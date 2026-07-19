@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual envs
+venv/
+.venv/
+env/
+
+# Environment / secrets
+.env
+!.env.example
+
+# Project output
+output/
+
+# LangGraph local artifacts
+.langgraph_api/
+.langgraph/
+
+# IDE
+.vscode/
+.idea/
+
+# OS (Windows)
+Thumbs.db
+desktop.ini
