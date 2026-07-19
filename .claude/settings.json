@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": ["Write(docs/prompts.md)"]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "agent",
+            "timeout": 120,
+            "prompt": "You are running as a UserPromptSubmit hook for this project. Your only job is to decide whether the user's prompt should be logged to docs/prompts.md, and if so, log it — then let the turn proceed normally.\n\nThe hook input JSON is:\n$ARGUMENTS\n\nExtract the user's submitted prompt text from the `prompt` field of that JSON. That is the text to evaluate and, if relevant, log verbatim.\n\nEvaluate these relevance criteria. ALL must be true for the prompt to be logged:\n1. The prompt is about implementing or updating a feature, automation, tests, or documentation.\n2. The prompt is longer than 150 characters.\n3. The prompt is NOT a short confirmation/negation such as 'pare', 'não', 'sim', 'prossiga', 'execute', 'continue', 'ok', 'certo', 'pode', 'vai', 'tudo bem', or similar short variants.\n4. The prompt is NOT a question (does not end with '?' and is not clearly interrogative).\n5. The prompt's main goal is NOT creating, opening, or editing GitHub issues.\n\nIf ANY criterion fails, do nothing (do not touch docs/prompts.md) and skip straight to the final response below.\n\nIf ALL criteria pass:\n1. Run `git config user.name` via Bash to get the author. If it fails or is empty, use 'Desconhecido'.\n2. Get the current date and time via Bash (e.g. `date '+%Y-%m-%d %H:%M'`).\n3. Read docs/prompts.md if it exists (Read tool) to see current content; if it does not exist, you will create it.\n4. Append (Edit if the file exists, Write if it does not) exactly this block at the end of the file:\n\n---\n\n## <a concise summary of the prompt in up to 10 words, in Portuguese>\n\n* Data: <date and time from step 2, formatted YYYY-MM-DD HH:MM>\n* Autor: <author from step 1>\n* Tipo: <classify the prompt as exactly one of: Zero shot, Few shot, Chain of Thought, Instrução direta, Contextual>\n\n### Prompt original\n```\n<the full original prompt text from the `prompt` field, copied verbatim>\n```\n\nMANDATORY FORMATTING RULE, not negotiable: when copying the prompt text into the '### Prompt original' code block, preserve the EXACT original formatting from the `prompt` field — every line break, paragraph break, bullet point, numbered list item, indentation level, and blank line between sections. Never compress the text into a single line, never strip line breaks, never reflow numbered or bulleted items onto one line. If the original prompt itself contains a fenced code block, preserve it with its own formatting nested inside the outer one.\n\nAfter you finish (whether you logged an entry or decided not to), respond with exactly this JSON and nothing else: {\"ok\": true}"
+          }
+        ]
+      }
+    ]
+  }
+}
