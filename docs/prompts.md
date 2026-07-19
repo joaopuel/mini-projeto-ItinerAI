@@ -89,6 +89,28 @@ Implementar a ferramenta (tool) de busca de pontos turísticos no destino inform
 
 ---
 
+## Ferramenta de busca de eventos e festivais (Wikipédia)
+
+* Data: 2026-07-19
+* Autor: joaopuel
+* Tipo: Implementação
+
+### Prompt original
+```
+#Instrução
+Implemente a ferramenta de busca de eventos e festivais no destino informado
+
+#Detalhes
+1. A ferramenta deve fazer uma busca pela wikipédia https://en.wikipedia.org/wiki/
+2. A busca deve se concentrar em eventos e festivais traducionais da região
+3. Como wikipédia apresenta um texto estático, pouco atualizado, é obrigatório informar na resposta para sempre pesquisar as datas e horários dos festivais nos sites oficiais do envento
+4. Essas informações deve ser adicionadas como sugestões ao intininerário, já que não são precisas/atualizadas com os exatos dias dos eventos
+5. Realize os ajustes necessáriso para adicionar esta funcionalidade
+6. Ajuste o arquivo CLAUDE.md, caso necessário
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>
