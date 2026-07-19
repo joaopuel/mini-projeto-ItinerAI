@@ -28,6 +28,46 @@ Adicione a seguinte regra no arquivo: Durante implementações de funcionalidade
 
 ---
 
+## Configuração inicial de comunicação com a LLM (Groq)
+
+* Data: 2026-07-19
+* Autor: joaopuel
+* Tipo: Configuração / Implementação
+
+### Prompt original
+```
+#Instrução
+Com base nos objetivos do projeto, adicione as configurações iniciais para permitir a comunicação com a LLM
+
+#Detalhes
+1. Criar os arquivos .env.example, requirements, gitignore
+2. Criar os arquivos de configurações para a plataforma GROQ para permitir a comunicação com o modelo proposto
+3. Neste estágio inicial, apenas deve ser possível se comunicar com a LLM via terminal, sem nenhuma ferramenta ou orientação para a LLM
+```
+
+---
+
+## Contexto padrão do agente (system prompt e saudação inicial)
+
+* Data: 2026-07-19
+* Autor: joaopuel
+* Tipo: Implementação
+
+### Prompt original
+```
+#Instrução
+Adicione contexto padrão do agente
+
+#Detalhes
+1. O contexto padrão deve ser enviado a LLM em toda sessão para ganrantir que a LLM entenda o papel e comportamento padrão que o angete de ter
+2. O agente  tem como objetivo a criação de intinerários para viagens
+3. O agente deve ter um tom amigável e descontraído
+4. O agente deve iniciar a conversa sempre com "Sou ItinerAi, o seu melhor companheiro de viagem. Qual o seu próximo destino?"
+5. Não adicione qualquer validação nesta parte, a LLM apenas deve ficar ciente do contexto inicial do agente, papel e objetivos
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>

@@ -14,7 +14,8 @@ from itinerai_agent.utils.state import AgentState
 
 
 def main() -> None:
-    print("ItinerAI — digite sua mensagem (ou 'sair' para encerrar)")
+    print("ItinerAI: Sou ItinerAi, o seu melhor companheiro de viagem. Qual o seu próximo destino?")
+    print("(digite 'sair' para encerrar)")
     state = AgentState()
     while True:
         try:

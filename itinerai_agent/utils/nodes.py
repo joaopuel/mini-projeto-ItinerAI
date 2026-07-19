@@ -1,10 +1,12 @@
+from langchain_core.messages import SystemMessage
 from langchain_groq import ChatGroq
 
+from itinerai_agent.utils.prompts import AGENT_SYSTEM_PROMPT
 from itinerai_agent.utils.state import AgentState
 
 _llm = ChatGroq(model="llama-3.1-8b-instant")
 
 
 def call_llm(state: AgentState) -> dict:
-    response = _llm.invoke(state.messages)
+    response = _llm.invoke([SystemMessage(content=AGENT_SYSTEM_PROMPT), *state.messages])
     return {"messages": [response]}
