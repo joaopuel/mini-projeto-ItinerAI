@@ -111,6 +111,54 @@ Implemente a ferramenta de busca de eventos e festivais no destino informado
 
 ---
 
+## Correção de erro: argumento `period` inesperado na busca de eventos
+
+* Data: 2026-07-19
+* Autor: joaopuel
+* Tipo: Correção de bug
+
+### Prompt original
+```
+#Instrução
+Ocorreu este erro durante a execução do agente. Investigue a causa e realize os ajustes necessários.
+Descreva sua linha de pensamento durante os ajustes.
+
+#Erro
+ItinerAI: Sou ItinerAi, o seu melhor companheiro de viagem. Qual o seu próximo destino?
+(digite 'sair' para encerrar)
+Você: Existe algum festival ou evento interessante na alemanha em outubro?
+Traceback (most recent call last):
+  File "C:\git\mini-projeto-ItinerAI\main.py", line 38, in <module>
+    main()
+  File "C:\git\mini-projeto-ItinerAI\main.py", line 32, in main
+    result = graph.invoke(state)
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\git\mini-projeto-ItinerAI\.venv\Lib\site-packages\langgraph\pregel\main.py", line 3913, in invoke
+    for chunk in self.stream(
+                 ^^^^^^^^^^^^
+  File "C:\git\mini-projeto-ItinerAI\.venv\Lib\site-packages\langgraph\pregel\main.py", line 2967, in stream
+    for _ in runner.tick(
+             ^^^^^^^^^^^^
+  File "C:\git\mini-projeto-ItinerAI\.venv\Lib\site-packages\langgraph\pregel\_runner.py", line 207, in tick
+    run_with_retry(
+  File "C:\git\mini-projeto-ItinerAI\.venv\Lib\site-packages\langgraph\pregel\_retry.py", line 617, in run_with_retry
+    return task.proc.invoke(task.input, config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\git\mini-projeto-ItinerAI\.venv\Lib\site-packages\langgraph\_internal\_runnable.py", line 684, in invoke
+    input = context.run(step.invoke, input, config, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\git\mini-projeto-ItinerAI\.venv\Lib\site-packages\langgraph\_internal\_runnable.py", line 426, in invoke
+    ret = self.func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\git\mini-projeto-ItinerAI\itinerai_agent\utils\nodes.py", line 35, in call_tools
+    result = tool_fn(**call["args"])
+             ^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: search_events_and_festivals() got an unexpected keyword argument 'period'
+During task with name 'call_tools' and id '16763708-c53f-e3ac-3c2c-35c70aef9fa6'
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>
