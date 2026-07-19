@@ -159,6 +159,82 @@ During task with name 'call_tools' and id '16763708-c53f-e3ac-3c2c-35c70aef9fa6'
 
 ---
 
+## Ferramenta de construção de itinerário
+
+* Data: 2026-07-19
+* Autor: joaopuel
+* Tipo: Implementação
+
+### Prompt original
+```
+#Instrução
+Implementar ferramente de construção de itinerário
+
+#Detalhes
+1. Ajuste as ferramentas de busca de pontos turísticos e eventos para sempre retornar o local exato ou provável da atração
+2. A nova ferramenta de contrução de intinerário deve receber as informações obtidas pelas buscas e o período da viagem
+3. A ferramente deve dividir as atrações encontradas pelo total de dias diposponíveis
+4. Deve ser sugerido no máximo 3 atrações por período do dia (dia, tarde e noite)
+5. Caso encontradas poucas atrações pela duração da viagem, pode inserir mensagem do tipo: "Aproveite cada detalhe, há tempo suficiente para aproveitar as atrações nas suas férias) e, em últimos casos, sugerir repetir lugares para aproveitar ainda mais detalhes dos mesmos
+6. As atrações devem ser agrupadas por proximodade visando a melhor eficiência da viagem
+```
+
+---
+
+## Correção de erro: tool_use_failed na extração de pontos turísticos
+
+* Data: 2026-07-19
+* Autor: joaopuel
+* Tipo: Correção de bug
+
+### Prompt original
+```
+Investigue e ajuste este erro:
+
+(.venv) PS C:\git\mini-projeto-ItinerAI> python main.py
+ItinerAI: Sou ItinerAi, o seu melhor companheiro de viagem. Qual o seu próximo destino?
+(digite 'sair' para encerrar)
+Você: Vou para Lisboa por 3 dias
+Traceback (most recent call last):
+  ...
+  File "C:\git\mini-projeto-ItinerAI\itinerai_agent\utils\tools.py", line 116, in _extract_attractions
+    result = structured_llm.invoke(prompt)
+  ...
+groq.BadRequestError: Error code: 400 - {'error': {'message': "Failed to call a function.
+Please adjust your prompt. See 'failed_generation' for more details.", 'type':
+'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation':
+'<function=_ExtractedAttractions> {"attractions": [ ... modelo entrou em loop de
+repetição e truncou o JSON ... ]'}}
+```
+
+---
+
+## Correção de erro: tool_use_failed em build_itinerary (schema)
+
+* Data: 2026-07-19
+* Autor: joaopuel
+* Tipo: Correção de bug
+
+### Prompt original
+```
+Esse erro aconteceu, investigue e ajuste:
+
+... (busca de pontos turísticos da Itália, depois:)
+Você: Monte um roteiro para 1 semana na itália
+Traceback (most recent call last):
+  ...
+  File "C:\git\mini-projeto-ItinerAI\itinerai_agent\utils\nodes.py", line 21, in call_llm
+    response = _llm_with_tools.invoke([SystemMessage(content=AGENT_SYSTEM_PROMPT), *state.messages])
+  ...
+groq.BadRequestError: Error code: 400 - {'error': {'message': "Failed to call a function.
+Please adjust your prompt. See 'failed_generation' for more details.", 'type':
+'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation':
+'<function=build_itinerary>{"attractions": [ ... 16 pontos turísticos inline ... ],
+"destination": "Itália", "num_days": 7}'}}
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>

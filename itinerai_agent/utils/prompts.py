@@ -31,6 +31,18 @@ oficial de cada evento. Se a ferramenta não encontrar nada, informe \
 educadamente que não foi possível encontrar eventos/festivais do destino na \
 Web.
 
+Por fim, você tem a ferramenta `build_itinerary`, que monta o itinerário dia \
+a dia da viagem. Para usá-la: (1) garanta que já buscou os pontos turísticos \
+e os eventos do destino; (2) descubra a quantidade de dias da viagem — se o \
+usuário ainda não informou, pergunte de forma amigável antes de montar o \
+roteiro; (3) chame `build_itinerary` passando `destination` e `num_days` (um \
+número inteiro de dias). As atrações e os eventos já encontrados são \
+fornecidos automaticamente à ferramenta, então você NÃO precisa repassá-los. \
+Ao receber o resultado, apresente o roteiro dia a dia de forma organizada e \
+animada (dia, área e as atrações de manhã, tarde e noite); se vier uma \
+observação (`note`), repasse-a; e liste as sugestões de eventos/festivais \
+com o aviso (`disclaimer`) na íntegra.
+
 Converse em português, com um tom amigável e descontraído, como um amigo \
 animado para ajudar a planejar a próxima viagem do usuário.
 """
@@ -41,13 +53,19 @@ A partir do texto abaixo, extraído de uma página da Wikipédia sobre \
 para um viajante (monumentos, museus, parques, praças, marcos históricos, \
 bairros de interesse, etc.).
 
+Liste no máximo 15 pontos turísticos, os mais relevantes, e NUNCA repita um \
+ponto turístico que já tenha listado.
+
 Para cada ponto turístico, informe:
 - name: um nome curto.
 - description: uma descrição de uma frase.
+- location: o local exato quando o texto informar (bairro, endereço ou área \
+da cidade) ou, quando não houver, o local provável (ex.: a própria cidade ou \
+região do destino). Nunca deixe este campo vazio.
 
-Escreva "name" e "description" em português, mesmo que o texto original \
-esteja em inglês. Se o texto não mencionar nenhum ponto turístico claro, \
-retorne uma lista vazia.
+Escreva "name", "description" e "location" em português, mesmo que o texto \
+original esteja em inglês. Se o texto não mencionar nenhum ponto turístico \
+claro, retorne uma lista vazia.
 
 Texto:
 {page_text}
@@ -59,18 +77,45 @@ A partir do texto abaixo, extraído de uma página da Wikipédia sobre \
 recorrentes da região (festivais culturais, religiosos, folclóricos, de \
 música, gastronômicos, celebrações tradicionais, etc.).
 
+Liste no máximo 15 eventos/festivais, os mais relevantes, e NUNCA repita um \
+evento que já tenha listado.
+
 Para cada evento, informe:
 - name: um nome curto.
 - description: uma descrição de uma frase, incluindo a época/período do \
 ano em que costuma ocorrer SOMENTE se essa informação estiver explícita no \
 texto (ex.: mês, estação do ano). Não invente nem estime datas.
+- location: o local exato quando o texto informar (bairro, endereço ou área \
+da cidade) ou, quando não houver, o local provável (ex.: a própria cidade ou \
+região do destino). Nunca deixe este campo vazio.
 
-Escreva "name" e "description" em português, mesmo que o texto original \
-esteja em inglês. Se o texto não mencionar nenhum evento ou festival claro, \
-retorne uma lista vazia.
+Escreva "name", "description" e "location" em português, mesmo que o texto \
+original esteja em inglês. Se o texto não mencionar nenhum evento ou festival \
+claro, retorne uma lista vazia.
 
 {period_context}
 
 Texto:
 {page_text}
+"""
+
+ITINERARY_CLUSTERING_PROMPT = """\
+Abaixo está uma lista de atrações turísticas de {destination}, cada uma com \
+sua localização (exata ou provável). Ordene TODAS as atrações agrupando as \
+que ficam próximas umas das outras na mesma região, de modo que um viajante \
+consiga visitar cada grupo com o mínimo de deslocamento.
+
+Para cada atração da lista, devolva:
+- name: exatamente o mesmo nome recebido (não traduza nem altere).
+- area: um rótulo curto da região/zona onde ela fica (ex.: "Centro \
+Histórico", "Zona Norte"). Atrações do mesmo grupo devem compartilhar o \
+mesmo rótulo de area.
+
+Regras importantes:
+- Inclua todas as atrações recebidas, sem inventar novas nem remover \
+nenhuma.
+- Liste as atrações da mesma area em sequência (uma após a outra).
+
+Atrações:
+{attractions}
 """
