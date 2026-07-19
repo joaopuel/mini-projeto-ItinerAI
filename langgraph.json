@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "itinerai_agent": "./itinerai_agent/agent.py:graph"
+  },
+  "env": "./.env"
+}

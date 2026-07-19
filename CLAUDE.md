@@ -45,6 +45,7 @@ mini-projeto-ItinerAI/
 ├── docs/
 │   └── application-structure.md
 ├── output/                 # itinerários .md gerados pelo agente (não versionado)
+├── main.py                 # ponto de entrada: loop de chat via terminal
 ├── .env                    # variáveis de ambiente locais (não versionado)
 ├── requirements.txt        # dependências do projeto
 └── langgraph.json          # arquivo de configuração do LangGraph
