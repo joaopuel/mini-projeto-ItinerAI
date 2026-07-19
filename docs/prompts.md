@@ -68,6 +68,27 @@ Adicione contexto padrão do agente
 
 ---
 
+## Ferramenta de busca de pontos turísticos (Wikipédia)
+
+* Data: 2026-07-19
+* Autor: joaopuel
+* Tipo: Implementação
+
+### Prompt original
+```
+#Instrição
+Implementar a ferramenta (tool) de busca de pontos turísticos no destino informado
+
+#Detalhes
+1. Adicione um nó no langraph para a ferramenta
+2. A ferramenta deve sempre primeira a busca em 'https://en.wikipedia.org/wiki/Tourism_in_<destiny>'
+3. Caso não encontrado, realizar a busca padrão da wikipédia 'https://en.wikipedia.org/wiki/<search-target>'
+4. Caso, nada relevante seja encontrado, informar ao usuário que não foi possível encontrar informações do destino na Web
+5. Pode criar uma ou mais ferramentas para esta funcionalidade
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>

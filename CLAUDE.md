@@ -25,6 +25,27 @@ neste documento sem alinhar antes com o usuário.
 - **Groq** — modelo `llama-3.1-8b-instant` como LLM do agente.
 - Autenticação com a Groq via variável de ambiente `GROQ_API_KEY` (nunca
   hardcode a chave; carregue de `.env`/ambiente).
+- **requests + beautifulsoup4** — busca e parsing de páginas da Wikipédia,
+  usadas como fonte de dados pelas tools (ex.: busca de pontos turísticos).
+
+## Arquitetura do grafo (tool-calling)
+
+O agente segue um loop de tool-calling estilo ReAct, não um pipeline fixo de
+nós por etapa:
+
+- `call_llm` invoca o LLM com as tools de `tools.py` vinculadas via
+  `bind_tools`.
+- Uma aresta condicional (`should_call_tools`) verifica se a resposta do LLM
+  pediu alguma tool: se sim, roteia para `call_tools`; se não, vai para
+  `END`.
+- `call_tools` executa a(s) tool(s) pedidas e volta para `call_llm`, que
+  formula a resposta final ao usuário (inclusive mensagens de "não
+  encontrado").
+
+Novas funcionalidades (busca de eventos/shows, montagem do itinerário,
+geração do `.md`) devem seguir o mesmo padrão: implementar como tool pura em
+`tools.py` e registrá-la na lista de tools vinculada ao LLM em `nodes.py`,
+em vez de criar nós fixos por etapa.
 
 ## Estrutura do projeto
 
@@ -56,10 +77,12 @@ mini-projeto-ItinerAI/
 - `state.py` deve definir o estado do grafo com `pydantic.BaseModel`,
   incluindo ao menos: destino, período de férias, pontos turísticos
   encontrados, eventos encontrados e o itinerário dia a dia resultante.
+  Também é o lugar para os modelos pydantic de dados de domínio usados pelas
+  tools (ex.: `TouristAttraction`).
 - `tools.py` concentra as ferramentas expostas ao agente (pesquisa de pontos
   turísticos, pesquisa de eventos/shows, geração do arquivo `.md`).
-- `nodes.py` concentra os nós do grafo (cada etapa do fluxo: pesquisar
-  pontos turísticos → pesquisar eventos → montar itinerário → gerar `.md`).
+- `nodes.py` concentra os nós do grafo — ver "Arquitetura do grafo
+  (tool-calling)" acima para o padrão atual de roteamento.
 - Itinerários gerados são salvos como arquivo `.md` em `output/`.
 
 ## Configuração de ambiente
