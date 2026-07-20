@@ -7,6 +7,9 @@ interação com o agente acontece via terminal — **não há interface gráfica
 
 Funcionalidades do agente:
 
+- Validar a mensagem do usuário antes de processá-la: bloquear tentativas de
+  prompt injection, mensagens em scripts não-latinos (mandarim/híndi) e
+  URLs/links enviados pelo usuário, respondendo com um aviso em português.
 - Pesquisar pontos turísticos do destino informado (via Wikipédia).
 - Pesquisar eventos e festivais tradicionais do destino (via Wikipédia).
   Como a Wikipédia é um texto estático, esses eventos são tratados como
@@ -37,6 +40,11 @@ neste documento sem alinhar antes com o usuário.
 O agente segue um loop de tool-calling estilo ReAct, não um pipeline fixo de
 nós por etapa:
 
+- `validate_input` é o nó de entrada do grafo (`START → validate_input`):
+  valida a última mensagem do usuário e, via aresta condicional
+  (`route_after_validation`), segue para `call_llm` quando a entrada é válida
+  ou vai direto para `END` (com a mensagem de recusa já inserida) quando viola
+  uma regra. Ver "Validação de entrada" abaixo.
 - `call_llm` invoca o LLM com as tools de `tools.py` vinculadas via
   `bind_tools`.
 - Uma aresta condicional (`should_call_tools`) verifica se a resposta do LLM
@@ -49,6 +57,40 @@ nós por etapa:
 Qualquer nova funcionalidade deve seguir o mesmo padrão: implementar como
 tool em `tools.py` e registrá-la na lista de tools vinculada ao LLM em
 `nodes.py`, em vez de criar nós fixos por etapa.
+
+## Validação de entrada (`validation.py`)
+
+Antes de a mensagem do usuário chegar ao LLM, o nó `validate_input` a inspeciona
+e bloqueia três tipos de entrada, sempre respondendo com uma mensagem
+informativa em português (e sem acionar nenhuma tool):
+
+1. **Prompt injection** (ex.: "ignore as instruções anteriores").
+2. **Idioma não suportado** — mensagens em scripts não-latinos: mandarim (CJK) e
+   híndi (devanágari).
+3. **URLs/links** enviados pelo usuário — o agente nunca os acessa (a fonte de
+   dados é sempre a Wikipédia, via as tools).
+
+Regras de design (não remover sem alinhar):
+
+- **Detecção 100% por regex, sem nenhuma chamada ao LLM.** O
+  `llama-3.1-8b-instant` é fraco; a validação precisa ser determinística,
+  barata e previsível, sem sobrecarregar o modelo.
+- Os padrões de **prompt injection** cobrem os 6 idiomas mais falados:
+  português, inglês, espanhol, francês, mandarim e híndi.
+- O **filtro de idioma** barra apenas scripts não-latinos (mandarim/híndi), que
+  são 100% confiáveis por regex. Inglês, espanhol e francês **não** são barrados
+  pelo filtro de idioma (compartilham palavras com o português → risco de falso
+  positivo), mas tentativas de injeção nesses idiomas continuam pegas pela regra
+  de injeção. Trade-off consciente: mensagens benignas nesses idiomas passam e
+  chegam ao LLM.
+- A ordem de checagem é injeção → idioma → URL: uma injeção em mandarim/híndi
+  recebe a mensagem específica de injeção, não a de idioma.
+- Toda a lógica fica em `validation.py` como funções puras
+  (`contains_prompt_injection`, `contains_non_latin_script`, `contains_url` e o
+  agregador `validate_user_input`); o nó `validate_input` e o roteamento
+  (`route_after_validation`) ficam em `nodes.py`. O roteamento não usa novo
+  campo de estado: quando reprova, o nó insere uma `AIMessage` e o router a
+  detecta para ir a `END`. `AgentState` permanece inalterado.
 
 ## Ferramentas do agente (`tools.py`)
 
@@ -93,7 +135,9 @@ mini-projeto-ItinerAI/
 │   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── tools.py        # tools: busca de pontos turísticos, busca de eventos/festivais, geração do .md
-│   │   ├── nodes.py        # funções de nó do grafo
+│   │   ├── validation.py   # validação de entrada do usuário (anti prompt injection, idioma, URLs)
+│   │   ├── prompts.py      # prompts do agente e das extrações
+│   │   ├── nodes.py        # funções de nó do grafo (validação, chamada ao LLM, execução de tools)
 │   │   └── state.py        # definição do estado do grafo (modelos pydantic)
 │   ├── __init__.py
 │   └── agent.py            # construção/compilação do StateGraph
@@ -121,6 +165,8 @@ mini-projeto-ItinerAI/
   "Ferramentas do agente" acima.
 - `nodes.py` concentra os nós do grafo — ver "Arquitetura do grafo
   (tool-calling)" acima para o padrão atual de roteamento.
+- `validation.py` concentra a validação de entrada do usuário (funções puras de
+  regex + mensagens de recusa) — ver "Validação de entrada" acima.
 - Itinerários gerados são salvos como arquivo `.md` em `output/`.
 
 ## Configuração de ambiente

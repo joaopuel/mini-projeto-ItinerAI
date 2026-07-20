@@ -1,4 +1,4 @@
-from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_groq import ChatGroq
 from langgraph.graph import END
 
@@ -9,12 +9,35 @@ from itinerai_agent.utils.tools import (
     search_events_and_festivals,
     search_tourist_attractions,
 )
+from itinerai_agent.utils.validation import validate_user_input
 
 _TOOLS = [search_tourist_attractions, search_events_and_festivals, build_itinerary]
 _TOOLS_BY_NAME = {tool.__name__: tool for tool in _TOOLS}
 
 _llm = ChatGroq(model="llama-3.1-8b-instant")
 _llm_with_tools = _llm.bind_tools(_TOOLS)
+
+
+def validate_input(state: AgentState) -> dict:
+    # Porta de entrada do grafo: valida a última mensagem do usuário antes de
+    # ela chegar ao LLM. Se violar uma regra (prompt injection, idioma em
+    # script não-latino ou URL/link), responde direto com uma mensagem
+    # informativa em português — sem deixar o conteúdo entrar no loop de tools.
+    last_message = state.messages[-1]
+    if not isinstance(last_message, HumanMessage):
+        return {}
+    refusal = validate_user_input(str(last_message.content))
+    if refusal is not None:
+        return {"messages": [AIMessage(content=refusal)]}
+    return {}
+
+
+def route_after_validation(state: AgentState) -> str:
+    # Se a validação inseriu uma resposta (AIMessage), encerra o turno; caso
+    # contrário, a última mensagem ainda é a do usuário e seguimos para o LLM.
+    if isinstance(state.messages[-1], AIMessage):
+        return END
+    return "call_llm"
 
 
 def call_llm(state: AgentState) -> dict:

@@ -255,6 +255,40 @@ Implementar ferramenta de criação de arquivo .md com o itinerário
 
 ---
 
+## Nó de validação de entrada (anti prompt injection, idioma e URLs)
+
+* Data: 2026-07-19
+* Autor: joaopuel
+* Tipo: Implementação
+
+### Prompt original
+```
+#Instrução
+Adicionar etapa/nó de validação
+
+#Detalhes
+1. Impedir prompt injection, proibir comandos como: "Ignorar prompts/instruções anteriores"
+2. Impedir prompts em outros idiomas, a comunicação somente deve acontecer em português
+3. Impedir acessar URLs/Links disponibilizados pelo usuários
+4. Nesses casos, enviar uma mensagem informativa ao usuário
+5. Atualizar arquivo CLAUDE.md com nova funcionalidade de validação
+```
+
+---
+
+## Ajuste: validação somente por regex, sem LLM (6 idiomas)
+
+* Data: 2026-07-19
+* Autor: joaopuel
+* Tipo: Ajuste / Implementação
+
+### Prompt original
+```
+Antes mencionei para utilizar o sistemas híbrido de verificação usando regex e LLM. Mas altera para utilizar somente regex para detectar prompt injections nos 5 idiomais mais falados no mundo, inglês, mandarin, hindi, espanhol, francês + português. Evitando assim sobrecarregar ainda mais a LLM, que é um modelo mais fraco. Altere o plano.
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>
