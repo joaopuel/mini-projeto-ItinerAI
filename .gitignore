@@ -15,6 +15,11 @@ env/
 # Project output
 output/
 
+# Memória persistente (SQLite)
+itinerai_memory.db
+itinerai_memory.db-journal
+itinerai_memory.db-wal
+
 # LangGraph local artifacts
 .langgraph_api/
 .langgraph/
