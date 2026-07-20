@@ -13,51 +13,29 @@ class TouristAttraction(BaseModel):
     agrupar atrações próximas no mesmo dia do itinerário."""
 
 
-class TraditionalEvent(BaseModel):
-    """Evento/festival tradicional da região. Sem data exata: deve ser
-    tratado como sugestão para o itinerário, a confirmar no site oficial."""
-
-    name: str
-    description: str
-    location: str = ""
-    """Local exato (bairro/endereço/área) ou provável do evento."""
-
-
-class ItinerarySlot(BaseModel):
-    """Um período de um dia do itinerário (manhã, tarde ou noite)."""
-
-    period: str
-    attractions: list[str] = Field(default_factory=list)
-
-
 class ItineraryDay(BaseModel):
-    """Um dia do itinerário, com as atrações agrupadas por período."""
+    """Um dia do itinerário, com a lista de atrações a visitar."""
 
     day: int
     area: str = ""
-    slots: list[ItinerarySlot] = Field(default_factory=list)
+    attractions: list[str] = Field(default_factory=list)
 
 
 class Itinerary(BaseModel):
-    """Itinerário dia a dia montado a partir das atrações e eventos encontrados."""
+    """Itinerário dia a dia montado a partir das atrações encontradas."""
 
     destination: str
     num_days: int
     days: list[ItineraryDay] = Field(default_factory=list)
     note: str | None = None
-    event_suggestions: list[TraditionalEvent] = Field(default_factory=list)
-    disclaimer: str = ""
 
 
 class AgentState(BaseModel):
     messages: Annotated[list[BaseMessage], add_messages] = Field(default_factory=list)
     destination: str | None = None
-    # Datas de ida/volta e duração da viagem. Ficam no estado (além de serem
-    # passadas a build_itinerary) para poderem ser persistidas pela memória e
-    # permitir a retomada da conversa após uma falha — ver utils/memory.py.
-    start_date: str | None = None
-    end_date: str | None = None
+    # Duração da viagem em dias. Fica no estado (além de ser passada a
+    # build_itinerary) para poder ser persistida pela memória e permitir a
+    # retomada da conversa após uma falha — ver utils/memory.py.
     num_days: int | None = None
     tourist_attractions: list[TouristAttraction] = Field(default_factory=list)
-    traditional_events: list[TraditionalEvent] = Field(default_factory=list)
     itinerary: Itinerary | None = None

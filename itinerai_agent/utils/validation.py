@@ -105,8 +105,8 @@ FOREIGN_LANGUAGE_MESSAGE = (
 )
 URL_MESSAGE = (
     "Por segurança, não acesso links ou URLs enviados por usuários. Se quiser, me "
-    "diga apenas o nome do destino (e o período da viagem) que eu pesquiso as "
-    "informações para você."
+    "diga apenas o nome do destino (e por quantos dias você pretende viajar) que eu "
+    "pesquiso as informações para você."
 )
 
 

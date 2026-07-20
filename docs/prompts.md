@@ -356,6 +356,75 @@ Analise o que pode ter acontecido e faça as alterações
 
 ---
 
+## Remoção de ferramentas (busca de eventos/festivais e cálculo por datas)
+
+* Data: 2026-07-20
+* Autor: joaopuel
+* Tipo: Refatoração / Remoção de funcionalidades
+
+### Prompt original
+```
+#Instrução
+Por se tratar de um modelo simples, o montante de ferramentas pode estar causando sobrecarga de contexto na LLM. Remova algumas funcionalidades.
+
+#Detalhes
+1. Remova a ferramenta de busca de eventos/festivais. Somente será trabalhado a busca de pontos turísticos.
+2. Remova a ferramente que calcula a duração entre duas datas. Somente será informada a duração da viagem em dias.
+3. Busque no projeto e remova quaisquer menções a estas funcionalidades
+```
+
+---
+
+## Remoção dos períodos do dia (Manhã/Tarde/Noite) do itinerário
+
+* Data: 2026-07-20
+* Autor: joaopuel
+* Tipo: Refatoração / Remoção de funcionalidades
+
+### Prompt original
+```
+Para reduzir ainda mais o contexto do agente. Remova todas referências aos períodos "Manhã", "Tarde", "Noite" na contrução do itinerário.
+```
+
+---
+
+## Ajuste do máximo de atrações por dia (3)
+
+* Data: 2026-07-20
+* Autor: joaopuel
+* Tipo: Ajuste
+
+### Prompt original
+```
+Altera também para que o máximo de atrações por dia ser apenas 3
+```
+
+---
+
+## Correção: tool calls vazadas como texto pelo llama-3.1-8b
+
+* Data: 2026-07-20
+* Autor: joaopuel
+* Tipo: Correção de bug
+
+### Prompt original
+```
+O que pode estar acontecendo aqui?
+
+ItinerAI: Sou ItinerAi, o seu melhor companheiro de viagem.
+(digite 'sair' para encerrar)
+ItinerAI: Encontrei uma viagem em andamento para Espanha. Deseja retomá-la? (s/n)
+Você: não
+ItinerAI: Qual o seu próximo destino?
+Você: Monte um itinerário de 3 dias para a Inglaterra
+ItinerAI: function=build_itinerary>{"destination": "Inglaterra", "num_days": 3}</function>
+
+function=search_tourist_attractions>{"destination": "Inglaterra"}</function>
+Você:
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>

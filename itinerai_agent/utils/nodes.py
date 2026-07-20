@@ -1,3 +1,7 @@
+import json
+import re
+from uuid import uuid4
+
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_groq import ChatGroq
 from langgraph.graph import END
@@ -7,22 +11,74 @@ from itinerai_agent.utils.prompts import AGENT_SYSTEM_PROMPT
 from itinerai_agent.utils.state import AgentState
 from itinerai_agent.utils.tools import (
     build_itinerary,
-    calculate_trip_days,
-    search_events_and_festivals,
     search_tourist_attractions,
 )
 from itinerai_agent.utils.validation import validate_user_input
 
 _TOOLS = [
     search_tourist_attractions,
-    search_events_and_festivals,
-    calculate_trip_days,
     build_itinerary,
 ]
 _TOOLS_BY_NAME = {tool.__name__: tool for tool in _TOOLS}
 
 _llm = ChatGroq(model="llama-3.1-8b-instant")
 _llm_with_tools = _llm.bind_tools(_TOOLS)
+
+# O llama-3.1-8b-instant às vezes "vaza" as tool calls no formato nativo do Llama
+# (<function=nome>{json}</function>) como TEXTO da resposta, em vez de gerar
+# tool_calls estruturados — a Groq não parseia, o campo tool_calls fica vazio e o
+# texto cru acabaria impresso no terminal. Este regex recupera essas chamadas.
+_LEAKED_TOOL_CALL_RE = re.compile(
+    r"<function=([A-Za-z_]\w*)>?\s*(\{.*?\})\s*</function>",
+    re.DOTALL,
+)
+
+
+def _parse_leaked_tool_calls(content: str) -> list[dict]:
+    """Extrai tool calls que o LLM emitiu como texto (formato <function=...>) e as
+    devolve como dicts de tool_call válidos. Ignora, com tolerância, nomes
+    desconhecidos e JSON malformado (comum quando o modelo trunca a saída)."""
+    calls: list[dict] = []
+    for match in _LEAKED_TOOL_CALL_RE.finditer(content):
+        name, raw_args = match.group(1), match.group(2)
+        if name not in _TOOLS_BY_NAME:
+            continue
+        try:
+            args = json.loads(raw_args)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(args, dict):
+            calls.append(
+                {"name": name, "args": args, "id": f"leaked_{uuid4().hex}", "type": "tool_call"}
+            )
+    return calls
+
+
+def _repair_leaked_response(response: AIMessage) -> AIMessage:
+    """Conserta uma resposta em que o LLM vazou as tool calls como texto.
+
+    Se já houver tool_calls estruturados, devolve a resposta intacta. Caso
+    contrário, tenta recuperar as chamadas vazadas: descarta um `build_itinerary`
+    prematuro quando há busca no mesmo lote (a busca precisa rodar antes) e, se
+    nada for recuperável, troca o texto cru por um aviso amigável em vez de
+    exibir o `<function=...>` ao usuário."""
+    if getattr(response, "tool_calls", None):
+        return response
+    content = response.content if isinstance(response.content, str) else ""
+    if "<function=" not in content:
+        return response
+    calls = _parse_leaked_tool_calls(content)
+    if not calls:
+        return AIMessage(
+            content=(
+                "Desculpe, me atrapalhei ao preparar seu pedido. Pode reformular ou tentar "
+                "novamente em instantes?"
+            )
+        )
+    names = {call["name"] for call in calls}
+    if "search_tourist_attractions" in names:
+        calls = [call for call in calls if call["name"] != "build_itinerary"]
+    return AIMessage(content="", tool_calls=calls)
 
 
 def validate_input(state: AgentState) -> dict:
@@ -63,8 +119,6 @@ def persist_memory(state: AgentState) -> dict:
     save_trip_memory(
         TripMemory(
             destination=state.destination,
-            start_date=state.start_date,
-            end_date=state.end_date,
             num_days=state.num_days,
             completed=state.itinerary is not None,
         )
@@ -81,13 +135,20 @@ def call_llm(state: AgentState) -> dict:
             [SystemMessage(content=AGENT_SYSTEM_PROMPT), *state.messages]
         )
     except Exception:
-        response = AIMessage(
-            content=(
-                "Desculpe, tive um problema ao processar seu pedido agora. Pode reformular "
-                "ou tentar novamente em instantes?"
-            )
-        )
-    return {"messages": [response]}
+        return {
+            "messages": [
+                AIMessage(
+                    content=(
+                        "Desculpe, tive um problema ao processar seu pedido agora. Pode "
+                        "reformular ou tentar novamente em instantes?"
+                    )
+                )
+            ]
+        }
+    # O modelo fraco às vezes vaza as tool calls como texto (formato
+    # <function=...>): recupera-as para o grafo executá-las, em vez de imprimir o
+    # texto cru no terminal.
+    return {"messages": [_repair_leaked_response(response)]}
 
 
 def should_call_tools(state: AgentState) -> str:
@@ -106,30 +167,17 @@ def call_tools(state: AgentState) -> dict:
         tool_fn = _TOOLS_BY_NAME[call["name"]]
         args = dict(call["args"])
 
-        # A construção do itinerário usa as atrações/eventos já encontrados e
-        # guardados no estado; injetamos aqui para o LLM não precisar
-        # re-serializar essas listas (só fornece destination e num_days).
+        # A construção do itinerário usa as atrações já encontradas e guardadas
+        # no estado; injetamos aqui para o LLM não precisar re-serializar essa
+        # lista (só fornece destination e num_days).
         if call["name"] == "build_itinerary":
             args["attractions"] = state.tourist_attractions
-            args["events"] = state.traditional_events
 
         result = tool_fn(**args)
 
         if call["name"] == "search_tourist_attractions":
             update["destination"] = result.destination
             update["tourist_attractions"] = result.attractions
-            tool_content = result.model_dump_json()
-        elif call["name"] == "search_events_and_festivals":
-            update["destination"] = result.destination
-            update["traditional_events"] = result.events
-            tool_content = result.model_dump_json()
-        elif call["name"] == "calculate_trip_days":
-            # Guarda datas e duração no estado (quando válidas) para que a
-            # memória persistente possa salvá-las e permitir a retomada.
-            if result.valid:
-                update["start_date"] = result.start_date
-                update["end_date"] = result.end_date
-                update["num_days"] = result.num_days
             tool_content = result.model_dump_json()
         elif call["name"] == "build_itinerary":
             update["itinerary"] = result.itinerary

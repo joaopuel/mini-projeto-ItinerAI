@@ -1,7 +1,7 @@
 """Memória persistente do ItinerAI em SQLite.
 
-Guarda os dados da viagem em andamento (destino, datas de ida/volta e duração)
-para permitir a **retomada** de uma conversa depois que o programa é reiniciado
+Guarda os dados da viagem em andamento (destino e duração em dias) para
+permitir a **retomada** de uma conversa depois que o programa é reiniciado
 — por exemplo, quando a busca de atrações ou a geração do itinerário falha e
 derruba o processo. Assim o usuário não precisa redigitar tudo do zero.
 
@@ -43,8 +43,6 @@ class TripMemory(BaseModel):
     (usado para decidir se vale oferecer a retomada no próximo início)."""
 
     destination: str | None = None
-    start_date: str | None = None
-    end_date: str | None = None
     num_days: int | None = None
     completed: bool = False
     updated_at: str | None = None
@@ -80,8 +78,6 @@ def init_db(db_path: Path | None = None) -> None:
             CREATE TABLE IF NOT EXISTS {_TABLE_NAME} (
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 destination TEXT,
-                start_date TEXT,
-                end_date TEXT,
                 num_days INTEGER,
                 completed INTEGER NOT NULL DEFAULT 0,
                 updated_at TEXT
@@ -101,20 +97,16 @@ def save_trip_memory(memory: TripMemory, db_path: Path | None = None) -> None:
         connection.execute(
             f"""
             INSERT INTO {_TABLE_NAME}
-                (id, destination, start_date, end_date, num_days, completed, updated_at)
-            VALUES (1, ?, ?, ?, ?, ?, ?)
+                (id, destination, num_days, completed, updated_at)
+            VALUES (1, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 destination = excluded.destination,
-                start_date  = excluded.start_date,
-                end_date    = excluded.end_date,
                 num_days    = excluded.num_days,
                 completed   = excluded.completed,
                 updated_at  = excluded.updated_at
             """,
             (
                 memory.destination,
-                memory.start_date,
-                memory.end_date,
                 memory.num_days,
                 int(memory.completed),
                 updated_at,
@@ -131,7 +123,7 @@ def load_trip_memory(db_path: Path | None = None) -> TripMemory | None:
     with _connect(db_path) as connection:
         cursor = connection.execute(
             f"""
-            SELECT destination, start_date, end_date, num_days, completed, updated_at
+            SELECT destination, num_days, completed, updated_at
             FROM {_TABLE_NAME}
             WHERE id = 1
             """
@@ -141,11 +133,9 @@ def load_trip_memory(db_path: Path | None = None) -> TripMemory | None:
     if row is None:
         return None
 
-    destination, start_date, end_date, num_days, completed, updated_at = row
+    destination, num_days, completed, updated_at = row
     return TripMemory(
         destination=destination,
-        start_date=start_date,
-        end_date=end_date,
         num_days=num_days,
         completed=bool(completed),
         updated_at=updated_at,

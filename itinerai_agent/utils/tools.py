@@ -1,10 +1,9 @@
-"""Tools do agente ItinerAI (busca de pontos turísticos, busca de eventos,
-escrita do itinerário .md)."""
+"""Tools do agente ItinerAI (busca de pontos turísticos e escrita do
+itinerário .md)."""
 
 import re
 import unicodedata
 from collections import Counter
-from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
@@ -17,31 +16,19 @@ from pydantic import BaseModel, Field
 
 from itinerai_agent.utils.prompts import (
     ATTRACTION_EXTRACTION_PROMPT,
-    EVENT_EXTRACTION_PROMPT,
     ITINERARY_CLUSTERING_PROMPT,
 )
 from itinerai_agent.utils.state import (
     Itinerary,
     ItineraryDay,
-    ItinerarySlot,
     TouristAttraction,
-    TraditionalEvent,
 )
 
 WIKIPEDIA_BASE_URL = "https://en.wikipedia.org/wiki"
 _REQUEST_HEADERS = {"User-Agent": "ItinerAI/1.0 (https://github.com/joaopuel/mini-projeto-ItinerAI)"}
 _MAX_PAGE_TEXT_CHARS = 8000
 
-EVENT_DATES_DISCLAIMER = (
-    "As informações de eventos e festivais vêm da Wikipédia, um texto estático e pouco "
-    "atualizado: as datas e horários exatos não são confiáveis. Consulte sempre o site "
-    "oficial de cada evento antes de confirmar e trate estas sugestões apenas como ideias "
-    "para o itinerário, não como compromissos fixos."
-)
-
-ITINERARY_SLOTS = ("Manhã", "Tarde", "Noite")
-MAX_ATTRACTIONS_PER_SLOT = 3
-MAX_ATTRACTIONS_PER_DAY = len(ITINERARY_SLOTS) * MAX_ATTRACTIONS_PER_SLOT
+MAX_ATTRACTIONS_PER_DAY = 3
 
 ITINERARY_RELAXED_NOTE = (
     "Aproveite cada detalhe, há tempo suficiente para aproveitar as atrações nas suas férias."
@@ -51,7 +38,7 @@ ITINERARY_REVISIT_NOTE = (
     "curtir ainda mais os detalhes deles."
 )
 ITINERARY_OVERFLOW_NOTE = (
-    "Havia mais atrações do que cabe no período informado; priorizamos as principais em "
+    "Havia mais atrações do que cabe na duração informada; priorizamos as principais em "
     "cada dia."
 )
 
@@ -83,10 +70,6 @@ class _ExtractedAttractions(BaseModel):
     attractions: list[TouristAttraction] = Field(default_factory=list)
 
 
-class _ExtractedEvents(BaseModel):
-    events: list[TraditionalEvent] = Field(default_factory=list)
-
-
 class _ClusteredAttraction(BaseModel):
     name: str
     area: str = ""
@@ -101,27 +84,6 @@ class TouristAttractionSearchResult(BaseModel):
     source_url: str | None
     found: bool
     attractions: list[TouristAttraction] = Field(default_factory=list)
-
-
-class EventSearchResult(BaseModel):
-    destination: str
-    source_url: str | None
-    found: bool
-    events: list[TraditionalEvent] = Field(default_factory=list)
-    disclaimer: str = EVENT_DATES_DISCLAIMER
-
-
-class TripDaysResult(BaseModel):
-    """Resultado da validação/cálculo da duração da viagem a partir das datas de
-    ida e volta. `valid` indica se as datas passaram na validação; `num_days` é a
-    duração em dias (contagem inclusiva, 0 quando inválido) e `message` é o texto
-    pronto para o usuário — o erro de validação ou a confirmação da duração."""
-
-    start_date: str
-    end_date: str
-    valid: bool
-    num_days: int
-    message: str
 
 
 class ItineraryFileResult(BaseModel):
@@ -178,36 +140,6 @@ def _extract_attractions(destination: str, page_text: str) -> list[TouristAttrac
     return unique_attractions
 
 
-def _extract_events(destination: str, page_text: str, period: str | None) -> list[TraditionalEvent]:
-    """Usa o LLM para extrair uma lista estruturada de eventos/festivais
-    tradicionais a partir do texto de uma página da Wikipédia."""
-    period_context = (
-        f'O usuário pretende viajar em: "{period}". Se a descrição de um evento '
-        "mencionar explicitamente uma época/período do ano, deixe claro se ela "
-        "coincide com esse período informado pelo usuário. Não exclua eventos "
-        "cuja época não esteja explícita no texto nem estime se eles coincidem."
-        if period
-        else "O usuário não informou o período da viagem."
-    )
-    prompt = EVENT_EXTRACTION_PROMPT.format(
-        destination=destination,
-        page_text=page_text[:_MAX_PAGE_TEXT_CHARS],
-        period_context=period_context,
-    )
-    result = _invoke_structured(_ExtractedEvents, prompt)
-    if result is None:
-        return []
-
-    seen_names: set[str] = set()
-    unique_events = []
-    for event in result.events:
-        key = event.name.strip().lower()
-        if key not in seen_names:
-            seen_names.add(key)
-            unique_events.append(event)
-    return unique_events
-
-
 def search_tourist_attractions(destination: str) -> TouristAttractionSearchResult:
     """Busca pontos turísticos de um destino de viagem na Wikipédia.
 
@@ -235,44 +167,6 @@ def search_tourist_attractions(destination: str) -> TouristAttractionSearchResul
         source_url=None,
         found=False,
         attractions=[],
-    )
-
-
-def search_events_and_festivals(destination: str, period: str | None = None) -> EventSearchResult:
-    """Busca eventos e festivais tradicionais de um destino de viagem na
-    Wikipédia.
-
-    Tenta, em ordem, as páginas "Festivals in <destination>" e "Culture of
-    <destination>"; se nenhuma existir, tenta a página padrão do destino.
-    `period` é opcional e descreve o período de férias informado pelo
-    usuário (ex.: "outubro", "última semana de julho"); quando informado, é
-    usado apenas como contexto para a extração — nunca para descartar
-    eventos, já que a Wikipédia não traz datas confiáveis o suficiente para
-    estimar se um evento coincide com o período. Como a Wikipédia é um texto
-    estático e pouco atualizado, o resultado sempre traz um aviso
-    (`disclaimer`) para o usuário confirmar dia e horário no site oficial de
-    cada evento antes de incluí-lo no itinerário. Retorna found=False caso
-    nenhuma página exista ou nada relevante seja encontrado.
-    """
-    for title in (f"Festivals in {destination}", f"Culture of {destination}", destination):
-        fetched = _fetch_wikipedia_page(title)
-        if fetched is None:
-            continue
-        page_text, url = fetched
-        events = _extract_events(destination, page_text, period)
-        if events:
-            return EventSearchResult(
-                destination=destination,
-                source_url=url,
-                found=True,
-                events=events,
-            )
-
-    return EventSearchResult(
-        destination=destination,
-        source_url=None,
-        found=False,
-        events=[],
     )
 
 
@@ -332,10 +226,9 @@ def _distribute_across_days(
     """Distribui atrações já ordenadas por proximidade entre os dias da
     viagem. Função pura e determinística (sem LLM/rede).
 
-    Regras: no máximo 3 atrações por período (manhã/tarde/noite) e 9 por dia;
-    atrações próximas caem no mesmo dia; se houver poucas atrações para a
-    duração, adiciona uma observação e, em último caso, repete lugares
-    (revisitas) para não deixar nenhum dia vazio.
+    Regras: no máximo 3 atrações por dia; atrações próximas caem no mesmo dia;
+    se houver poucas atrações para a duração, adiciona uma observação e, em
+    último caso, repete lugares (revisitas) para não deixar nenhum dia vazio.
     """
     num_days = max(1, num_days)
     total = len(clustered)
@@ -377,18 +270,14 @@ def _distribute_across_days(
 
     days: list[ItineraryDay] = []
     for day_index, day_placements in enumerate(placements):
-        slots: list[ItinerarySlot] = []
-        for slot_index, slot_name in enumerate(ITINERARY_SLOTS):
-            start = slot_index * MAX_ATTRACTIONS_PER_SLOT
-            slot_placements = day_placements[start : start + MAX_ATTRACTIONS_PER_SLOT]
-            if slot_placements:
-                names = [
-                    f"{attraction.name} (revisita)" if is_revisit else attraction.name
-                    for attraction, _area, is_revisit in slot_placements
-                ]
-                slots.append(ItinerarySlot(period=slot_name, attractions=names))
+        names = [
+            f"{attraction.name} (revisita)" if is_revisit else attraction.name
+            for attraction, _area, is_revisit in day_placements
+        ]
         days.append(
-            ItineraryDay(day=day_index + 1, area=_dominant_area(day_placements), slots=slots)
+            ItineraryDay(
+                day=day_index + 1, area=_dominant_area(day_placements), attractions=names
+            )
         )
     return days, note
 
@@ -397,17 +286,14 @@ def assemble_itinerary(
     destination: str,
     num_days: int,
     attractions: list[TouristAttraction] | None = None,
-    events: list[TraditionalEvent] | None = None,
 ) -> Itinerary:
-    """Monta o modelo `Itinerary` dia a dia a partir das atrações e eventos.
+    """Monta o modelo `Itinerary` dia a dia a partir das atrações.
 
-    Função pura (sem I/O de arquivo): agrupa as atrações por proximidade,
-    divide-as pelos `num_days` dias (no máximo 3 por período), e adiciona os
-    eventos como sugestões sem data fixa. É o núcleo testável usado por
-    `build_itinerary`.
+    Função pura (sem I/O de arquivo): agrupa as atrações por proximidade e
+    divide-as pelos `num_days` dias (no máximo 3 por dia). É o núcleo
+    testável usado por `build_itinerary`.
     """
     attractions = attractions or []
-    events = events or []
     num_days = max(1, int(num_days))
 
     clustered = _cluster_by_proximity(destination, attractions)
@@ -418,17 +304,14 @@ def assemble_itinerary(
         num_days=num_days,
         days=days,
         note=note,
-        event_suggestions=events,
-        disclaimer=EVENT_DATES_DISCLAIMER if events else "",
     )
 
 
 def render_itinerary_markdown(itinerary: Itinerary) -> str:
     """Renderiza um `Itinerary` como texto markdown para o arquivo .md.
 
-    Função pura: produz título, observação (quando houver), os dias com seus
-    períodos e atrações, e a seção de sugestões de eventos/festivais fechando
-    com o aviso (disclaimer). Todo o conteúdo em português.
+    Função pura: produz título, observação (quando houver) e os dias com suas
+    atrações. Todo o conteúdo em português.
     """
     day_word = "dia" if itinerary.num_days == 1 else "dias"
     lines: list[str] = [
@@ -446,22 +329,11 @@ def render_itinerary_markdown(itinerary: Itinerary) -> str:
         if day.area:
             header += f" — {day.area}"
         lines += [header, ""]
-        if day.slots:
-            for slot in day.slots:
-                lines.append(f"### {slot.period}")
-                lines += [f"- {name}" for name in slot.attractions]
-                lines.append("")
+        if day.attractions:
+            lines += [f"- {name}" for name in day.attractions]
+            lines.append("")
         else:
             lines += ["_Dia livre para descansar ou explorar por conta própria._", ""]
-
-    if itinerary.event_suggestions:
-        lines += ["## Sugestões de eventos e festivais", ""]
-        for event in itinerary.event_suggestions:
-            local = f" ({event.location})" if event.location else ""
-            lines.append(f"- **{event.name}**{local} — {event.description}")
-        lines.append("")
-        if itinerary.disclaimer:
-            lines += [f"> {itinerary.disclaimer}", ""]
 
     return "\n".join(lines).rstrip() + "\n"
 
@@ -504,26 +376,24 @@ def build_itinerary(
     destination: str,
     num_days: int,
     attractions: Annotated[list[TouristAttraction] | None, InjectedToolArg] = None,
-    events: Annotated[list[TraditionalEvent] | None, InjectedToolArg] = None,
 ) -> ItineraryFileResult:
     """Monta o itinerário da viagem e grava um arquivo .md em `output/`.
 
     Forneça apenas `destination` e `num_days` (número inteiro de dias). As
-    atrações e os eventos já encontrados pelas buscas são fornecidos
-    automaticamente — NÃO os repasse.
+    atrações já encontradas pela busca são fornecidas automaticamente — NÃO as
+    repasse.
 
     As atrações são agrupadas por proximidade e divididas pelos `num_days`
-    dias (no máximo 3 por período: manhã, tarde e noite); eventos e festivais
-    entram como sugestões sem data fixa. O arquivo é nomeado a partir do
-    destino e da duração; se já existir um com o mesmo nome, ganha um número
-    sequencial. Retorna a mensagem de confirmação com o nome do arquivo — o
-    itinerário completo NÃO é exibido no terminal.
+    dias (no máximo 3 por dia). O arquivo é nomeado a partir do destino e da
+    duração; se já existir um com o mesmo nome, ganha um número sequencial.
+    Retorna a mensagem de confirmação com o nome do arquivo — o itinerário
+    completo NÃO é exibido no terminal.
 
-    `attractions`/`events` são injetados pelo grafo (a partir do estado) e por
-    isso ficam ocultos do modelo via `InjectedToolArg`.
+    `attractions` é injetado pelo grafo (a partir do estado) e por isso fica
+    oculto do modelo via `InjectedToolArg`.
     """
     num_days = max(1, int(num_days))
-    itinerary = assemble_itinerary(destination, num_days, attractions, events)
+    itinerary = assemble_itinerary(destination, num_days, attractions)
 
     markdown = render_itinerary_markdown(itinerary)
     path = _resolve_output_path(_itinerary_file_stem(destination, num_days))
@@ -538,98 +408,4 @@ def build_itinerary(
         file_name=path.name,
         message=message,
         itinerary=itinerary,
-    )
-
-
-# Formatos de data aceitos: ISO (preferido, pedido no schema/prompt) e os
-# formatos brasileiros mais comuns, por robustez quando o LLM repassa a data
-# como o usuário digitou.
-_DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d/%m/%y", "%d-%m-%Y")
-
-
-def _parse_date(text: str) -> date | None:
-    """Converte uma string de data em `date`, aceitando ISO (AAAA-MM-DD) e os
-    formatos brasileiros comuns (DD/MM/AAAA, DD/MM/AA, DD-MM-AAAA).
-
-    Função pura e determinística (sem LLM/rede): retorna `None` se nenhum
-    formato conhecido casar, deixando a decisão de recusa para a tool.
-    """
-    text = text.strip()
-    for fmt in _DATE_FORMATS:
-        try:
-            return datetime.strptime(text, fmt).date()
-        except ValueError:
-            continue
-    return None
-
-
-def calculate_trip_days(start_date: str, end_date: str) -> TripDaysResult:
-    """Valida as datas de ida/volta da viagem e calcula a duração em dias.
-
-    Use esta ferramenta quando o usuário informar as datas de ida (chegada) e
-    volta (saída) em vez do número de dias. Passe as datas de preferência no
-    formato ISO `AAAA-MM-DD` (ex.: "2026-07-20"). A tool valida, de forma
-    determinística, que:
-    (1) ambas as datas são posteriores à data atual;
-    (2) a data de ida é anterior ou igual à data de volta.
-
-    Se alguma validação falhar, retorna `valid=False`, `num_days=0` e uma
-    `message` em português explicando o problema — nesse caso, repasse a
-    mensagem ao usuário e peça datas corrigidas, sem montar o itinerário. Se as
-    datas forem válidas, retorna `valid=True` e `num_days` (contagem inclusiva,
-    considerando o dia de chegada e o de saída) para ser usado como duração da
-    viagem em `build_itinerary`.
-    """
-    start = _parse_date(start_date)
-    end = _parse_date(end_date)
-
-    if start is None or end is None:
-        return TripDaysResult(
-            start_date=start_date,
-            end_date=end_date,
-            valid=False,
-            num_days=0,
-            message=(
-                "Não consegui entender as datas informadas. Por favor, mande a data de "
-                "ida e a de volta num formato claro, como AAAA-MM-DD (ex.: 2026-07-20) "
-                "ou DD/MM/AAAA (ex.: 20/07/2026)."
-            ),
-        )
-
-    today = date.today()
-    if start <= today or end <= today:
-        return TripDaysResult(
-            start_date=start.isoformat(),
-            end_date=end.isoformat(),
-            valid=False,
-            num_days=0,
-            message=(
-                "As datas da viagem precisam ser posteriores à data de hoje. Confira as "
-                "datas de ida e volta e me mande datas futuras, por favor."
-            ),
-        )
-
-    if start > end:
-        return TripDaysResult(
-            start_date=start.isoformat(),
-            end_date=end.isoformat(),
-            valid=False,
-            num_days=0,
-            message=(
-                "A data de ida precisa ser anterior ou igual à data de volta. Confira a "
-                "ordem das datas e me mande novamente, por favor."
-            ),
-        )
-
-    num_days = (end - start).days + 1
-    day_word = "dia" if num_days == 1 else "dias"
-    return TripDaysResult(
-        start_date=start.isoformat(),
-        end_date=end.isoformat(),
-        valid=True,
-        num_days=num_days,
-        message=(
-            f"Sua viagem terá {num_days} {day_word} (de {start.isoformat()} a "
-            f"{end.isoformat()}, contando o dia de chegada e o de saída)."
-        ),
     )

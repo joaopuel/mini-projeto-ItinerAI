@@ -11,25 +11,17 @@ Funcionalidades do agente:
   prompt injection, mensagens em scripts não-latinos (mandarim/híndi) e
   URLs/links enviados pelo usuário, respondendo com um aviso em português.
 - Coletar os campos obrigatórios para montar a viagem, verificando-os em
-  sequência — 1º o destino, 2º as datas de ida/volta OU a duração em dias — e
-  pedindo ao usuário **uma informação por vez**, na ordem, quando alguma faltar,
-  antes de pesquisar ou montar o roteiro. Essa coleta é conduzida pelo
+  sequência — 1º o destino, 2º a duração da viagem em dias — e pedindo ao
+  usuário **uma informação por vez**, na ordem, quando alguma faltar, antes de
+  pesquisar ou montar o roteiro. Essa coleta é conduzida pelo
   `AGENT_SYSTEM_PROMPT` (não faz parte da validação de segurança por regex de
   `validation.py`).
 - Pesquisar pontos turísticos do destino informado (via Wikipédia).
-- Pesquisar eventos e festivais tradicionais do destino (via Wikipédia).
-  Como a Wikipédia é um texto estático, esses eventos são tratados como
-  **sugestões sem data exata**, sempre acompanhados de um aviso para o usuário
-  confirmar dia/horário no site oficial de cada evento.
-- Descobrir a duração da viagem: quando o usuário informa as datas de ida e
-  volta em vez do número de dias, validar as datas (futuras e na ordem correta)
-  e calcular a quantidade de dias (contagem inclusiva) usada na montagem do
-  roteiro.
-- Montar um itinerário dia a dia (manhã/tarde/noite), agrupando atrações
-  próximas para reduzir deslocamento.
+- Montar um itinerário dia a dia, agrupando atrações próximas para reduzir
+  deslocamento.
 - Gerar um arquivo `.md` com o itinerário em `output/`. **O roteiro não é
   exibido no terminal** — o agente apenas informa o nome do arquivo criado.
-- Manter uma memória persistente da última viagem (destino, datas e duração)
+- Manter uma memória persistente da última viagem (destino e duração em dias)
   em SQLite, salva logo após a validação. Numa nova execução, o agente
   **mostra** a última viagem salva e oferece **retomá-la** (se ficou incompleta,
   ex.: após uma falha na busca/geração) ou **refazê-la** (se já concluída).
@@ -42,7 +34,7 @@ neste documento sem alinhar antes com o usuário.
 - **Python 3.12.9**
 - **LangGraph** — orquestração do agente como um grafo de estados.
 - **pydantic** — definição do estado do grafo e de todos os modelos de dados
-  (ex.: pontos turísticos, eventos, dias do itinerário).
+  (ex.: pontos turísticos, dias do itinerário).
 - **Groq** — modelo `llama-3.1-8b-instant` como LLM do agente.
 - Autenticação com a Groq via variável de ambiente `GROQ_API_KEY` (nunca
   hardcode a chave; carregue de `.env`/ambiente).
@@ -124,14 +116,13 @@ Regras de design (não alterar sem alinhar):
 - **Registro único** ("apenas a última viagem"): a tabela `trip_memory` tem uma
   linha fixa (`id = 1`, garantida por `CHECK (id = 1)`) sobrescrita a cada
   salvamento (upsert). Não é um histórico de várias viagens.
-- O que é salvo: `destination`, `start_date`, `end_date`, `num_days`,
-  `completed` (itinerário já gerado?) e `updated_at`. Modelado como o pydantic
-  `TripMemory`.
+- O que é salvo: `destination`, `num_days`, `completed` (itinerário já gerado?)
+  e `updated_at`. Modelado como o pydantic `TripMemory`.
 - **Quando salvar:** o nó `persist_memory` salva logo após a validação, no
   início do turno, com os dados acumulados até ali (garante que, antes das
   buscas/roteiro que podem falhar, a viagem já está persistida). `main.py`
   também salva ao fim de cada turno, para capturar o que foi descoberto no
-  próprio turno (datas, duração e a conclusão do itinerário). Ambos **só salvam
+  próprio turno (duração e a conclusão do itinerário). Ambos **só salvam
   quando já há um destino** — do contrário, uma conversa nova (estado ainda
   vazio) sobrescreveria a última viagem com um registro nulo.
 - **Retomada/exibição no início:** `main.py` chama `load_trip_memory` na
@@ -139,8 +130,8 @@ Regras de design (não alterar sem alinhar):
   determinística (sem passar pelo LLM) e oferece continuá-la: se estiver
   incompleta (`completed=False`), oferece **retomá-la**; se concluída, oferece
   **refazer** o roteiro. Ao aceitar, pré-preenche o `AgentState`
-  (destino/datas/dias) e injeta uma mensagem sintética que reafirma a viagem,
-  para o agente refazer as buscas e o roteiro sem o usuário redigitar nada. A
+  (destino/dias) e injeta uma mensagem sintética que reafirma a viagem,
+  para o agente refazer a busca e o roteiro sem o usuário redigitar nada. A
   memória não é exposta ao LLM durante a conversa (mantém o modelo fraco leve).
 - Funções puras e testáveis (`init_db`, `save_trip_memory`, `load_trip_memory`),
   todas com um `db_path` opcional que cai para `MEMORY_DB_PATH` em tempo de
@@ -153,21 +144,9 @@ Todas já implementadas e registradas em `nodes.py`:
 
 - `search_tourist_attractions(destination)` — busca na Wikipédia
   (`Tourism in <destino>` → `<destino>`).
-- `search_events_and_festivals(destination, period=None)` — busca na Wikipédia
-  (`Festivals in <destino>` → `Culture of <destino>` → `<destino>`). Retorna
-  eventos como sugestões sem data + um `disclaimer` obrigatório.
-- `calculate_trip_days(start_date, end_date)` — valida as datas de ida/volta e
-  calcula a duração da viagem. Usada quando o usuário informa as datas em vez do
-  número de dias. Validação **100% determinística** (stdlib `datetime`, sem LLM):
-  aceita datas em ISO (`AAAA-MM-DD`) e formatos BR (`DD/MM/AAAA`), exige que
-  ambas sejam posteriores à data atual e que a ida seja anterior ou igual à
-  volta. Em caso de falha, retorna `valid=False` + `message` de recusa em
-  português; em caso de sucesso, retorna `num_days` (contagem **inclusiva**:
-  conta o dia de chegada e o de saída) para alimentar o `build_itinerary`. É uma
-  tool pura, não altera o estado.
 - `build_itinerary(destination, num_days)` — monta o roteiro e **grava o `.md`**
-  em `output/`. As atrações/eventos vêm do estado, injetados em `call_tools`, e
-  ficam **ocultos do modelo via `InjectedToolArg`** — o schema exposto ao LLM tem
+  em `output/`. As atrações vêm do estado, injetadas em `call_tools`, e
+  ficam **ocultas do modelo via `InjectedToolArg`** — o schema exposto ao LLM tem
   só `destination` e `num_days`. A tool devolve apenas o aviso do arquivo criado
   (o roteiro completo vai para `state.itinerary`, não para o terminal).
 
@@ -198,7 +177,7 @@ mini-projeto-ItinerAI/
 ├── itinerai_agent/         # todo o código do agente
 │   ├── utils/
 │   │   ├── __init__.py
-│   │   ├── tools.py        # tools: busca de pontos turísticos, busca de eventos/festivais, geração do .md
+│   │   ├── tools.py        # tools: busca de pontos turísticos, geração do .md
 │   │   ├── validation.py   # validação de entrada do usuário (anti prompt injection, idioma, URLs)
 │   │   ├── memory.py       # memória persistente da última viagem em SQLite (retomada)
 │   │   ├── prompts.py      # prompts do agente e das extrações
@@ -219,19 +198,15 @@ mini-projeto-ItinerAI/
 - Todo o código do agente fica dentro de `itinerai_agent/`, seguindo o padrão
   `my_agent` da documentação do LangGraph.
 - `state.py` define o estado do grafo (`AgentState`) com `pydantic.BaseModel`:
-  `messages`, `destination`, `start_date`, `end_date`, `num_days`,
-  `tourist_attractions`, `traditional_events` e `itinerary`. As datas de
-  ida/volta e a duração (`num_days`) ficam no estado — além de serem passadas a
-  `build_itinerary` — para poderem ser persistidas pela memória e permitir a
-  retomada da conversa (populadas em `call_tools` a partir de
-  `calculate_trip_days`/`build_itinerary`). Também é o lugar dos
+  `messages`, `destination`, `num_days`, `tourist_attractions` e `itinerary`. A
+  duração (`num_days`) fica no estado — além de ser passada a `build_itinerary`
+  — para poder ser persistida pela memória e permitir a retomada da conversa
+  (populada em `call_tools` a partir de `build_itinerary`). Também é o lugar dos
   modelos de domínio usados pelas tools (`TouristAttraction`,
-  `TraditionalEvent`, `Itinerary`/`ItineraryDay`/`ItinerarySlot`). Atrações e
-  eventos têm um campo `location` (exato ou provável) usado no agrupamento por
-  proximidade.
+  `Itinerary`/`ItineraryDay`). As atrações têm um campo `location` (exato ou
+  provável) usado no agrupamento por proximidade.
 - `tools.py` concentra as ferramentas expostas ao agente (pesquisa de pontos
-  turísticos, pesquisa de eventos/festivais, geração do arquivo `.md`) — ver
-  "Ferramentas do agente" acima.
+  turísticos, geração do arquivo `.md`) — ver "Ferramentas do agente" acima.
 - `nodes.py` concentra os nós do grafo — ver "Arquitetura do grafo
   (tool-calling)" acima para o padrão atual de roteamento.
 - `validation.py` concentra a validação de entrada do usuário (funções puras de

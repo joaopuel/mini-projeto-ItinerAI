@@ -28,8 +28,6 @@ def _save_state(state: AgentState) -> None:
     save_trip_memory(
         TripMemory(
             destination=state.destination,
-            start_date=state.start_date,
-            end_date=state.end_date,
             num_days=state.num_days,
             completed=state.itinerary is not None,
         )
@@ -37,24 +35,20 @@ def _save_state(state: AgentState) -> None:
 
 
 def _trip_description(memory: TripMemory) -> str:
-    """Descrição curta da viagem salva para exibir ao usuário (destino + duração
-    ou datas, quando houver)."""
+    """Descrição curta da viagem salva para exibir ao usuário (destino +
+    duração, quando houver)."""
     description = memory.destination or ""
     if memory.num_days:
         description += f" ({memory.num_days} dias)"
-    elif memory.start_date and memory.end_date:
-        description += f" (de {memory.start_date} a {memory.end_date})"
     return description
 
 
 def _resume_message(memory: TripMemory) -> str:
-    """Mensagem sintética que reafirma a viagem salva, para o agente retomar as
-    buscas/roteiro sem o usuário precisar redigitar destino e datas."""
+    """Mensagem sintética que reafirma a viagem salva, para o agente retomar a
+    busca/roteiro sem o usuário precisar redigitar destino e duração."""
     parts = [f"Quero retomar minha viagem para {memory.destination}"]
     if memory.num_days:
         parts.append(f"com duração de {memory.num_days} dias")
-    elif memory.start_date and memory.end_date:
-        parts.append(f"com ida em {memory.start_date} e volta em {memory.end_date}")
     return ", ".join(parts) + "."
 
 
@@ -87,8 +81,6 @@ def _startup(memory: TripMemory | None) -> AgentState | None:
 
     return AgentState(
         destination=memory.destination,
-        start_date=memory.start_date,
-        end_date=memory.end_date,
         num_days=memory.num_days,
         messages=[HumanMessage(content=_resume_message(memory))],
     )
