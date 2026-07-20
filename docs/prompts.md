@@ -289,6 +289,27 @@ Antes mencionei para utilizar o sistemas híbrido de verificação usando regex 
 
 ---
 
+## Validação de campos obrigatórios (destino e datas/duração)
+
+* Data: 2026-07-20
+* Autor: joaopuel
+* Tipo: Implementação
+
+### Prompt original
+```
+#Instrução
+Adicionar novas validações da entrada do usuário
+
+#Detalhes
+1. Após a entrada do usuário, além das validações de segurança é preciso validar se todos os campos necessários foram informados, como destino, datas ou duração da viagem em dias
+2. Verificar as informações em sequência:
+2.1. Qual o destino de sua viagem?
+2.2. Quais são as datas de ida e de volta? Ou qual a duração (dias) da sua viagem?
+3. Caso alguma das informações não tenha sido fornecida, solicitar ao usuário a informação
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>

@@ -10,6 +10,12 @@ Funcionalidades do agente:
 - Validar a mensagem do usuário antes de processá-la: bloquear tentativas de
   prompt injection, mensagens em scripts não-latinos (mandarim/híndi) e
   URLs/links enviados pelo usuário, respondendo com um aviso em português.
+- Coletar os campos obrigatórios para montar a viagem, verificando-os em
+  sequência — 1º o destino, 2º as datas de ida/volta OU a duração em dias — e
+  pedindo ao usuário **uma informação por vez**, na ordem, quando alguma faltar,
+  antes de pesquisar ou montar o roteiro. Essa coleta é conduzida pelo
+  `AGENT_SYSTEM_PROMPT` (não faz parte da validação de segurança por regex de
+  `validation.py`).
 - Pesquisar pontos turísticos do destino informado (via Wikipédia).
 - Pesquisar eventos e festivais tradicionais do destino (via Wikipédia).
   Como a Wikipédia é um texto estático, esses eventos são tratados como
