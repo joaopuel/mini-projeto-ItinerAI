@@ -52,6 +52,12 @@ class Itinerary(BaseModel):
 class AgentState(BaseModel):
     messages: Annotated[list[BaseMessage], add_messages] = Field(default_factory=list)
     destination: str | None = None
+    # Datas de ida/volta e duração da viagem. Ficam no estado (além de serem
+    # passadas a build_itinerary) para poderem ser persistidas pela memória e
+    # permitir a retomada da conversa após uma falha — ver utils/memory.py.
+    start_date: str | None = None
+    end_date: str | None = None
+    num_days: int | None = None
     tourist_attractions: list[TouristAttraction] = Field(default_factory=list)
     traditional_events: list[TraditionalEvent] = Field(default_factory=list)
     itinerary: Itinerary | None = None

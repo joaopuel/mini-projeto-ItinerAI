@@ -2,6 +2,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langchain_groq import ChatGroq
 from langgraph.graph import END
 
+from itinerai_agent.utils.memory import TripMemory, save_trip_memory
 from itinerai_agent.utils.prompts import AGENT_SYSTEM_PROMPT
 from itinerai_agent.utils.state import AgentState
 from itinerai_agent.utils.tools import (
@@ -40,10 +41,35 @@ def validate_input(state: AgentState) -> dict:
 
 def route_after_validation(state: AgentState) -> str:
     # Se a validação inseriu uma resposta (AIMessage), encerra o turno; caso
-    # contrário, a última mensagem ainda é a do usuário e seguimos para o LLM.
+    # contrário, a última mensagem ainda é a do usuário e seguimos para
+    # persistir a memória antes de chamar o LLM.
     if isinstance(state.messages[-1], AIMessage):
         return END
-    return "call_llm"
+    return "persist_memory"
+
+
+def persist_memory(state: AgentState) -> dict:
+    # Roda logo após a validação (só no caminho válido): salva os dados da
+    # viagem coletados até aqui (destino, datas, duração) na memória persistente.
+    # Como acontece antes das buscas e da montagem do roteiro, se algo falhar
+    # adiante a viagem já está salva e a conversa pode ser retomada no próximo
+    # início. Não altera o estado.
+    #
+    # Só persiste quando já existe um destino: no começo de uma nova conversa o
+    # estado ainda está vazio, e salvar aqui apagaria a última viagem guardada
+    # (sobrescrevendo o registro único com tudo nulo).
+    if state.destination is None:
+        return {}
+    save_trip_memory(
+        TripMemory(
+            destination=state.destination,
+            start_date=state.start_date,
+            end_date=state.end_date,
+            num_days=state.num_days,
+            completed=state.itinerary is not None,
+        )
+    )
+    return {}
 
 
 def call_llm(state: AgentState) -> dict:
@@ -97,8 +123,17 @@ def call_tools(state: AgentState) -> dict:
             update["destination"] = result.destination
             update["traditional_events"] = result.events
             tool_content = result.model_dump_json()
+        elif call["name"] == "calculate_trip_days":
+            # Guarda datas e duração no estado (quando válidas) para que a
+            # memória persistente possa salvá-las e permitir a retomada.
+            if result.valid:
+                update["start_date"] = result.start_date
+                update["end_date"] = result.end_date
+                update["num_days"] = result.num_days
+            tool_content = result.model_dump_json()
         elif call["name"] == "build_itinerary":
             update["itinerary"] = result.itinerary
+            update["num_days"] = result.num_days
             # Só o aviso volta para o LLM: o itinerário completo fica no arquivo
             # e não deve ser listado no terminal.
             tool_content = result.message

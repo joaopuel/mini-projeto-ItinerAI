@@ -29,6 +29,10 @@ Funcionalidades do agente:
   próximas para reduzir deslocamento.
 - Gerar um arquivo `.md` com o itinerário em `output/`. **O roteiro não é
   exibido no terminal** — o agente apenas informa o nome do arquivo criado.
+- Manter uma memória persistente da última viagem (destino, datas e duração)
+  em SQLite, salva logo após a validação. Numa nova execução, o agente
+  **mostra** a última viagem salva e oferece **retomá-la** (se ficou incompleta,
+  ex.: após uma falha na busca/geração) ou **refazê-la** (se já concluída).
 
 Não introduza funcionalidades, integrações ou tecnologias além das descritas
 neste documento sem alinhar antes com o usuário.
@@ -52,9 +56,13 @@ nós por etapa:
 
 - `validate_input` é o nó de entrada do grafo (`START → validate_input`):
   valida a última mensagem do usuário e, via aresta condicional
-  (`route_after_validation`), segue para `call_llm` quando a entrada é válida
-  ou vai direto para `END` (com a mensagem de recusa já inserida) quando viola
-  uma regra. Ver "Validação de entrada" abaixo.
+  (`route_after_validation`), segue para `persist_memory` quando a entrada é
+  válida ou vai direto para `END` (com a mensagem de recusa já inserida) quando
+  viola uma regra. Ver "Validação de entrada" abaixo.
+- `persist_memory` roda logo após a validação (só no caminho válido) e salva os
+  dados da viagem coletados até aqui na memória persistente, antes das buscas
+  que podem falhar; em seguida segue para `call_llm`. Ver "Memória persistente"
+  abaixo.
 - `call_llm` invoca o LLM com as tools de `tools.py` vinculadas via
   `bind_tools`.
 - Uma aresta condicional (`should_call_tools`) verifica se a resposta do LLM
@@ -101,6 +109,43 @@ Regras de design (não remover sem alinhar):
   (`route_after_validation`) ficam em `nodes.py`. O roteamento não usa novo
   campo de estado: quando reprova, o nó insere uma `AIMessage` e o router a
   detecta para ir a `END`. `AgentState` permanece inalterado.
+
+## Memória persistente (`memory.py`)
+
+O agente guarda em **SQLite** os dados da última viagem, para poder retomá-la
+numa nova execução caso a busca de atrações ou a geração do roteiro falhe (e
+falham de fato: uma falha de rede em `tools.py` propaga e derruba o processo).
+
+Regras de design (não alterar sem alinhar):
+
+- **SQLite via `sqlite3` da stdlib** — sem nova dependência no
+  `requirements.txt` e sem LLM/rede. A persistência é determinística, barata e
+  previsível, no mesmo espírito da validação por regex.
+- **Registro único** ("apenas a última viagem"): a tabela `trip_memory` tem uma
+  linha fixa (`id = 1`, garantida por `CHECK (id = 1)`) sobrescrita a cada
+  salvamento (upsert). Não é um histórico de várias viagens.
+- O que é salvo: `destination`, `start_date`, `end_date`, `num_days`,
+  `completed` (itinerário já gerado?) e `updated_at`. Modelado como o pydantic
+  `TripMemory`.
+- **Quando salvar:** o nó `persist_memory` salva logo após a validação, no
+  início do turno, com os dados acumulados até ali (garante que, antes das
+  buscas/roteiro que podem falhar, a viagem já está persistida). `main.py`
+  também salva ao fim de cada turno, para capturar o que foi descoberto no
+  próprio turno (datas, duração e a conclusão do itinerário). Ambos **só salvam
+  quando já há um destino** — do contrário, uma conversa nova (estado ainda
+  vazio) sobrescreveria a última viagem com um registro nulo.
+- **Retomada/exibição no início:** `main.py` chama `load_trip_memory` na
+  abertura e, se houver uma viagem salva com destino, **mostra-a** de forma
+  determinística (sem passar pelo LLM) e oferece continuá-la: se estiver
+  incompleta (`completed=False`), oferece **retomá-la**; se concluída, oferece
+  **refazer** o roteiro. Ao aceitar, pré-preenche o `AgentState`
+  (destino/datas/dias) e injeta uma mensagem sintética que reafirma a viagem,
+  para o agente refazer as buscas e o roteiro sem o usuário redigitar nada. A
+  memória não é exposta ao LLM durante a conversa (mantém o modelo fraco leve).
+- Funções puras e testáveis (`init_db`, `save_trip_memory`, `load_trip_memory`),
+  todas com um `db_path` opcional que cai para `MEMORY_DB_PATH` em tempo de
+  chamada. O banco fica na raiz do projeto (`itinerai_memory.db`) e **não é
+  versionado**.
 
 ## Ferramentas do agente (`tools.py`)
 
@@ -155,8 +200,9 @@ mini-projeto-ItinerAI/
 │   │   ├── __init__.py
 │   │   ├── tools.py        # tools: busca de pontos turísticos, busca de eventos/festivais, geração do .md
 │   │   ├── validation.py   # validação de entrada do usuário (anti prompt injection, idioma, URLs)
+│   │   ├── memory.py       # memória persistente da última viagem em SQLite (retomada)
 │   │   ├── prompts.py      # prompts do agente e das extrações
-│   │   ├── nodes.py        # funções de nó do grafo (validação, chamada ao LLM, execução de tools)
+│   │   ├── nodes.py        # funções de nó do grafo (validação, persistência, chamada ao LLM, execução de tools)
 │   │   └── state.py        # definição do estado do grafo (modelos pydantic)
 │   ├── __init__.py
 │   └── agent.py            # construção/compilação do StateGraph
@@ -165,6 +211,7 @@ mini-projeto-ItinerAI/
 ├── output/                 # itinerários .md gerados pelo agente (não versionado)
 ├── main.py                 # ponto de entrada: loop de chat via terminal
 ├── .env                    # variáveis de ambiente locais (não versionado)
+├── itinerai_memory.db      # memória persistente SQLite da última viagem (não versionado)
 ├── requirements.txt        # dependências do projeto
 └── langgraph.json          # arquivo de configuração do LangGraph
 ```
@@ -172,10 +219,12 @@ mini-projeto-ItinerAI/
 - Todo o código do agente fica dentro de `itinerai_agent/`, seguindo o padrão
   `my_agent` da documentação do LangGraph.
 - `state.py` define o estado do grafo (`AgentState`) com `pydantic.BaseModel`:
-  `messages`, `destination`, `tourist_attractions`, `traditional_events` e
-  `itinerary`. A duração da viagem (`num_days`) não fica no estado — o agente a
-  obtém na conversa (diretamente ou via `calculate_trip_days`, a partir das
-  datas de ida/volta) e passa direto para `build_itinerary`. Também é o lugar dos
+  `messages`, `destination`, `start_date`, `end_date`, `num_days`,
+  `tourist_attractions`, `traditional_events` e `itinerary`. As datas de
+  ida/volta e a duração (`num_days`) ficam no estado — além de serem passadas a
+  `build_itinerary` — para poderem ser persistidas pela memória e permitir a
+  retomada da conversa (populadas em `call_tools` a partir de
+  `calculate_trip_days`/`build_itinerary`). Também é o lugar dos
   modelos de domínio usados pelas tools (`TouristAttraction`,
   `TraditionalEvent`, `Itinerary`/`ItineraryDay`/`ItinerarySlot`). Atrações e
   eventos têm um campo `location` (exato ou provável) usado no agrupamento por
@@ -187,6 +236,9 @@ mini-projeto-ItinerAI/
   (tool-calling)" acima para o padrão atual de roteamento.
 - `validation.py` concentra a validação de entrada do usuário (funções puras de
   regex + mensagens de recusa) — ver "Validação de entrada" acima.
+- `memory.py` concentra a memória persistente em SQLite (funções puras
+  `init_db`/`save_trip_memory`/`load_trip_memory` + o modelo `TripMemory`) —
+  ver "Memória persistente" acima.
 - Itinerários gerados são salvos como arquivo `.md` em `output/`.
 
 ## Configuração de ambiente
@@ -194,7 +246,9 @@ mini-projeto-ItinerAI/
 - Requer Python 3.12.9.
 - Variável de ambiente obrigatória: `GROQ_API_KEY` (carregada via `.env` em
   desenvolvimento local, nunca commitada).
-- `.env` e `output/` devem estar no `.gitignore`.
+- `.env`, `output/` e o banco `itinerai_memory.db` devem estar no `.gitignore`.
+- A memória persistente usa `sqlite3` da stdlib — nenhuma dependência extra no
+  `requirements.txt`.
 
 ## Convenções de código
 
