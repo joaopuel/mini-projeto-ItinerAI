@@ -56,7 +56,8 @@ nós por etapa:
   que podem falhar; em seguida segue para `call_llm`. Ver "Memória persistente"
   abaixo.
 - `call_llm` invoca o LLM com as tools de `tools.py` vinculadas via
-  `bind_tools`.
+  `bind_tools`; também recupera as tool calls que o modelo fraco eventualmente
+  "vaza" como texto (ver "Robustez com o `llama-3.1-8b-instant`" abaixo).
 - Uma aresta condicional (`should_call_tools`) verifica se a resposta do LLM
   pediu alguma tool: se sim, roteia para `call_tools`; se não, vai para
   `END`.
@@ -145,10 +146,15 @@ Todas já implementadas e registradas em `nodes.py`:
 - `search_tourist_attractions(destination)` — busca na Wikipédia
   (`Tourism in <destino>` → `<destino>`).
 - `build_itinerary(destination, num_days)` — monta o roteiro e **grava o `.md`**
-  em `output/`. As atrações vêm do estado, injetadas em `call_tools`, e
-  ficam **ocultas do modelo via `InjectedToolArg`** — o schema exposto ao LLM tem
-  só `destination` e `num_days`. A tool devolve apenas o aviso do arquivo criado
-  (o roteiro completo vai para `state.itinerary`, não para o terminal).
+  em `output/`. Agrupa as atrações por proximidade e as distribui pelos
+  `num_days` dias (**no máximo 3 atrações por dia**, sem divisão por período do
+  dia — cada dia é uma lista simples de atrações); quando há poucas atrações para
+  a duração, sinaliza com uma observação e, em último caso, repete lugares
+  (revisitas) para não deixar dias vazios. As atrações vêm do estado, injetadas
+  em `call_tools`, e ficam **ocultas do modelo via `InjectedToolArg`** — o schema
+  exposto ao LLM tem só `destination` e `num_days`. A tool devolve apenas o aviso
+  do arquivo criado (o roteiro completo vai para `state.itinerary`, não para o
+  terminal).
 
 O nome do arquivo gerado segue o padrão `itinerario-<destino>-<n>-dias.md`; se
 já existir, ganha sufixo sequencial no padrão Windows (` (2)`, ` (3)`, …).
@@ -165,6 +171,19 @@ motivo — cada uma corrige um `tool_use_failed`/crash real):
   `call_llm` responde com mensagem amigável, em vez de derrubar o agente.
 - Mantenha os schemas das tools **pequenos**; para dados grandes vindos do
   estado, use `InjectedToolArg` (nunca exponha listas aninhadas ao modelo).
+- **Recuperação de tool calls "vazadas" como texto:** o modelo às vezes emite a
+  chamada no formato nativo do Llama (`<function=nome>{json}</function>`) como
+  **texto** da resposta, em vez de `tool_calls` estruturados (a Groq não parseia
+  e o campo `tool_calls` fica vazio). Sem tratamento, o texto cru apareceria no
+  terminal e o roteiro nunca seria montado. `_repair_leaked_response` (em
+  `nodes.py`, aplicado no fim de `call_llm`) detecta o padrão, reconstrói as
+  chamadas em `tool_calls` reais por regex determinístico e **descarta um
+  `build_itinerary` prematuro** quando há uma busca no mesmo lote (a busca
+  precisa rodar antes); se nada for recuperável (JSON truncado, ferramenta
+  desconhecida), troca o texto cru por um aviso amigável.
+- Para reduzir o gatilho na origem, o `AGENT_SYSTEM_PROMPT` orienta o modelo a
+  chamar **uma ferramenta por vez**, a nunca escrever a chamada como texto e a
+  sempre usar `search_tourist_attractions` **antes** de `build_itinerary`.
 
 ## Estrutura do projeto
 

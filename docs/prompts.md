@@ -457,6 +457,39 @@ Adicione também tres asteriscos nas informações de ida/volta, funcionalidade 
 
 ---
 
+## Atualização do README do projeto
+
+* Data: 2026-07-20
+* Autor: joaopuel
+* Tipo: Documentação
+
+### Prompt original
+```
+#Instrução
+Atualize o README do projeto
+
+#Detalhes
+1. Use as informações deste projeto como base
+2. Use as informações do CLAUDE.md como contexto
+3. O README deve ser montando seguindo os requisitos presente em docs/requisitos
+4. Todas as informações que já estão atualmente no README podem ser descartadas
+```
+
+---
+
+## Registro dos prompts deste chat em docs/prompts
+
+* Data: 2026-07-20
+* Autor: joaopuel
+* Tipo: Documentação
+
+### Prompt original
+```
+Adicione os últimos prompts desse chat ao docs/prompts
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>
