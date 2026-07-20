@@ -4,6 +4,7 @@ escrita do itinerário .md)."""
 import re
 import unicodedata
 from collections import Counter
+from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
@@ -108,6 +109,19 @@ class EventSearchResult(BaseModel):
     found: bool
     events: list[TraditionalEvent] = Field(default_factory=list)
     disclaimer: str = EVENT_DATES_DISCLAIMER
+
+
+class TripDaysResult(BaseModel):
+    """Resultado da validação/cálculo da duração da viagem a partir das datas de
+    ida e volta. `valid` indica se as datas passaram na validação; `num_days` é a
+    duração em dias (contagem inclusiva, 0 quando inválido) e `message` é o texto
+    pronto para o usuário — o erro de validação ou a confirmação da duração."""
+
+    start_date: str
+    end_date: str
+    valid: bool
+    num_days: int
+    message: str
 
 
 class ItineraryFileResult(BaseModel):
@@ -524,4 +538,98 @@ def build_itinerary(
         file_name=path.name,
         message=message,
         itinerary=itinerary,
+    )
+
+
+# Formatos de data aceitos: ISO (preferido, pedido no schema/prompt) e os
+# formatos brasileiros mais comuns, por robustez quando o LLM repassa a data
+# como o usuário digitou.
+_DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d/%m/%y", "%d-%m-%Y")
+
+
+def _parse_date(text: str) -> date | None:
+    """Converte uma string de data em `date`, aceitando ISO (AAAA-MM-DD) e os
+    formatos brasileiros comuns (DD/MM/AAAA, DD/MM/AA, DD-MM-AAAA).
+
+    Função pura e determinística (sem LLM/rede): retorna `None` se nenhum
+    formato conhecido casar, deixando a decisão de recusa para a tool.
+    """
+    text = text.strip()
+    for fmt in _DATE_FORMATS:
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def calculate_trip_days(start_date: str, end_date: str) -> TripDaysResult:
+    """Valida as datas de ida/volta da viagem e calcula a duração em dias.
+
+    Use esta ferramenta quando o usuário informar as datas de ida (chegada) e
+    volta (saída) em vez do número de dias. Passe as datas de preferência no
+    formato ISO `AAAA-MM-DD` (ex.: "2026-07-20"). A tool valida, de forma
+    determinística, que:
+    (1) ambas as datas são posteriores à data atual;
+    (2) a data de ida é anterior ou igual à data de volta.
+
+    Se alguma validação falhar, retorna `valid=False`, `num_days=0` e uma
+    `message` em português explicando o problema — nesse caso, repasse a
+    mensagem ao usuário e peça datas corrigidas, sem montar o itinerário. Se as
+    datas forem válidas, retorna `valid=True` e `num_days` (contagem inclusiva,
+    considerando o dia de chegada e o de saída) para ser usado como duração da
+    viagem em `build_itinerary`.
+    """
+    start = _parse_date(start_date)
+    end = _parse_date(end_date)
+
+    if start is None or end is None:
+        return TripDaysResult(
+            start_date=start_date,
+            end_date=end_date,
+            valid=False,
+            num_days=0,
+            message=(
+                "Não consegui entender as datas informadas. Por favor, mande a data de "
+                "ida e a de volta num formato claro, como AAAA-MM-DD (ex.: 2026-07-20) "
+                "ou DD/MM/AAAA (ex.: 20/07/2026)."
+            ),
+        )
+
+    today = date.today()
+    if start <= today or end <= today:
+        return TripDaysResult(
+            start_date=start.isoformat(),
+            end_date=end.isoformat(),
+            valid=False,
+            num_days=0,
+            message=(
+                "As datas da viagem precisam ser posteriores à data de hoje. Confira as "
+                "datas de ida e volta e me mande datas futuras, por favor."
+            ),
+        )
+
+    if start > end:
+        return TripDaysResult(
+            start_date=start.isoformat(),
+            end_date=end.isoformat(),
+            valid=False,
+            num_days=0,
+            message=(
+                "A data de ida precisa ser anterior ou igual à data de volta. Confira a "
+                "ordem das datas e me mande novamente, por favor."
+            ),
+        )
+
+    num_days = (end - start).days + 1
+    day_word = "dia" if num_days == 1 else "dias"
+    return TripDaysResult(
+        start_date=start.isoformat(),
+        end_date=end.isoformat(),
+        valid=True,
+        num_days=num_days,
+        message=(
+            f"Sua viagem terá {num_days} {day_word} (de {start.isoformat()} a "
+            f"{end.isoformat()}, contando o dia de chegada e o de saída)."
+        ),
     )

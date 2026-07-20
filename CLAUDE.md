@@ -15,6 +15,10 @@ Funcionalidades do agente:
   Como a Wikipédia é um texto estático, esses eventos são tratados como
   **sugestões sem data exata**, sempre acompanhados de um aviso para o usuário
   confirmar dia/horário no site oficial de cada evento.
+- Descobrir a duração da viagem: quando o usuário informa as datas de ida e
+  volta em vez do número de dias, validar as datas (futuras e na ordem correta)
+  e calcular a quantidade de dias (contagem inclusiva) usada na montagem do
+  roteiro.
 - Montar um itinerário dia a dia (manhã/tarde/noite), agrupando atrações
   próximas para reduzir deslocamento.
 - Gerar um arquivo `.md` com o itinerário em `output/`. **O roteiro não é
@@ -101,6 +105,15 @@ Todas já implementadas e registradas em `nodes.py`:
 - `search_events_and_festivals(destination, period=None)` — busca na Wikipédia
   (`Festivals in <destino>` → `Culture of <destino>` → `<destino>`). Retorna
   eventos como sugestões sem data + um `disclaimer` obrigatório.
+- `calculate_trip_days(start_date, end_date)` — valida as datas de ida/volta e
+  calcula a duração da viagem. Usada quando o usuário informa as datas em vez do
+  número de dias. Validação **100% determinística** (stdlib `datetime`, sem LLM):
+  aceita datas em ISO (`AAAA-MM-DD`) e formatos BR (`DD/MM/AAAA`), exige que
+  ambas sejam posteriores à data atual e que a ida seja anterior ou igual à
+  volta. Em caso de falha, retorna `valid=False` + `message` de recusa em
+  português; em caso de sucesso, retorna `num_days` (contagem **inclusiva**:
+  conta o dia de chegada e o de saída) para alimentar o `build_itinerary`. É uma
+  tool pura, não altera o estado.
 - `build_itinerary(destination, num_days)` — monta o roteiro e **grava o `.md`**
   em `output/`. As atrações/eventos vêm do estado, injetados em `call_tools`, e
   ficam **ocultos do modelo via `InjectedToolArg`** — o schema exposto ao LLM tem
@@ -155,7 +168,8 @@ mini-projeto-ItinerAI/
 - `state.py` define o estado do grafo (`AgentState`) com `pydantic.BaseModel`:
   `messages`, `destination`, `tourist_attractions`, `traditional_events` e
   `itinerary`. A duração da viagem (`num_days`) não fica no estado — o agente a
-  obtém na conversa e passa direto para `build_itinerary`. Também é o lugar dos
+  obtém na conversa (diretamente ou via `calculate_trip_days`, a partir das
+  datas de ida/volta) e passa direto para `build_itinerary`. Também é o lugar dos
   modelos de domínio usados pelas tools (`TouristAttraction`,
   `TraditionalEvent`, `Itinerary`/`ItineraryDay`/`ItinerarySlot`). Atrações e
   eventos têm um campo `location` (exato ou provável) usado no agrupamento por

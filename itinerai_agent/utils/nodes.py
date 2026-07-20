@@ -6,12 +6,18 @@ from itinerai_agent.utils.prompts import AGENT_SYSTEM_PROMPT
 from itinerai_agent.utils.state import AgentState
 from itinerai_agent.utils.tools import (
     build_itinerary,
+    calculate_trip_days,
     search_events_and_festivals,
     search_tourist_attractions,
 )
 from itinerai_agent.utils.validation import validate_user_input
 
-_TOOLS = [search_tourist_attractions, search_events_and_festivals, build_itinerary]
+_TOOLS = [
+    search_tourist_attractions,
+    search_events_and_festivals,
+    calculate_trip_days,
+    build_itinerary,
+]
 _TOOLS_BY_NAME = {tool.__name__: tool for tool in _TOOLS}
 
 _llm = ChatGroq(model="llama-3.1-8b-instant")
