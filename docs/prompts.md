@@ -425,6 +425,38 @@ Você:
 
 ---
 
+## Ajuste da apresentação: asteriscos para funcionalidades ausentes
+
+* Data: 2026-07-20
+* Autor: joaopuel
+* Tipo: Documentação / Ajuste
+
+### Prompt original
+```
+#Instrução
+Ajuste a apresetação do projeto para apresentar correamtente as funcionalidade
+
+#Detalhes
+1. No arquivo, docs/appresentacao, adicione um aterisco vemelho nas menções a preferências do usuários e a ferramenta search_local_events. Essas funcionalidades não estão presentes nesta versão do agente para não sobrecarregar a LLM fraca
+2. Também adicone dois ateriscos na ferramenta save_itinerary(), essa ferramente foi mesclada com a ferramenta build_itinerary para também não sobrecarregar o contexto
+3. Adicione essas observações, mas não altere o restante da apresentação, pois o projeto já foi apresentado com a mesma
+```
+
+---
+
+## Apresentação: três asteriscos nas informações de ida/volta
+
+* Data: 2026-07-20
+* Autor: joaopuel
+* Tipo: Documentação / Ajuste
+
+### Prompt original
+```
+Adicione também tres asteriscos nas informações de ida/volta, funcionalidade também removida para não sobrecarregar o contexto. Foi substiuido por apenas informar a duração da viagem em dias
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>

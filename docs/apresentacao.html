@@ -299,6 +299,13 @@
   [data-reveal]{ opacity:0; transform:translateY(14px); animation:reveal .7s ease forwards; }
   @media (prefers-reduced-motion: reduce){ [data-reveal]{ opacity:1; transform:none; animation:none; } }
   @keyframes reveal{ to{ opacity:1; transform:none; } }
+
+  /* Marcadores de funcionalidade ausente nesta versão (anotações pós-apresentação) */
+  .na-mark{ color:var(--brick); font-weight:800; }
+  .na-note{
+    max-width:1240px; margin:.55em auto 0; width:100%;
+    font-family:var(--font-mono); font-size:.72rem; line-height:1.5; color:var(--paper-dim);
+  }
 </style>
 
 <div class="deck" id="deck">
@@ -320,15 +327,17 @@
             <dd>A partir do destino e das datas da viagem, o ItinerAI pesquisa atrações e eventos locais e distribui tudo em um roteiro dia a dia, pronto para seguir.</dd>
           </div>
         </dl>
+        <p class="na-note" data-reveal style="animation-delay:.42s"><span class="na-mark">*</span>Preferências do usuário não fazem parte desta versão do agente — removidas para não sobrecarregar a LLM fraca.</p>
+        <p class="na-note" data-reveal style="animation-delay:.46s"><span class="na-mark">***</span>Datas de ida e volta foram removidas desta versão — agora informa-se apenas a duração da viagem em dias, para não sobrecarregar o contexto.</p>
       </div>
 
       <div class="pass" data-reveal style="animation-delay:.36s">
         <div class="stub stub--entrada">
           <span class="stub-label">Entrada</span>
           <div class="field"><span>Destino</span><b>Lisboa, PT</b></div>
-          <div class="field"><span>Ida</span><b>04 mar 2026</b></div>
-          <div class="field"><span>Volta</span><b>07 mar 2026</b></div>
-          <div class="field"><span>Preferências</span><b>história, gastronomia</b></div>
+          <div class="field"><span>Ida<sup class="na-mark">***</sup></span><b>04 mar 2026</b></div>
+          <div class="field"><span>Volta<sup class="na-mark">***</sup></span><b>07 mar 2026</b></div>
+          <div class="field"><span>Preferências<sup class="na-mark">*</sup></span><b>história, gastronomia</b></div>
         </div>
         <div class="stub stub--saida">
           <span class="stub-label">Saída · roteiro.md</span>
@@ -356,7 +365,7 @@
         <span class="stop-kind">Decolagem</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12l19-8-6 8 6 8-19-8z"/></svg>
         <h3>Entrada do usuário</h3>
-        <p>Destino, data de ida/volta e preferências informados pelo viajante.</p>
+        <p>Destino, data de ida/volta<sup class="na-mark">***</sup> e preferências<sup class="na-mark">*</sup> informados pelo viajante.</p>
       </div>
       <div class="leg"><svg viewBox="0 0 46 24"><line x1="2" y1="12" x2="38" y2="12" stroke="currentColor" stroke-dasharray="4 5" opacity=".5"/><path d="M38 6l8 6-8 6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
 
@@ -364,7 +373,7 @@
         <span class="stop-kind">Preparação</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/></svg>
         <h3>Estado do agente</h3>
-        <p>Guarda destino, período e preferências no contexto da execução.</p>
+        <p>Guarda destino, período e preferências<sup class="na-mark">*</sup> no contexto da execução.</p>
       </div>
       <div class="leg"><svg viewBox="0 0 46 24"><line x1="2" y1="12" x2="38" y2="12" stroke="currentColor" stroke-dasharray="4 5" opacity=".5"/><path d="M38 6l8 6-8 6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
 
@@ -379,7 +388,7 @@
       <div class="stop">
         <span class="stop-kind">Escala 2</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
-        <h3>search_local_events()</h3>
+        <h3>search_local_events()<sup class="na-mark">*</sup></h3>
         <p>Verifica eventos e shows acontecendo na janela da viagem.</p>
       </div>
       <div class="leg"><svg viewBox="0 0 46 24"><line x1="2" y1="12" x2="38" y2="12" stroke="currentColor" stroke-dasharray="4 5" opacity=".5"/><path d="M38 6l8 6-8 6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
@@ -395,12 +404,15 @@
       <div class="stop">
         <span class="stop-kind">Pouso</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3v14l12-5-12-5z" transform="rotate(0 12 12)"/><path d="M4 21h16"/></svg>
-        <h3>save_itinerary()</h3>
+        <h3>save_itinerary()<sup class="na-mark">**</sup></h3>
         <p>Gera o roteiro final estruturado em .md, pronto para o viajante.</p>
       </div>
     </div>
 
     <p class="legend-note" data-reveal style="animation-delay:.3s"><span class="dot"></span> cada escala é um nó do grafo; as arestas decidem o próximo passo com base no estado atual</p>
+    <p class="na-note" data-reveal style="animation-delay:.36s"><span class="na-mark">*</span>Preferências do usuário e a busca de eventos (search_local_events) não fazem parte desta versão do agente — removidas para não sobrecarregar a LLM fraca.</p>
+    <p class="na-note" data-reveal style="animation-delay:.4s"><span class="na-mark">**</span>save_itinerary() foi mesclada com build_itinerary() para não sobrecarregar o contexto.</p>
+    <p class="na-note" data-reveal style="animation-delay:.44s"><span class="na-mark">***</span>Datas de ida e volta foram removidas desta versão — agora informa-se apenas a duração da viagem em dias, para não sobrecarregar o contexto.</p>
   </section>
 
 </div>
