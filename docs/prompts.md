@@ -310,6 +310,52 @@ Adicionar novas validações da entrada do usuário
 
 ---
 
+## Memória persistente do agente (SQLite)
+
+* Data: 2026-07-20
+* Autor: joaopuel
+* Tipo: Implementação
+
+### Prompt original
+```
+#Instrução
+Adicione memória persistente do agente
+
+#Detalhes
+1. Utilize o SQLlite
+2. Salve informações das últimas conversas, como destino, datas e quantidade de dias de viagem
+3. As informações devem ser salvas assim logo depois do nó de validação, para que, caso ocorra algum erro na busca de atrações ou geração de intinerário, o processo possa ser iniciado novamente de forma mais fácil 
+4. Atualize o CLAUDE.md com a nova funcionalidade
+```
+
+---
+
+## Correção: memória sobrescrita e exibição da última viagem no início
+
+* Data: 2026-07-20
+* Autor: joaopuel
+* Tipo: Correção de bug / Ajuste
+
+### Prompt original
+```
+O salvamento de memória não funcionou. Interação com o agente:
+
+ItinerAI: Parabéns! Seu itinerário para a Alemanha está pronto! Por favor, verifique o arquivo itinerario-alemanha-7-dias.md em output/ para ver o roteiro detalhado da sua viagem. Lembre-se de sempre verificar as informações de eventos e festivais no site oficial antes de confirmar. Boa viagem!
+Você: sair
+(.venv) PS C:\git\mini-projeto-ItinerAI> python main.py
+ItinerAI: Sou ItinerAi, o seu melhor companheiro de viagem.
+(digite 'sair' para encerrar)
+ItinerAI: Qual o seu próximo destino?
+Você: Qual foi meu último destino?
+ItinerAI: Não posso encontrar informações sobre o seu último destino. Posso ajudar com outra coisa?
+Você: sair
+
+
+Analise o que pode ter acontecido e faça as alterações
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>
