@@ -235,6 +235,26 @@ Please adjust your prompt. See 'failed_generation' for more details.", 'type':
 
 ---
 
+## Ferramenta de geração do arquivo .md do itinerário
+
+* Data: 2026-07-19
+* Autor: joaopuel
+* Tipo: Implementação
+
+### Prompt original
+```
+#Instrução
+Implementar ferramenta de criação de arquivo .md com o itinerário
+
+#Detalhes
+1. Criar a ferramenta para criar o arquivo .md em output/
+2. O nome de cada arquivo deve ser referente ao destino + os dias de viagem
+3. Caso já exista documeto com o mesmo nome, adicionar um número sequencial como no padrão do windows, como "(2)" para o segundo, "(3)" para o terceiro e assim sucessivamente
+4. O agente não passa mais a logar o itinerário no terminal, apenas um aviso: "O arquivo  <file-name> com o itinerário para seu destino for cirado em output/
+```
+
+---
+
 ## <Resumo-do-Prompt>
 
 * Data: <data>

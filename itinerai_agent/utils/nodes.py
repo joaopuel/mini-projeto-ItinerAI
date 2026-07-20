@@ -59,16 +59,24 @@ def call_tools(state: AgentState) -> dict:
             args["events"] = state.traditional_events
 
         result = tool_fn(**args)
-        tool_messages.append(ToolMessage(content=result.model_dump_json(), tool_call_id=call["id"]))
 
         if call["name"] == "search_tourist_attractions":
             update["destination"] = result.destination
             update["tourist_attractions"] = result.attractions
+            tool_content = result.model_dump_json()
         elif call["name"] == "search_events_and_festivals":
             update["destination"] = result.destination
             update["traditional_events"] = result.events
+            tool_content = result.model_dump_json()
         elif call["name"] == "build_itinerary":
-            update["itinerary"] = result
+            update["itinerary"] = result.itinerary
+            # Só o aviso volta para o LLM: o itinerário completo fica no arquivo
+            # e não deve ser listado no terminal.
+            tool_content = result.message
+        else:
+            tool_content = result.model_dump_json()
+
+        tool_messages.append(ToolMessage(content=tool_content, tool_call_id=call["id"]))
 
     update["messages"] = tool_messages
     return update

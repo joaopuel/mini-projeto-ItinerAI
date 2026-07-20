@@ -1,7 +1,10 @@
 """Tools do agente ItinerAI (busca de pontos turísticos, busca de eventos,
 escrita do itinerário .md)."""
 
+import re
+import unicodedata
 from collections import Counter
+from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
 
@@ -50,6 +53,10 @@ ITINERARY_OVERFLOW_NOTE = (
     "Havia mais atrações do que cabe no período informado; priorizamos as principais em "
     "cada dia."
 )
+
+# Pasta onde os itinerários .md são gravados. Resolvida a partir da raiz do
+# projeto (não do cwd), para funcionar de qualquer diretório de execução.
+OUTPUT_DIR = Path(__file__).resolve().parents[2] / "output"
 
 # temperature=0 deixa a extração determinística e reduz muito o risco de o
 # modelo entrar em loop de repetição e gerar um tool call malformado.
@@ -101,6 +108,18 @@ class EventSearchResult(BaseModel):
     found: bool
     events: list[TraditionalEvent] = Field(default_factory=list)
     disclaimer: str = EVENT_DATES_DISCLAIMER
+
+
+class ItineraryFileResult(BaseModel):
+    """Resultado da geração do arquivo .md do itinerário. `message` é o aviso
+    pronto para o usuário; `itinerary` guarda o roteiro completo (vai para o
+    estado, não para o terminal)."""
+
+    destination: str
+    num_days: int
+    file_name: str
+    message: str
+    itinerary: Itinerary
 
 
 def _fetch_wikipedia_page(title: str) -> tuple[str, str] | None:
@@ -360,27 +379,18 @@ def _distribute_across_days(
     return days, note
 
 
-def build_itinerary(
+def assemble_itinerary(
     destination: str,
     num_days: int,
-    attractions: Annotated[list[TouristAttraction] | None, InjectedToolArg] = None,
-    events: Annotated[list[TraditionalEvent] | None, InjectedToolArg] = None,
+    attractions: list[TouristAttraction] | None = None,
+    events: list[TraditionalEvent] | None = None,
 ) -> Itinerary:
-    """Monta o itinerário dia a dia da viagem para um destino e uma duração.
+    """Monta o modelo `Itinerary` dia a dia a partir das atrações e eventos.
 
-    Forneça apenas `destination` e `num_days` (número inteiro de dias). As
-    atrações e os eventos já encontrados pelas buscas são fornecidos
-    automaticamente — NÃO os repasse.
-
-    As atrações são agrupadas por proximidade e divididas pelos `num_days`
-    dias da viagem, com no máximo 3 por período (manhã/tarde/noite). Eventos e
-    festivais entram como sugestões (sem data fixa), acompanhados do aviso
-    para confirmar dia e horário no site oficial de cada um. Quando há poucas
-    atrações para a duração, o itinerário traz uma observação (`note`) e pode
-    sugerir revisitas.
-
-    `attractions`/`events` são injetados pelo grafo (a partir do estado) e por
-    isso ficam ocultos do modelo via `InjectedToolArg`.
+    Função pura (sem I/O de arquivo): agrupa as atrações por proximidade,
+    divide-as pelos `num_days` dias (no máximo 3 por período), e adiciona os
+    eventos como sugestões sem data fixa. É o núcleo testável usado por
+    `build_itinerary`.
     """
     attractions = attractions or []
     events = events or []
@@ -396,4 +406,122 @@ def build_itinerary(
         note=note,
         event_suggestions=events,
         disclaimer=EVENT_DATES_DISCLAIMER if events else "",
+    )
+
+
+def render_itinerary_markdown(itinerary: Itinerary) -> str:
+    """Renderiza um `Itinerary` como texto markdown para o arquivo .md.
+
+    Função pura: produz título, observação (quando houver), os dias com seus
+    períodos e atrações, e a seção de sugestões de eventos/festivais fechando
+    com o aviso (disclaimer). Todo o conteúdo em português.
+    """
+    day_word = "dia" if itinerary.num_days == 1 else "dias"
+    lines: list[str] = [
+        f"# Roteiro de viagem — {itinerary.destination}",
+        "",
+        f"*{itinerary.num_days} {day_word} de viagem*",
+        "",
+    ]
+
+    if itinerary.note:
+        lines += [f"> {itinerary.note}", ""]
+
+    for day in itinerary.days:
+        header = f"## Dia {day.day}"
+        if day.area:
+            header += f" — {day.area}"
+        lines += [header, ""]
+        if day.slots:
+            for slot in day.slots:
+                lines.append(f"### {slot.period}")
+                lines += [f"- {name}" for name in slot.attractions]
+                lines.append("")
+        else:
+            lines += ["_Dia livre para descansar ou explorar por conta própria._", ""]
+
+    if itinerary.event_suggestions:
+        lines += ["## Sugestões de eventos e festivais", ""]
+        for event in itinerary.event_suggestions:
+            local = f" ({event.location})" if event.location else ""
+            lines.append(f"- **{event.name}**{local} — {event.description}")
+        lines.append("")
+        if itinerary.disclaimer:
+            lines += [f"> {itinerary.disclaimer}", ""]
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _slugify(text: str) -> str:
+    """Converte um texto em um slug ASCII seguro para nome de arquivo
+    (minúsculas, sem acentos, palavras separadas por hífen)."""
+    normalized = unicodedata.normalize("NFKD", text)
+    ascii_text = normalized.encode("ascii", "ignore").decode("ascii").lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_text).strip("-")
+    return slug or "destino"
+
+
+def _itinerary_file_stem(destination: str, num_days: int) -> str:
+    """Nome-base (sem extensão) do arquivo do itinerário: destino + dias."""
+    day_word = "dia" if num_days == 1 else "dias"
+    return f"itinerario-{_slugify(destination)}-{num_days}-{day_word}"
+
+
+def _resolve_output_path(stem: str, output_dir: Path | None = None) -> Path:
+    """Resolve o caminho do arquivo .md em `output_dir`, criando a pasta se
+    preciso. Se já existir um arquivo com o mesmo nome, acrescenta um número
+    sequencial no padrão do Windows: `stem (2).md`, `stem (3).md`, etc.
+
+    `output_dir` cai para `OUTPUT_DIR` quando omitido (lido em tempo de
+    chamada, o que também facilita os testes).
+    """
+    if output_dir is None:
+        output_dir = OUTPUT_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
+    candidate = output_dir / f"{stem}.md"
+    counter = 2
+    while candidate.exists():
+        candidate = output_dir / f"{stem} ({counter}).md"
+        counter += 1
+    return candidate
+
+
+def build_itinerary(
+    destination: str,
+    num_days: int,
+    attractions: Annotated[list[TouristAttraction] | None, InjectedToolArg] = None,
+    events: Annotated[list[TraditionalEvent] | None, InjectedToolArg] = None,
+) -> ItineraryFileResult:
+    """Monta o itinerário da viagem e grava um arquivo .md em `output/`.
+
+    Forneça apenas `destination` e `num_days` (número inteiro de dias). As
+    atrações e os eventos já encontrados pelas buscas são fornecidos
+    automaticamente — NÃO os repasse.
+
+    As atrações são agrupadas por proximidade e divididas pelos `num_days`
+    dias (no máximo 3 por período: manhã, tarde e noite); eventos e festivais
+    entram como sugestões sem data fixa. O arquivo é nomeado a partir do
+    destino e da duração; se já existir um com o mesmo nome, ganha um número
+    sequencial. Retorna a mensagem de confirmação com o nome do arquivo — o
+    itinerário completo NÃO é exibido no terminal.
+
+    `attractions`/`events` são injetados pelo grafo (a partir do estado) e por
+    isso ficam ocultos do modelo via `InjectedToolArg`.
+    """
+    num_days = max(1, int(num_days))
+    itinerary = assemble_itinerary(destination, num_days, attractions, events)
+
+    markdown = render_itinerary_markdown(itinerary)
+    path = _resolve_output_path(_itinerary_file_stem(destination, num_days))
+    path.write_text(markdown, encoding="utf-8")
+
+    message = (
+        f"O arquivo {path.name} com o itinerário para seu destino foi criado em output/"
+    )
+    return ItineraryFileResult(
+        destination=destination,
+        num_days=num_days,
+        file_name=path.name,
+        message=message,
+        itinerary=itinerary,
     )
