@@ -35,7 +35,11 @@ neste documento sem alinhar antes com o usuário.
 - **LangGraph** — orquestração do agente como um grafo de estados.
 - **pydantic** — definição do estado do grafo e de todos os modelos de dados
   (ex.: pontos turísticos, dias do itinerário).
-- **Groq** — modelo `llama-3.1-8b-instant` como LLM do agente.
+- **Groq** — modelo `openai/gpt-oss-120b` como LLM do agente (e como LLM de
+  extração em `tools.py`). O `llama-3.1-8b-instant` original foi desligado pela
+  Groq em 16/08/2026; `openai/gpt-oss-120b` está na camada gratuita (limites de
+  taxa: 30 req/min, 8K tokens/min, 1K req/dia, 200K tokens/dia). A
+  externalização do nome do modelo para variável de ambiente é a tarefa T03.
 - Autenticação com a Groq via variável de ambiente `GROQ_API_KEY` (nunca
   hardcode a chave; carregue de `.env`/ambiente).
 - **requests + beautifulsoup4** — busca e parsing de páginas da Wikipédia,
@@ -56,18 +60,27 @@ nós por etapa:
   que podem falhar; em seguida segue para `call_llm`. Ver "Memória persistente"
   abaixo.
 - `call_llm` invoca o LLM com as tools de `tools.py` vinculadas via
-  `bind_tools`; também recupera as tool calls que o modelo fraco eventualmente
-  "vaza" como texto (ver "Robustez com o `llama-3.1-8b-instant`" abaixo).
-- Uma aresta condicional (`should_call_tools`) verifica se a resposta do LLM
-  pediu alguma tool: se sim, roteia para `call_tools`; se não, vai para
-  `END`.
-- `call_tools` executa a(s) tool(s) pedidas e volta para `call_llm`, que
-  formula a resposta final ao usuário (inclusive mensagens de "não
-  encontrado").
+  `bind_tools`; também recupera as tool calls que o modelo eventualmente
+  "vaza" como texto (ver "Robustez em tool-calling" abaixo).
+- Uma aresta condicional (`route_after_llm`) tem **3 saídas**: sem tool call →
+  `END` (condição de parada); tool call `search_tourist_attractions` → o
+  fan-out da busca (`dispatch_search`); qualquer outra tool (hoje só
+  `build_itinerary`) → `call_tools`.
+- `call_tools` executa `build_itinerary` (e outras tools que venham a existir) e
+  volta para `call_llm`. **A busca de atrações não passa por `call_tools`** — é
+  sempre roteada para o fan-out.
+- `dispatch_search → (fetch_tourism_page ∥ fetch_destination_page) →
+  merge_pages` é a **paralelização simples** exigida pelo §4.2 (ver
+  "Paralelização da busca da Wikipédia" abaixo). `merge_pages` volta para
+  `call_llm`, que formula a resposta final (inclusive "não encontrado").
 
-Qualquer nova funcionalidade deve seguir o mesmo padrão: implementar como
-tool em `tools.py` e registrá-la na lista de tools vinculada ao LLM em
-`nodes.py`, em vez de criar nós fixos por etapa.
+Para novas *ferramentas*, siga o padrão: implementar como tool em `tools.py` e
+registrá-la na lista vinculada ao LLM em `nodes.py`, roteando por `call_tools`
+— sem criar nós fixos por etapa. A **exceção deliberada** é a paralelização do
+§4.2: a busca da Wikipédia foi quebrada em nós fixos de fan-out/fan-in
+justamente porque o requisito é sobre a *topologia do grafo*, não sobre a
+ferramenta. `search_tourist_attractions` continua registrada (é o que o
+`bind_tools` inspeciona) e existe como especificação sequencial em `tools.py`.
 
 ## Validação de entrada (`validation.py`)
 
@@ -83,9 +96,9 @@ informativa em português (e sem acionar nenhuma tool):
 
 Regras de design (não remover sem alinhar):
 
-- **Detecção 100% por regex, sem nenhuma chamada ao LLM.** O
-  `llama-3.1-8b-instant` é fraco; a validação precisa ser determinística,
-  barata e previsível, sem sobrecarregar o modelo.
+- **Detecção 100% por regex, sem nenhuma chamada ao LLM.** A validação precisa
+  ser determinística, barata e previsível, sem sobrecarregar o modelo nem
+  depender do julgamento dele.
 - Os padrões de **prompt injection** cobrem os 6 idiomas mais falados:
   português, inglês, espanhol, francês, mandarim e híndi.
 - O **filtro de idioma** barra apenas scripts não-latinos (mandarim/híndi), que
@@ -144,7 +157,11 @@ Regras de design (não alterar sem alinhar):
 Todas já implementadas e registradas em `nodes.py`:
 
 - `search_tourist_attractions(destination)` — busca na Wikipédia
-  (`Tourism in <destino>` → `<destino>`).
+  (`Tourism in <destino>` → `<destino>`). No grafo roda como fan-out/fan-in
+  paralelo (ver "Paralelização da busca da Wikipédia"); a função em `tools.py` é
+  a especificação sequencial e o que o `bind_tools` inspeciona. A unidade por
+  ramo é `fetch_page_attractions(title, destination, kind)` (fetch + extração,
+  com guarda mínima de `Exception` → `found=False`).
 - `build_itinerary(destination, num_days)` — monta o roteiro e **grava o `.md`**
   em `output/`. Agrupa as atrações por proximidade e as distribui pelos
   `num_days` dias (**no máximo 3 atrações por dia**, sem divisão por período do
@@ -159,16 +176,66 @@ Todas já implementadas e registradas em `nodes.py`:
 O nome do arquivo gerado segue o padrão `itinerario-<destino>-<n>-dias.md`; se
 já existir, ganha sufixo sequencial no padrão Windows (` (2)`, ` (3)`, …).
 
-## Robustez com o `llama-3.1-8b-instant`
+## Paralelização da busca da Wikipédia (`nodes.py`)
 
-O modelo é pequeno e frágil em tool-calling. Regras aprendidas (não remover sem
-motivo — cada uma corrige um `tool_use_failed`/crash real):
+A busca sequencial de páginas da Wikipédia (`Tourism in <destino>` e, no
+fallback, `<destino>`) é modelada como um **fan-out/fan-in no grafo** — a
+"paralelização simples" exigida pelo §4.2. Regras de design (não alterar sem
+alinhar):
+
+- **`dispatch_search`** é a origem única do fan-out. Extrai `destination` e
+  `tool_call_id` da tool call `search_tourist_attractions` e os guarda no
+  pydantic `AgentState.pending_search`, para os nós seguintes não reprocessarem
+  `messages`.
+- **`fetch_tourism_page`** e **`fetch_destination_page`** rodam em paralelo (o
+  LangGraph executa nós de um mesmo superstep num `ThreadPoolExecutor`; a I/O de
+  rede e a chamada Groq liberam o GIL). Cada um faz fetch + extração via
+  `fetch_page_attractions` e escreve **uma chave** (`tourism` / `destination`)
+  em `AgentState.page_results`.
+- **`page_results`** é `Annotated[dict[str, WikipediaPageResult],
+  _merge_page_results]`: o reducer mescla por chave (`{**existing, **new}`).
+  Como os dois ramos sempre reescrevem sua própria chave a cada busca, um retry
+  do ReAct ou um novo turno sobrescreve tudo — resultados antigos nunca vazam,
+  sem precisar de nó de reset.
+- **`merge_pages`** é o fan-in e é **100% determinístico, sem LLM**: escolhe a
+  página que rendeu atrações, priorizando `Tourism in <destino>`; senão
+  `<destino>`; senão `found=False`. Devolve o **mesmo** `TouristAttractionSearchResult`
+  (e o mesmo formato de `ToolMessage`, com o `tool_call_id` da busca) que
+  `call_tools` produzia antes. A extração (que usa o LLM) fica nos ramos,
+  **fora** do nó de consolidação — mantém a "escolha da melhor página"
+  determinística.
+- Comportamento observável idêntico ao da busca sequencial: mesmas atrações,
+  mesmo `source_url`, mesma mensagem de "não encontrado". O custo é 1 chamada a
+  mais ao LLM de extração por busca (as duas páginas são sempre extraídas), mas
+  em paralelo (sem custo de latência).
+- Resiliência de rede completa (timeout/retry/backoff/log) **não** está aqui —
+  é a tarefa T02/#13. `fetch_page_attractions` só tem a guarda mínima
+  `try/except → found=False` para não regredir o caminho feliz (agora as duas
+  páginas são sempre buscadas).
+- `main.py` passa `recursion_limit=50` no `graph.invoke` — o fan-out consome
+  alguns supersteps a mais por busca.
+
+## Robustez em tool-calling
+
+Estas regras nasceram com o `llama-3.1-8b-instant` (modelo pequeno e frágil,
+hoje substituído por `openai/gpt-oss-120b`). O `gpt-oss-120b` erra muito menos,
+mas as proteções continuam — cada uma corrige um `tool_use_failed`/crash real e
+o custo delas é baixo (não remover sem motivo):
 
 - O LLM de extração (`_extraction_llm`) usa `temperature=0`; os prompts de
   extração pedem no máximo ~15 itens e proíbem repetição (evita loops que
   truncam o JSON).
-- Falhas de geração estruturada são tratadas: as extrações caem para vazio e
-  `call_llm` responde com mensagem amigável, em vez de derrubar o agente.
+- **A extração NÃO usa `ChatGroq.with_structured_output`.** Com o
+  `openai/gpt-oss-120b` esse método força `tool_choice` e o modelo devolve o
+  JSON como **texto** (não como tool call), o que a Groq rejeita com
+  `tool_use_failed` ("model did not call a tool"). Em vez disso,
+  `_invoke_structured` (em `tools.py`) pede o formato do JSON no próprio prompt
+  de extração e faz o parse do texto da resposta (`_extract_json_payload`
+  tolera cercas ` ```json ` e texto ao redor; lista "solta" é embrulhada no
+  campo único do schema), validando com `schema.model_validate`.
+- Falhas de extração são tratadas: `_invoke_structured` devolve `None` em
+  qualquer erro, as extrações caem para vazio e `call_llm` responde com
+  mensagem amigável, em vez de derrubar o agente.
 - Mantenha os schemas das tools **pequenos**; para dados grandes vindos do
   estado, use `InjectedToolArg` (nunca exponha listas aninhadas ao modelo).
 - **Recuperação de tool calls "vazadas" como texto:** o modelo às vezes emite a
@@ -180,7 +247,11 @@ motivo — cada uma corrige um `tool_use_failed`/crash real):
   chamadas em `tool_calls` reais por regex determinístico e **descarta um
   `build_itinerary` prematuro** quando há uma busca no mesmo lote (a busca
   precisa rodar antes); se nada for recuperável (JSON truncado, ferramenta
-  desconhecida), troca o texto cru por um aviso amigável.
+  desconhecida), troca o texto cru por um aviso amigável. Esse descarte do
+  `build_itinerary` prematuro (helper `_drop_premature_build_itinerary`) vale
+  também para tool calls **estruturados** — `call_llm` o aplica antes de
+  `route_after_llm`, para que `merge_pages` responda sempre a exatamente um
+  `tool_call_id`.
 - Para reduzir o gatilho na origem, o `AGENT_SYSTEM_PROMPT` orienta o modelo a
   chamar **uma ferramenta por vez**, a nunca escrever a chamada como texto e a
   sempre usar `search_tourist_attractions` **antes** de `build_itinerary`.
@@ -200,7 +271,7 @@ mini-projeto-ItinerAI/
 │   │   ├── validation.py   # validação de entrada do usuário (anti prompt injection, idioma, URLs)
 │   │   ├── memory.py       # memória persistente da última viagem em SQLite (retomada)
 │   │   ├── prompts.py      # prompts do agente e das extrações
-│   │   ├── nodes.py        # funções de nó do grafo (validação, persistência, chamada ao LLM, execução de tools)
+│   │   ├── nodes.py        # funções de nó do grafo (validação, persistência, LLM, tools, fan-out da busca)
 │   │   └── state.py        # definição do estado do grafo (modelos pydantic)
 │   ├── __init__.py
 │   └── agent.py            # construção/compilação do StateGraph
@@ -217,12 +288,16 @@ mini-projeto-ItinerAI/
 - Todo o código do agente fica dentro de `itinerai_agent/`, seguindo o padrão
   `my_agent` da documentação do LangGraph.
 - `state.py` define o estado do grafo (`AgentState`) com `pydantic.BaseModel`:
-  `messages`, `destination`, `num_days`, `tourist_attractions` e `itinerary`. A
-  duração (`num_days`) fica no estado — além de ser passada a `build_itinerary`
-  — para poder ser persistida pela memória e permitir a retomada da conversa
-  (populada em `call_tools` a partir de `build_itinerary`). Também é o lugar dos
-  modelos de domínio usados pelas tools (`TouristAttraction`,
-  `Itinerary`/`ItineraryDay`). As atrações têm um campo `location` (exato ou
+  `messages`, `destination`, `num_days`, `tourist_attractions`, `itinerary`,
+  `pending_search` e `page_results`. A duração (`num_days`) fica no estado —
+  além de ser passada a `build_itinerary` — para poder ser persistida pela
+  memória e permitir a retomada da conversa (populada em `call_tools` a partir
+  de `build_itinerary`). `pending_search` (modelo `PendingSearch`) e
+  `page_results` (`dict[str, WikipediaPageResult]` com o reducer
+  `_merge_page_results`) suportam o fan-out/fan-in da busca — ver
+  "Paralelização da busca da Wikipédia". Também é o lugar dos modelos de domínio
+  usados pelas tools (`TouristAttraction`, `Itinerary`/`ItineraryDay`,
+  `WikipediaPageResult`). As atrações têm um campo `location` (exato ou
   provável) usado no agrupamento por proximidade.
 - `tools.py` concentra as ferramentas expostas ao agente (pesquisa de pontos
   turísticos, geração do arquivo `.md`) — ver "Ferramentas do agente" acima.
@@ -248,7 +323,10 @@ mini-projeto-ItinerAI/
 
 - Use type hints em todas as funções públicas.
 - Toda estrutura de dados trocada entre nós do grafo deve ser um modelo
-  `pydantic`, não `dict` solto.
+  `pydantic`, não `dict` solto. (`AgentState.page_results` é `dict[str,
+  WikipediaPageResult]` — um canal de reducer tipado com valores pydantic, no
+  mesmo espírito de `messages: Annotated[list[BaseMessage], add_messages]`, não
+  um `dict` solto.)
 - Mantenha as tools em `tools.py` puras e testáveis (sem lógica de
   orquestração do grafo dentro delas).
 - Nomes de arquivos-fonte, pastas, funções e variáveis em inglês; mensagens

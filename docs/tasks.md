@@ -108,16 +108,16 @@ LLM.
 
 **Checklist técnico**
 
-- [ ] Extrair a busca de cada página da Wikipédia em nós distintos do grafo
+- [x] Extrair a busca de cada página da Wikipédia em nós distintos do grafo
       (`fetch_tourism_page` e `fetch_destination_page`)
-- [ ] Configurar o fan-out a partir de `call_tools` (ou de um nó de busca
-      dedicado) para os dois nós em paralelo
-- [ ] Criar o nó de fan-in (`merge_pages`) que consolida os resultados de forma
-      determinística, priorizando a página `Tourism in <destino>` quando válida
-- [ ] Garantir que o estado suporte escrita concorrente dos dois ramos
-      (reducer/`Annotated` no campo correspondente do `AgentState`)
-- [ ] Preservar o comportamento atual quando apenas uma das páginas existir
-- [ ] Atualizar o diagrama do fluxo no `README.md` e no `CLAUDE.md`
+- [x] Configurar o fan-out a partir de um nó de busca dedicado (`dispatch_search`)
+      para os dois nós em paralelo
+- [x] Criar o nó de fan-in (`merge_pages`) que consolida os resultados de forma
+      determinística (sem LLM), priorizando a página `Tourism in <destino>` quando válida
+- [x] Garantir que o estado suporte escrita concorrente dos dois ramos
+      (`page_results: Annotated[dict[str, WikipediaPageResult], _merge_page_results]`)
+- [x] Preservar o comportamento atual quando apenas uma das páginas existir
+- [x] Atualizar o diagrama do fluxo no `README.md` e no `CLAUDE.md`
 
 ---
 

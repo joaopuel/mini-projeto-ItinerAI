@@ -93,7 +93,7 @@ def main() -> None:
     resumed = _startup(load_trip_memory())
     if resumed is not None:
         state = resumed
-        result = graph.invoke(state)
+        result = graph.invoke(state, {"recursion_limit": 50})
         state = AgentState.model_validate(result)
         _save_state(state)
         print(f"ItinerAI: {state.messages[-1].content}")
@@ -113,7 +113,10 @@ def main() -> None:
             continue
 
         state.messages.append(HumanMessage(content=user_input))
-        result = graph.invoke(state)
+        # recursion_limit acima do default (25): o fan-out da busca
+        # (dispatch_search → fetch_* → merge_pages) consome alguns supersteps a
+        # mais por busca, e retries do ReAct somam.
+        result = graph.invoke(state, {"recursion_limit": 50})
         state = AgentState.model_validate(result)
         _save_state(state)
         print(f"ItinerAI: {state.messages[-1].content}")

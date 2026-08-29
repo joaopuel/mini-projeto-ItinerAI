@@ -600,3 +600,59 @@ português brasileiro. Depois mova a nova tarefa para In Progress e crie um PR
 para a develop. O nome da branch deve começar com "docs/" e o nome do commit
 deve começar com "docs:".
 ```
+
+---
+
+## Leitura da issue e planejamento de implementação
+
+* Data: 2026-08-29 16:45
+* Autor: joaopuel
+* Tipo: Planejamento
+
+### Prompt original
+```
+Using github cli, read the issue https://github.com/joaopuel/mini-projeto-ItinerAI/issues/12. Create a plan to implement what is requested in the issue.
+```
+
+---
+
+## Diagnóstico e troca do modelo Groq desligado
+
+* Data: 2026-08-29 18:30
+* Autor: joaopuel
+* Tipo: Correção / Investigação
+
+### Prompt original
+```
+A aplicação só está retornando "Desculpe, tive um problema ao processar seu
+pedido agora. Pode reformular ou tentar novamente em instantes?". Talvez seja
+um problema com o modelo Groq selecionado. Você poderia verificar se o modelo
+gpt oss 120b da Groq é gratuito e trocar pelo que está em uso hoje?
+```
+
+---
+
+## Commit isolado para a troca de modelo
+
+* Data: 2026-08-29 18:45
+* Autor: joaopuel
+* Tipo: Versionamento
+
+### Prompt original
+```
+Crie um commit separado para a troca de modelo.
+```
+
+---
+
+## Registro dos prompts e commit das modificações
+
+* Data: 2026-08-29 18:55
+* Autor: joaopuel
+* Tipo: Documentação / Versionamento
+
+### Prompt original
+```
+Ok. Adicione os prompts mais importantes em /docs/prompts em português
+brasileiro e faça o commit de todas as modificações feitas.
+```

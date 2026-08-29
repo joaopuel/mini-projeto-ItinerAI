@@ -64,7 +64,7 @@ resultados — mantendo o contexto da conversa em um estado compartilhado.
 | **Python 3.12.9** | Linguagem base |
 | **LangGraph** | Orquestração do agente como grafo de estados (`StateGraph`) |
 | **pydantic** | Estado do grafo e todos os modelos de dados |
-| **Groq** — `llama-3.1-8b-instant` | LLM do agente (via `langchain-groq`) |
+| **Groq** — `openai/gpt-oss-120b` | LLM do agente e da extração (via `langchain-groq`) |
 | **requests + beautifulsoup4** | Busca e parsing das páginas da Wikipédia |
 | **sqlite3** (stdlib) | Memória persistente da última viagem |
 
@@ -74,44 +74,59 @@ carregada de um arquivo `.env` (nunca versionada).
 ## Fluxo com LangGraph
 
 O agente é um `StateGraph` (`itinerai_agent/agent.py`) que segue um loop de
-tool-calling — validação e memória rodam antes, e o LLM entra em loop com as
-ferramentas até formular a resposta final:
+tool-calling — validação e memória rodam antes, o LLM entra em loop com as
+ferramentas até formular a resposta final, e a busca da Wikipédia roda como uma
+**paralelização** (fan-out/fan-in):
 
 ```
-                START
-                  │
-                  ▼
-          ┌─────────────────┐
-          │  validate_input │  valida a mensagem por regex (anti-injeção,
-          └─────────────────┘  idioma, URL) — sem chamar o LLM
-                  │
-         route_after_validation
-            ┌─────┴─────┐
-        (inválida)   (válida)
-            │             │
-            ▼             ▼
-           END   ┌─────────────────┐
-                 │  persist_memory │  salva a viagem no SQLite (antes das
-                 └─────────────────┘  buscas que podem falhar)
-                           │
-                           ▼
-                 ┌─────────────────┐
-              ┌─▶│    call_llm     │  invoca o LLM com as tools (bind_tools)
-              │  └─────────────────┘
-              │            │
-              │     should_call_tools
-              │       ┌────┴────┐
-              │   (sem tool) (com tool)
-              │       │         │
-              │       ▼         ▼
-              │      END  ┌─────────────┐
-              └──────────│  call_tools │  executa as ferramentas pedidas
-                         └─────────────┘
+                     START
+                       │
+                       ▼
+               ┌─────────────────┐
+               │  validate_input │  regex: anti-injeção, idioma, URL (sem LLM)
+               └─────────────────┘
+                       │
+              route_after_validation
+                 ┌─────┴─────┐
+             (inválida)   (válida)
+                 ▼             ▼
+                END   ┌─────────────────┐
+                      │  persist_memory │  salva a viagem no SQLite
+                      └─────────────────┘
+                               │
+                               ▼
+                   ┌───────────────────┐
+          ┌───────▶│      call_llm     │  LLM + tools (bind_tools)
+          │        └───────────────────┘
+          │                  │
+          │            route_after_llm
+          │       ┌──────────┼────────────────────┐
+          │  (sem tool)  (outra tool)   (search_tourist_attractions)
+          │       ▼          ▼                     ▼
+          │      END   ┌───────────┐      ┌─────────────────┐
+          │            │ call_tools│      │ dispatch_search │
+          │            └───────────┘      └─────────────────┘
+          │                  │             fan-out  ┌───┴────┐
+          │                  │                      ▼        ▼
+          │                  │        ┌──────────────────┐ ┌───────────────────────┐
+          │                  │        │fetch_tourism_page│ │fetch_destination_page │
+          │                  │        └──────────────────┘ └───────────────────────┘
+          │                  │          "Tourism in X"  ∥  "X"   (Wikipédia, paralelo)
+          │                  │                      └───┬────┘  fan-in
+          │                  │                          ▼
+          │                  │                   ┌─────────────┐
+          │                  │                   │ merge_pages │  melhor página,
+          │                  │                   └─────────────┘  determinístico (sem LLM)
+          │                  │                          │
+          └──────────────────┴──────────────────────────┘
+             (call_tools e merge_pages devolvem o controle a call_llm)
 ```
 
 **Estado compartilhado** (`AgentState`, em `itinerai_agent/utils/state.py`):
-`messages`, `destination`, `num_days`, `tourist_attractions` e `itinerary`.
-Toda estrutura trocada entre nós é um modelo pydantic (nunca `dict` solto).
+`messages`, `destination`, `num_days`, `tourist_attractions`, `itinerary`,
+`pending_search` e `page_results` (este último com um reducer que mescla as
+escritas concorrentes dos dois ramos do fan-out). Toda estrutura trocada entre
+nós é um modelo pydantic (nunca `dict` solto).
 
 Os nós ficam em `itinerai_agent/utils/nodes.py`:
 
@@ -119,7 +134,18 @@ Os nós ficam em `itinerai_agent/utils/nodes.py`:
 - **`persist_memory`** — salva o que já se sabe da viagem, antes das buscas.
 - **`call_llm`** — chama o LLM com as ferramentas vinculadas; também recupera
   chamadas de ferramenta que o modelo eventualmente "vaza" como texto.
-- **`call_tools`** — executa as ferramentas e devolve o controle ao LLM.
+- **`route_after_llm`** — aresta condicional com 3 saídas: fim do turno,
+  `call_tools` ou o fan-out da busca (`dispatch_search`).
+- **`call_tools`** — executa `build_itinerary` (e demais ferramentas) e devolve
+  o controle ao LLM.
+- **`dispatch_search`** — origem do fan-out: guarda destino e `tool_call_id` da
+  busca em `pending_search`.
+- **`fetch_tourism_page`** / **`fetch_destination_page`** — baixam em paralelo
+  as páginas `Tourism in <destino>` e `<destino>` da Wikipédia e extraem as
+  atrações de cada uma.
+- **`merge_pages`** — fan-in determinístico (sem LLM): escolhe a página que
+  rendeu atrações, priorizando `Tourism in <destino>`, e devolve o resultado
+  da busca ao LLM.
 
 ## Ferramentas do agente
 
@@ -127,8 +153,11 @@ As ferramentas ficam em `itinerai_agent/utils/tools.py` e são vinculadas ao LLM
 em `nodes.py`:
 
 - **`search_tourist_attractions(destination)`** — busca pontos turísticos do
-  destino na Wikipédia (tenta a página `Tourism in <destino>` e, se não existir,
-  a página `<destino>`), retornando uma lista estruturada de atrações.
+  destino na Wikipédia (páginas `Tourism in <destino>` e `<destino>`),
+  retornando uma lista estruturada de atrações. No grafo essa busca roda como um
+  fan-out/fan-in paralelo (`fetch_tourism_page` ∥ `fetch_destination_page` →
+  `merge_pages`); a função em `tools.py` é a especificação sequencial
+  equivalente e o que o `bind_tools` usa para montar o schema.
 - **`build_itinerary(destination, num_days)`** — monta o roteiro e **grava o
   arquivo `.md`** em `output/`. Agrupa as atrações por proximidade e as
   distribui pelos dias (**no máximo 3 por dia**). Devolve apenas a mensagem de
@@ -290,10 +319,9 @@ viajar) que eu pesquiso as informações para você.
 - **Agente de tool-calling (ReAct), não um pipeline fixo.** O LLM decide quando
   pedir dados, pesquisar e montar o roteiro. Novas funcionalidades entram como
   **ferramentas**, não como novos nós rígidos.
-- **Validação e memória determinísticas (regex + SQLite), sem LLM.** O
-  `llama-3.1-8b-instant` é pequeno e frágil; tirar validação e persistência do
-  caminho do modelo as torna baratas, previsíveis e testáveis, e evita
-  sobrecarregar o modelo.
+- **Validação e memória determinísticas (regex + SQLite), sem LLM.** Tirar
+  validação e persistência do caminho do modelo as torna baratas, previsíveis e
+  testáveis, e não depende do julgamento (nem da disponibilidade) do LLM.
 - **Schemas de ferramenta pequenos + `InjectedToolArg`.** Dados grandes (a lista
   de atrações) são injetados a partir do estado e escondidos do modelo, evitando
   falhas de tool-calling.
