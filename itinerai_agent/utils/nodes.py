@@ -2,15 +2,23 @@ import json
 import re
 from uuid import uuid4
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langchain_groq import ChatGroq
 from langgraph.graph import END
 
 from itinerai_agent.utils.memory import TripMemory, save_trip_memory
 from itinerai_agent.utils.prompts import AGENT_SYSTEM_PROMPT
-from itinerai_agent.utils.state import AgentState
+from itinerai_agent.utils.state import AgentState, PendingSearch
 from itinerai_agent.utils.tools import (
+    TouristAttractionSearchResult,
     build_itinerary,
+    fetch_page_attractions,
     search_tourist_attractions,
 )
 from itinerai_agent.utils.validation import validate_user_input
@@ -54,6 +62,19 @@ def _parse_leaked_tool_calls(content: str) -> list[dict]:
     return calls
 
 
+def _drop_premature_build_itinerary(calls: list[dict]) -> list[dict]:
+    """Quando `search_tourist_attractions` e `build_itinerary` são pedidos no
+    mesmo lote, descarta o `build_itinerary` — a busca precisa rodar antes (e o
+    grafo roteia a busca para o fan-out, que responde só ao tool_call_id da
+    busca). O modelo re-emite o `build_itinerary` no turno seguinte, já com as
+    atrações no estado. Vale para tool calls vazados como texto e para tool
+    calls estruturados."""
+    names = {call["name"] for call in calls}
+    if "search_tourist_attractions" in names:
+        return [call for call in calls if call["name"] != "build_itinerary"]
+    return calls
+
+
 def _repair_leaked_response(response: AIMessage) -> AIMessage:
     """Conserta uma resposta em que o LLM vazou as tool calls como texto.
 
@@ -75,10 +96,7 @@ def _repair_leaked_response(response: AIMessage) -> AIMessage:
                 "novamente em instantes?"
             )
         )
-    names = {call["name"] for call in calls}
-    if "search_tourist_attractions" in names:
-        calls = [call for call in calls if call["name"] != "build_itinerary"]
-    return AIMessage(content="", tool_calls=calls)
+    return AIMessage(content="", tool_calls=_drop_premature_build_itinerary(calls))
 
 
 def validate_input(state: AgentState) -> dict:
@@ -148,17 +166,35 @@ def call_llm(state: AgentState) -> dict:
     # O modelo fraco às vezes vaza as tool calls como texto (formato
     # <function=...>): recupera-as para o grafo executá-las, em vez de imprimir o
     # texto cru no terminal.
-    return {"messages": [_repair_leaked_response(response)]}
+    message = _repair_leaked_response(response)
+    # Mesmo lote com busca + montagem do roteiro (tool calls estruturados):
+    # mantém só a busca — ela roda antes (o grafo a roteia para o fan-out, que
+    # responde apenas ao tool_call_id da busca).
+    calls = getattr(message, "tool_calls", None)
+    if calls:
+        kept = _drop_premature_build_itinerary(calls)
+        if len(kept) != len(calls):
+            message = AIMessage(content=message.content, tool_calls=kept, id=message.id)
+    return {"messages": [message]}
 
 
-def should_call_tools(state: AgentState) -> str:
+def route_after_llm(state: AgentState) -> str:
+    # 3 saídas: sem tool call → fim do turno (condição de parada); busca de
+    # atrações → fan-out paralelo das páginas da Wikipédia (dispatch_search);
+    # qualquer outra tool → call_tools.
     last_message = state.messages[-1]
-    if getattr(last_message, "tool_calls", None):
-        return "call_tools"
-    return END
+    calls = getattr(last_message, "tool_calls", None)
+    if not calls:
+        return END
+    if any(call["name"] == "search_tourist_attractions" for call in calls):
+        return "dispatch_search"
+    return "call_tools"
 
 
 def call_tools(state: AgentState) -> dict:
+    # A busca de atrações NÃO passa por aqui: `route_after_llm` a roteia sempre
+    # para o fan-out `dispatch_search → fetch_* → merge_pages`. Este nó trata as
+    # demais ferramentas (hoje, só `build_itinerary`).
     last_message = state.messages[-1]
 
     tool_messages = []
@@ -175,11 +211,7 @@ def call_tools(state: AgentState) -> dict:
 
         result = tool_fn(**args)
 
-        if call["name"] == "search_tourist_attractions":
-            update["destination"] = result.destination
-            update["tourist_attractions"] = result.attractions
-            tool_content = result.model_dump_json()
-        elif call["name"] == "build_itinerary":
+        if call["name"] == "build_itinerary":
             update["itinerary"] = result.itinerary
             update["num_days"] = result.num_days
             # Só o aviso volta para o LLM: o itinerário completo fica no arquivo
@@ -192,3 +224,83 @@ def call_tools(state: AgentState) -> dict:
 
     update["messages"] = tool_messages
     return update
+
+
+def _pending_search_call(message: BaseMessage) -> dict | None:
+    """Encontra a tool call `search_tourist_attractions` numa AIMessage."""
+    for call in getattr(message, "tool_calls", None) or []:
+        if call["name"] == "search_tourist_attractions":
+            return call
+    return None
+
+
+def _require_pending_search(state: AgentState) -> PendingSearch:
+    # `dispatch_search` sempre preenche `pending_search` antes dos nós do
+    # fan-out; o assert transforma uma violação de invariante do grafo num
+    # erro claro em vez de um AttributeError obscuro.
+    pending = state.pending_search
+    assert pending is not None, "dispatch_search precisa rodar antes de fetch_*/merge_pages"
+    return pending
+
+
+def dispatch_search(state: AgentState) -> dict:
+    # Origem única do fan-out da busca: extrai destino e tool_call_id da tool
+    # call pedida pelo LLM e guarda em `pending_search`, para os nós `fetch_*` e
+    # `merge_pages` não reprocessarem `messages`.
+    call = _pending_search_call(state.messages[-1])
+    destination = str((call["args"] if call else {}).get("destination", "")).strip()
+    tool_call_id = call["id"] if call else ""
+    return {
+        "pending_search": PendingSearch(destination=destination, tool_call_id=tool_call_id)
+    }
+
+
+def fetch_tourism_page(state: AgentState) -> dict:
+    # Ramo paralelo 1: página "Tourism in <destino>".
+    pending = _require_pending_search(state)
+    result = fetch_page_attractions(
+        f"Tourism in {pending.destination}", pending.destination, "tourism"
+    )
+    return {"page_results": {"tourism": result}}
+
+
+def fetch_destination_page(state: AgentState) -> dict:
+    # Ramo paralelo 2: página "<destino>".
+    pending = _require_pending_search(state)
+    result = fetch_page_attractions(
+        pending.destination, pending.destination, "destination"
+    )
+    return {"page_results": {"destination": result}}
+
+
+def merge_pages(state: AgentState) -> dict:
+    # Fan-in determinístico (sem LLM): prioriza a página "Tourism in <destino>"
+    # quando ela rendeu atrações; senão a página do destino; senão found=False.
+    # Reproduz a ordem de fallback de search_tourist_attractions e devolve o
+    # mesmo TouristAttractionSearchResult (mesmo formato de ToolMessage que
+    # call_tools produzia para a busca).
+    pending = _require_pending_search(state)
+    results = state.page_results
+    tourism = results.get("tourism")
+    destination_page = results.get("destination")
+
+    if tourism is not None and tourism.attractions:
+        chosen = tourism
+    elif destination_page is not None and destination_page.attractions:
+        chosen = destination_page
+    else:
+        chosen = None
+
+    result = TouristAttractionSearchResult(
+        destination=pending.destination,
+        source_url=chosen.source_url if chosen else None,
+        found=chosen is not None,
+        attractions=chosen.attractions if chosen else [],
+    )
+    return {
+        "destination": result.destination,
+        "tourist_attractions": result.attractions,
+        "messages": [
+            ToolMessage(content=result.model_dump_json(), tool_call_id=pending.tool_call_id)
+        ],
+    }

@@ -5,7 +5,7 @@ import re
 import unicodedata
 from collections import Counter
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import quote
 
 import requests
@@ -22,6 +22,7 @@ from itinerai_agent.utils.state import (
     Itinerary,
     ItineraryDay,
     TouristAttraction,
+    WikipediaPageResult,
 )
 
 WIKIPEDIA_BASE_URL = "https://en.wikipedia.org/wiki"
@@ -140,26 +141,59 @@ def _extract_attractions(destination: str, page_text: str) -> list[TouristAttrac
     return unique_attractions
 
 
+def fetch_page_attractions(
+    title: str, destination: str, kind: Literal["tourism", "destination"]
+) -> WikipediaPageResult:
+    """Baixa uma página da Wikipédia e extrai suas atrações — a unidade de
+    trabalho de cada ramo do fan-out da busca no grafo
+    (`fetch_tourism_page` / `fetch_destination_page`).
+
+    Determinística no fluxo de controle: em 404, página sem conteúdo ou
+    falha de rede, devolve `found=False` (o outro ramo serve de fallback).
+    A guarda de `Exception` só previne regressão — a política de resiliência
+    (timeout/retry/backoff/log) é escopo da tarefa T02/#13.
+    """
+    try:
+        fetched = _fetch_wikipedia_page(title)
+    except Exception:
+        return WikipediaPageResult(kind=kind, found=False)
+    if fetched is None:
+        return WikipediaPageResult(kind=kind, found=False)
+    page_text, url = fetched
+    attractions = _extract_attractions(destination, page_text)
+    return WikipediaPageResult(
+        kind=kind,
+        found=bool(attractions),
+        source_url=url,
+        attractions=attractions,
+    )
+
+
 def search_tourist_attractions(destination: str) -> TouristAttractionSearchResult:
     """Busca pontos turísticos de um destino de viagem na Wikipédia.
 
-    Tenta primeiro a página "Tourism in <destination>"; se ela não existir,
-    tenta a página padrão do destino. Retorna os pontos turísticos
-    encontrados, ou found=False caso nenhuma página exista ou nada relevante
-    seja encontrado.
+    Tenta primeiro a página "Tourism in <destination>"; se ela não existir
+    ou não render atrações, tenta a página padrão do destino. Retorna os
+    pontos turísticos encontrados, ou found=False caso nenhuma página exista
+    ou nada relevante seja encontrado.
+
+    No grafo esta busca roda como um fan-out/fan-in paralelo
+    (`fetch_tourism_page` ∥ `fetch_destination_page` → `merge_pages`); esta
+    função é a especificação sequencial equivalente, mantida para referência
+    e usada pelo `bind_tools` para montar o schema da ferramenta.
     """
-    for title in (f"Tourism in {destination}", destination):
-        fetched = _fetch_wikipedia_page(title)
-        if fetched is None:
-            continue
-        page_text, url = fetched
-        attractions = _extract_attractions(destination, page_text)
-        if attractions:
+    candidates: tuple[tuple[str, Literal["tourism", "destination"]], ...] = (
+        (f"Tourism in {destination}", "tourism"),
+        (destination, "destination"),
+    )
+    for title, kind in candidates:
+        result = fetch_page_attractions(title, destination, kind)
+        if result.attractions:
             return TouristAttractionSearchResult(
                 destination=destination,
-                source_url=url,
+                source_url=result.source_url,
                 found=True,
-                attractions=attractions,
+                attractions=result.attractions,
             )
 
     return TouristAttractionSearchResult(
