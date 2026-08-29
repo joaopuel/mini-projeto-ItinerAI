@@ -72,6 +72,10 @@ Escreva "name", "description" e "location" em português, mesmo que o texto \
 original esteja em inglês. Se o texto não mencionar nenhum ponto turístico \
 claro, retorne uma lista vazia.
 
+Responda SOMENTE com um objeto JSON válido, sem nenhum texto, comentário ou \
+cerca de código antes ou depois, exatamente neste formato:
+{{"attractions": [{{"name": "...", "description": "...", "location": "..."}}]}}
+
 Texto:
 {page_text}
 """
@@ -92,6 +96,10 @@ Regras importantes:
 - Inclua todas as atrações recebidas, sem inventar novas nem remover \
 nenhuma.
 - Liste as atrações da mesma area em sequência (uma após a outra).
+
+Responda SOMENTE com um objeto JSON válido, sem nenhum texto, comentário ou \
+cerca de código antes ou depois, exatamente neste formato:
+{{"attractions": [{{"name": "...", "area": "..."}}]}}
 
 Atrações:
 {attractions}

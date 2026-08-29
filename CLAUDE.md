@@ -225,8 +225,17 @@ o custo delas é baixo (não remover sem motivo):
 - O LLM de extração (`_extraction_llm`) usa `temperature=0`; os prompts de
   extração pedem no máximo ~15 itens e proíbem repetição (evita loops que
   truncam o JSON).
-- Falhas de geração estruturada são tratadas: as extrações caem para vazio e
-  `call_llm` responde com mensagem amigável, em vez de derrubar o agente.
+- **A extração NÃO usa `ChatGroq.with_structured_output`.** Com o
+  `openai/gpt-oss-120b` esse método força `tool_choice` e o modelo devolve o
+  JSON como **texto** (não como tool call), o que a Groq rejeita com
+  `tool_use_failed` ("model did not call a tool"). Em vez disso,
+  `_invoke_structured` (em `tools.py`) pede o formato do JSON no próprio prompt
+  de extração e faz o parse do texto da resposta (`_extract_json_payload`
+  tolera cercas ` ```json ` e texto ao redor; lista "solta" é embrulhada no
+  campo único do schema), validando com `schema.model_validate`.
+- Falhas de extração são tratadas: `_invoke_structured` devolve `None` em
+  qualquer erro, as extrações caem para vazio e `call_llm` responde com
+  mensagem amigável, em vez de derrubar o agente.
 - Mantenha os schemas das tools **pequenos**; para dados grandes vindos do
   estado, use `InjectedToolArg` (nunca exponha listas aninhadas ao modelo).
 - **Recuperação de tool calls "vazadas" como texto:** o modelo às vezes emite a

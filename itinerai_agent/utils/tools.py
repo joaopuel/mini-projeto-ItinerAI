@@ -1,6 +1,7 @@
 """Tools do agente ItinerAI (busca de pontos turísticos e escrita do
 itinerário .md)."""
 
+import json
 import re
 import unicodedata
 from collections import Counter
@@ -48,21 +49,59 @@ ITINERARY_OVERFLOW_NOTE = (
 OUTPUT_DIR = Path(__file__).resolve().parents[2] / "output"
 
 # temperature=0 deixa a extração determinística e reduz muito o risco de o
-# modelo entrar em loop de repetição e gerar um tool call malformado.
+# modelo entrar em loop de repetição e gerar um JSON malformado.
 _extraction_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 
 
-def _invoke_structured(schema: type[BaseModel], prompt: str) -> BaseModel | None:
-    """Invoca o LLM de extração pedindo saída estruturada no formato `schema`.
+def _extract_json_payload(text: str) -> dict | list | None:
+    """Extrai o primeiro objeto/array JSON de um texto. Tolera cercas de código
+    (```json ... ```) e texto antes/depois do JSON."""
+    text = text.strip()
+    fence = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)
+    if fence:
+        text = fence.group(1).strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    for opener, closer in (("{", "}"), ("[", "]")):
+        start, end = text.find(opener), text.rfind(closer)
+        if 0 <= start < end:
+            try:
+                return json.loads(text[start : end + 1])
+            except json.JSONDecodeError:
+                continue
+    return None
 
-    Retorna `None` se o modelo falhar ao gerar uma resposta válida — por
-    exemplo, quando entra em loop de repetição e produz um JSON truncado que a
-    Groq rejeita com `tool_use_failed` (HTTP 400). Assim as tools degradam com
-    elegância (tratam como "nada encontrado") em vez de derrubar o agente.
+
+def _invoke_structured(schema: type[BaseModel], prompt: str) -> BaseModel | None:
+    """Pede uma resposta JSON ao LLM de extração e valida contra `schema`.
+
+    **Não** usa `ChatGroq.with_structured_output`: com o `openai/gpt-oss-120b`
+    na Groq esse método força `tool_choice` e o modelo devolve o JSON como
+    texto (não como tool call), o que a Groq rejeita com `tool_use_failed`
+    ("model did not call a tool"). Aqui o formato do JSON é pedido no próprio
+    prompt e a resposta é extraída do texto.
+
+    Retorna `None` em qualquer falha (rede, JSON inválido/truncado, schema que
+    não bate) — as tools degradam tratando como "nada encontrado" em vez de
+    derrubar o agente.
     """
     try:
-        structured_llm = _extraction_llm.with_structured_output(schema)
-        return structured_llm.invoke(prompt)
+        response = _extraction_llm.invoke(prompt)
+    except Exception:
+        return None
+    content = response.content if isinstance(response.content, str) else ""
+    payload = _extract_json_payload(content)
+    if payload is None:
+        return None
+    # O gpt-oss às vezes devolve só a lista, sem o objeto que a envolve.
+    if isinstance(payload, list):
+        field_names = list(schema.model_fields)
+        if len(field_names) == 1:
+            payload = {field_names[0]: payload}
+    try:
+        return schema.model_validate(payload)
     except Exception:
         return None
 
