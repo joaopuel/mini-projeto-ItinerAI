@@ -490,13 +490,113 @@ Adicione os últimos prompts desse chat ao docs/prompts
 
 ---
 
-## <Resumo-do-Prompt>
+## Análise do novo enunciado e percentual de conclusão do projeto
 
-* Data: <data>
+* Data: 2026-08-29 15:20
 * Autor: joaopuel
-* Tipo: <Tipo-de-Prompt-Utilizado>
+* Tipo: Análise / Planejamento
 
 ### Prompt original
 ```
-<Prompt-original>
+Tenho este projeto de uma avaliação anterior e agora preciso ajustá-lo para uma
+nova avaliação. Os requisitos da nova avaliação estão em /docs/requisitos.md.
+Você pode ler os novos requisitos e informar qual o percentual de conclusão que
+já tenho com o estado atual do projeto?
+```
+
+---
+
+## Criação de tarefas para implementações futuras
+
+* Data: 2026-08-29 15:44
+* Autor: joaopuel
+* Tipo: Instrução direta
+
+### Prompt original
+```
+Ok. Agora me ajude a criar tarefas para as novas implementações necessárias para
+atender aos requisitos não cumpridos. Primeiro, as tarefas devem ser criadas em
+/docs/tasks.md. Defina para cada tarefa um título e uma descrição. Use os
+/docs/issues-templates como exemplos para tarefas de docs, user story e
+tech/chore. As tarefas criadas serão adicionadas ao quadro do GitHub depois.
+Para o CI, quero adicionar o ESLint para validar a qualidade do código e uma
+verificação de que o código tenha mais de 70% de cobertura unitária. Para
+low-code, quero adicionar uma configuração do n8n para enviar um e-mail com o
+itinerário ao final do processo. Dê sugestões para atender aos demais critérios.
+Importante: todas as tarefas devem estar em português brasileiro.
+```
+
+---
+
+## Criação de epics para organizar os blocos de tarefas
+
+* Data: 2026-08-29 15:58
+* Autor: joaopuel
+* Tipo: Planejamento / Documentação
+
+### Prompt original
+```
+Adicionei um novo epic-template em /docs/issues-templates. Então, para cada
+bloco, crie uma issue de epic correspondente para melhor organização das
+tarefas. Ajuste no docs/tasks.md.
+```
+
+---
+
+## Criação das issues no quadro do GitHub via CLI
+
+* Data: 2026-08-29 16:05
+* Autor: joaopuel
+* Tipo: Automação / GitHub
+
+### Prompt original
+```
+Agora crie cada tarefa neste quadro do GitHub
+https://github.com/users/joaopuel/projects/1/views/1. Use o GitHub CLI. Para
+cada tarefa, me adicione como responsável (assignee).
+```
+
+---
+
+## Atualização da issue principal da avaliação anterior
+
+* Data: 2026-08-29 16:14
+* Autor: joaopuel
+* Tipo: Documentação
+
+### Prompt original
+```
+Agora ajuste a tarefa https://github.com/joaopuel/mini-projeto-ItinerAI/issues/1
+para descrever o estado atual do projeto. Essa tarefa foi criada apenas para
+servir como a tarefa principal de todo o projeto na avaliação anterior.
+```
+
+---
+
+## Criação da tarefa de versionamento das modificações atuais
+
+* Data: 2026-08-29 16:20
+* Autor: joaopuel
+* Tipo: Planejamento
+
+### Prompt original
+```
+Crie uma nova tarefa para commitar as modificações atuais, como a adição dos
+templates de tarefas, os requisitos e o tasks.md.
+```
+
+---
+
+## Adicionar prompts anteriores com tradução portuguesa
+
+* Data: 2026-08-29 16:26
+* Autor: joaopuel
+* Tipo: Instrução direta
+
+### Prompt original
+```
+Adicione todos os prompts anteriores em /docs/prompts.md, mas traduzidos para
+português brasileiro. Depois mova a nova tarefa para In Progress e crie um PR
+para a develop. O nome da branch deve começar com "docs/" e o nome do commit
+deve começar com "docs:".
 ```
