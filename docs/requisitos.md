@@ -1,243 +1,741 @@
-IA PARA DESENVOLVEDORES [T2] - Mini-Projeto Avaliativo
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+IA PARA DESENVOLVEDORES [T2]
+Situação de Aprendizagem (Projeto Avaliativo) - Módulo 2 - Semana 12
+SUMÁRIO
+1. CONTEXTUALIZAÇÃO 1
+2. DESAFIO 2
+3. RESULTADOS ESPERADOS (ENTREGA) 3
+4. REQUISITOS DA APLICAÇÃO 4
+4.1. Domínio, escopo e cenários 4
+4.2. Arquitetura agêntica e LangGraph 4
+4.3. Tools, MCP e integrações 4
+4.4. Memória, contexto e RAG 4
+4.5. Segurança, governança e limites de autonomia 5
+4.6. Observabilidade e resiliência 5
+4.7. IA para QA e testes inteligentes 5
+4.8. DevOps inteligente e detecção de falhas 5
+4.9. Low-Code para QA, SRE e agentes 6
+4.10. Prompts, modelos e refinamento 6
+5. ROTEIRO DA APLICAÇÃO 6
+5.1. FORMATO DO SISTEMA 7
+5.2. DOCUMENTAÇÃO NO README.MD 7
+5.3. USO DO QUADRO DO GITHUB 8
+5.4. USO DO REPOSITÓRIO NO GITHUB 9
+5.5. GRAVAÇÃO DE VÍDEO 9
+6. CRITÉRIOS DE AVALIAÇÃO 10
+7. CHECKLIST FINAL DE ENTREGA 14
+1. CONTEXTUALIZAÇÃO
+Sistemas de inteligência artificial deixaram de atuar apenas como assistentes
+conversacionais e passaram a executar tarefas, consultar dados, utilizar ferramentas, manter
+memória e coordenar fluxos de múltiplas etapas. Essa evolução amplia o valor da IA no
+desenvolvimento de software, mas também introduz novos riscos: uma ferramenta pode
+receber parâmetros inválidos, um loop pode não terminar, uma memória pode recuperar
+contexto inadequado, uma ação pode ultrapassar o nível de autonomia permitido e uma
+execução aparentemente correta pode esconder falhas, tentativas repetidas ou decisões
+sem rastreabilidade.
+Ao longo do Módulo 2, foram estudados os fundamentos de agentes, a diferença
+entre assistentes, agentes e workflows, o uso de tools e MCP, a construção de fluxos com
+LangGraph, memória curta e longa, RAG, integrações com APIs, segurança, governança,
+1
 
-## 1. CONTEXTUALIZAÇÃO
-Este documento descreve o Mini-Projeto Avaliativo do Módulo 2 da disciplina IA para DEVs. Nesta etapa, o foco é aplicar os conceitos de agentes de IA em um projeto prático, por meio da construção de uma solução funcional e bem documentada que automatize um processo real com apoio de IA.
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+automação de CI/CD e ChatOps, arquitetura escalável, observabilidade, revisão de código,
+testes inteligentes, detecção de falhas e automações low-code.
+Neste projeto avaliativo, você deverá desenvolver uma aplicação funcional em
+qualquer domínio de negócio, desde que o uso de IA esteja presente na solução e seja
+demonstrado nas atividades previstas neste projeto. Você poderá dar continuidade à
+aplicação desenvolvida no mini-projeto do módulo, evoluindo-a de forma coerente e sem a
+necessidade de criar um sistema excessivamente grande.
+O objetivo não é acumular funcionalidades, mas construir uma solução funcional,
+demonstrável e tecnicamente explicável. O projeto deverá evidenciar como a entrada
+percorre o fluxo, como o agente toma decisões, quais tools são utilizadas, como o contexto é
+mantido ou recuperado, quais controles impedem comportamentos inseguros, como a
+qualidade é verificada e quais sinais permitem investigar o funcionamento da solução.
+2. DESAFIO
+Você deverá desenvolver ou evoluir uma aplicação funcional com agentes de IA, em
+qualquer domínio de negócio, integrando os conteúdos essenciais do Módulo 2. A solução
+deverá receber uma solicitação, evento ou conjunto de dados, executar um fluxo com
+múltiplas etapas, utilizar ferramentas ou serviços, produzir uma saída estruturada e registrar
+evidências suficientes para que outra pessoa consiga compreender, testar e reproduzir seu
+comportamento.
+A solução poderá ser derivada do mini-projeto já desenvolvido. Nesse caso, você
+deverá demonstrar claramente quais capacidades foram mantidas, quais foram refatoradas e
+quais evoluções foram adicionadas para atender aos requisitos deste projeto final.
+Diante disso, você deverá:
+● Definir um problema real ou plausível, seus usuários, entradas, saídas, riscos e critérios
+de sucesso;
+● Explicar se a solução é um agente, um workflow determinístico ou um sistema
+híbrido, justificando essa classificação;
+● Modelar o fluxo principal com LangGraph, utilizando estado compartilhado, nodes,
+edges e controle explícito de execução;
+● Implementar pelo menos uma tool funcional integrada por MCP, API, serviço,
+backend ou webhook, com validação de entradas e tratamento de erros;
+● Implementar estratégia de memória e recuperação contextual adequada ao domínio;
+● Aplicar segurança, governança, limites de autonomia, controle de looping e aprovação
+humana quando necessária;
+2
 
-O projeto poderá ser desenvolvido individualmente ou em grupos de até 3 alunos. A proposta é criar um agente usando LangGraph, demonstrando o uso de componentes como objetivo, estado, memória, ferramentas, chamadas a APIs ou arquivos, validações e geração de respostas estruturadas.
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+● Produzir e correlacionar pelo menos dois sinais de observabilidade que permitam
+investigar e reconstruir uma execução;
+● Aplicar IA em revisão de código, geração ou refinamento de testes e priorização
+orientada a risco;
+● Integrar práticas de DevOps inteligente, incluindo explicação de logs, detecção de
+anomalias e estimativa de tendência ou risco de falha;
+● Adicionar ao menos uma integração low-code ou no-code para QA, SRE, automação
+ou construção visual de agentes;
+● Documentar prompts, decisões, limitações, testes e evidências de execução.
+3. RESULTADOS ESPERADOS (ENTREGA)
+A atividade será realizada individualmente. Cada estudante será responsável pelo
+planejamento, desenvolvimento, documentação, testes, organização do GitHub e
+demonstração da própria solução, mantendo evidências reais da evolução do trabalho por
+meio de cards, commits, branches, pull requests, testes, prompts e demais artefatos
+produzidos.
+O código deverá ser inserido e versionado em um repositório no GitHub, que poderá
+ser criado na conta pessoal do estudante, e o planejamento deverá ser realizado em um
+GitHub Project no formato Kanban. O professor deverá receber acesso aos artefatos
+necessários para a avaliação. Os links do repositório, do quadro e do vídeo deverão ser
+submetidos na atividade correspondente do AVA.
+A entrega será composta pelos seguintes artefatos principais:
+● Repositório no GitHub com código, testes, workflows, documentação e histórico de
+desenvolvimento;
+● Quadro Kanban do GitHub atualizado durante o projeto;
+● README.md completo, com instruções de instalação, configuração, execução e
+descrição da solução;
+● Documentação e evidências técnicas necessárias para demonstrar as principais
+decisões, refinamentos, testes, observabilidade, análise de falhas e integração
+low-code/no-code;
+● Vídeo de demonstração publicado no YouTube como não listado.
+Peso deste projeto: Avaliação M2.2 – 60% da nota do módulo.
+Data de liberação: 21/08/26 às 22h
+Data de entrega: 31/08/26 até às 15h
+Submissão no AVA: Projeto Avaliativo – M2.2
+3
 
-O agente poderá automatizar tanto processos relacionados ao ciclo de desenvolvimento de software, como revisão de pull requests, análise de logs de pipeline, triagem de issues e apoio à documentação técnica, quanto processos específicos da temática ou case escolhido pelo aluno ou grupo. Em ambos os casos, a solução deve demonstrar um fluxo claro de automação, com entrada definida, processamento por agente, uso controlado de ferramentas e saída útil para o usuário final.
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+4. REQUISITOS DA APLICAÇÃO
+O desenvolvimento da aplicação funcional pode ser feito em qualquer domínio de
+negócio, desde que o uso de IA esteja presente na solução e seja demonstrado nas
+atividades previstas neste projeto. As tecnologias poderão ser definidas de acordo com o
+domínio escolhido. A avaliação considerará a coerência entre o problema, a arquitetura, o
+nível de autonomia, os mecanismos de qualidade e as evidências apresentadas.
+4.1. Domínio, escopo e cenários
+● O problema, o público, as entradas, as saídas e os limites da solução deverão estar
+descritos no README.md.
+● A aplicação deverá possuir lógica funcional compatível com o problema escolhido,
+sem depender exclusivamente de respostas fixas no código.
+● Deverão ser demonstrados pelo menos dois cenários de uso, sendo um fluxo principal
+e um cenário de risco, falha, exceção ou comportamento anômalo.
+● A saída principal deverá ser estruturada e adequada ao domínio, podendo utilizar
+JSON, modelo Pydantic, tabela, relatório, contrato de API ou formato equivalente.
+4.2. Arquitetura agêntica e LangGraph
+● Implementar o fluxo principal com LangGraph, utilizando estado compartilhado
+tipado, nodes com responsabilidades claras e edges explícitas.
+● O fluxo deverá contemplar execução sequencial, ramificação condicional e ao menos
+uma paralelização simples.
+● Definir condições de continuidade e parada, evitando loops indefinidos e execuções
+desnecessárias.
+● Manter clara a separação entre decisões realizadas pelo modelo e regras
+determinísticas da aplicação.
+4.3. Tools, MCP e integrações
+● Implementar pelo menos uma tool funcional, com entradas e saídas bem definidas,
+integrada por MCP, API, serviço, backend ou webhook, incluindo validação de
+payloads, parâmetros e schemas e tratamento de falhas;
+● Ações destrutivas ou irreversíveis deverão ser simuladas, bloqueadas ou
+condicionadas à aprovação humana, quando aplicável ao domínio.
+4.4. Memória, contexto e RAG
+● Implementar uma estratégia de memória ou recuperação contextual adequada ao
+domínio da aplicação, utilizando recursos como state, checkpointer, armazenamento
+persistente ou RAG.
+4
 
-## 2. DESAFIO
-O aluno ou grupo deverá desenvolver um agente funcional, demonstrável e documentado, capaz de automatizar um processo real relacionado ao desenvolvimento de software ou à temática escolhida para o projeto. A solução deve apresentar uma entrada definida, um fluxo de execução organizado, uso de ferramenta, tratamento de contexto e uma saída útil para o usuário final.
-Ao construir o agente proposto, o aluno estará colocando em prática os aprendizados em:
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+● A estratégia adotada deverá permitir que a solução utilize informações relevantes da
+própria execução, de interações anteriores ou de uma fonte externa, conforme a
+necessidade do domínio.
+● Quando utilizar RAG, documentar resumidamente a base, o chunking, a indexação, a
+recuperação e as fontes. Para outras fontes externas, indicar a origem das informações
+e como são recuperadas.
+4.5. Segurança, governança e limites de autonomia
+● Proteger credenciais e informações sensíveis, mantendo segredos fora do repositório,
+e validar permissões antes da execução de tools ou ações externas.
+● Definir limites de autonomia coerentes com o domínio, determinando quando uma
+ação poderá ser executada, bloqueada ou depender de aprovação humana.
+● Implementar e demonstrar pelo menos um cenário adversarial envolvendo prompt
+injection ou entrada não confiável, comprovando que conteúdos externos não
+substituem as regras da aplicação, ações não autorizadas não são executadas e
+informações sensíveis não são reveladas.
+4.6. Observabilidade e resiliência
+● Produzir e correlacionar pelo menos dois sinais de observabilidade, sendo um deles
+logs estruturados e o outro podendo ser trace, métrica ou registro de auditoria;
+● Utilizar esses sinais para investigar pelo menos uma execução da aplicação,
+permitindo identificar seu fluxo, decisões relevantes, erros e latência, quando
+disponível.
+● Aplicar tratamento básico de falhas nas integrações externas, como timeout, retry
+limitado ou fallback, quando aplicável ao domínio.
+4.7. IA para QA e testes inteligentes
+● Utilizar IA para analisar pelo menos uma alteração real do projeto, como um diff,
+trecho de código ou Pull Request real, identificando possíveis problemas ou
+oportunidades de melhoria;
+● Gerar ou refinar testes automatizados com apoio de IA, cobrindo cenários relevantes
+da aplicação e incluindo pelo menos um dos seguintes tipos de teste: integração,
+aceitação ou E2E (end-to-end).
+● Selecionar e justificar pelo menos um teste ou cenário considerado prioritário com
+base em risco, impacto ou criticidade.
+4.8. DevOps inteligente e detecção de falhas
+● Configurar um pipeline que execute lint, testes e build ou validação equivalente. O
+deploy da aplicação não será obrigatório;
+5
 
-* Definir um agente com objetivo claro, explicando qual processo será automatizado, qual entrada será recebida e qual resultado será entregue ao usuário.
-* Implementar um fluxo funcional com LangGraph, utilizando estado, nós e conexões para organizar as etapas de execução do agente.
-* Aplicar, de forma simples, conceitos de arquitetura de agentes, como separação entre planejamento, execução, uso de ferramentas e geração da resposta final.
-* Integrar pelo menos uma ferramenta ao agente, como leitura ou escrita de arquivos, chamada a uma API, consulta a dados, análise de logs ou execução de uma função controlada.
-Utilizar memória ou contexto durante a execução, mantendo informações relevantes no estado do agente para apoiar o processamento e a resposta final.
-* Aplicar cuidados básicos de segurança e validação, como controle das entradas recebidas, proteção de chaves de API, limitação de ações da ferramenta e geração de saídas verificáveis.
-* Documentar o funcionamento do agente, os principais prompts utilizados, exemplos de entrada e saída e manter o projeto versionado no GitHub.
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+● Utilizar IA para analisar e explicar logs de pelo menos duas etapas entre CI, Dockerfile,
+lint, testes, build e, quando houver, CD ou deploy;
+● Detectar e explicar pelo menos uma anomalia, como erro recorrente, latência alta,
+falha de tool ou aumento da taxa de erro;
+● Produzir uma estimativa simples de tendência, risco ou probabilidade de falha,
+utilizando dados reais ou simulados e documentados;
+● Apresentar as evidências utilizadas e justificar a conclusão obtida na análise da falha
+ou do risco identificado.
+4.9. Low-Code para QA, SRE e agentes
+Você deverá implementar uma automação low-code ou no-code integrada à solução
+principal. Não será necessário reconstruir a aplicação na ferramenta visual.
+● O fluxo deverá possuir ao menos um gatilho, integrar-se à aplicação ou a um de seus
+serviços e produzir uma saída observável, como alerta, relatório, registro, comentário
+ou resposta;
+● A lógica principal deverá permanecer na aplicação, enquanto a ferramenta visual
+deverá atuar como apoio à orquestração ou integração;
+● O fluxo deverá possuir instruções resumidas de reprodução no README.md.
+Como extensão opcional , o aluno poderá utilizar ChatOps ou outro mecanismo de
+notificação para comunicar resultados, alertas ou diagnósticos produzidos pela aplicação,
+utilizando, por exemplo, Discord, Slack, Microsoft Teams, e-mail, GitHub Issue ou webhook.
+4.10. Prompts, modelos e refinamento
+● Manter documentadas no projeto as principais instruções de sistema utilizadas pelo
+agente, incluindo regras de comportamento, objetivos da tarefa, restrições
+importantes e padrões de resposta esperados, além dos prompts relevantes que
+orientam o funcionamento da solução;
+● Configurar o modelo utilizado por meio de variável de ambiente, evitando credenciais
+ou informações sensíveis no código;
+● Documentar pelo menos um ciclo de refinamento de prompt ou comportamento do
+agente, apresentando o problema observado, a alteração realizada e o resultado
+obtido.
+5. ROTEIRO DA APLICAÇÃO
+A seguir estão os requisitos de organização e apresentação da entrega. A estrutura
+poderá ser adaptada ao domínio, mas deverá permitir que o avaliador localize rapidamente o
+código do agente, as integrações, os testes, as políticas, os workflows e as evidências.
+6
 
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+5.1. FORMATO DO SISTEMA
+Você poderá escolher o formato da aplicação, desde que a solução seja executável,
+demonstrável e documentada. São formatos aceitáveis:
+● Aplicação de linha de comando;
+● API local com FastAPI, Flask ou tecnologia equivalente;
+● Interface simples com Gradio, Streamlit ou aplicação web;
+● Aplicação integrada a serviços externos ou automações.
+Outros formatos poderão ser utilizados desde que sejam adequados ao domínio e
+permitam demonstrar os requisitos do projeto.
+Notebooks poderão ser utilizados apenas como apoio à experimentação ou como
+demonstração auxiliar, não como formato principal da aplicação entregue.
+A solução deverá possuir dados de exemplo e instruções suficientes para reproduzir os
+cenários demonstrados. Credenciais, chaves de API, tokens e outras informações sensíveis
+não deverão ser incluídas no repositório, no AVA ou nos demais artefatos entregues. Quando
+necessário, deverá ser disponibilizado um .env.example sem valores reais.
+5.2. DOCUMENTAÇÃO NO README.MD
+Crie um arquivo README.md no repositório do projeto no GitHub para documentar a
+solução, apresentar as principais decisões técnicas e permitir que outra pessoa compreenda,
+configure, execute e avalie a aplicação.
+O README.md deverá funcionar como guia do projeto e conter obrigatoriamente:
+● Descrição da solução: nome do projeto, problema resolvido, público, objetivo e valor
+entregue. Quando houver continuidade do mini-projeto, indicar brevemente quais
+capacidades foram mantidas ou evoluídas;
+● Classificação e arquitetura: classificar a solução como agente, workflow
+determinístico ou sistema híbrido e apresentar um diagrama da arquitetura,
+destacando o fluxo LangGraph, seus principais nodes, rotas, paralelização e
+componentes envolvidos;
+● Tool e integração: descrever a tool implementada e sua integração, como MCP, API,
+serviço, backend ou webhook, indicando resumidamente sua finalidade no fluxo;
+● Contexto e memória: explicar a estratégia de memória ou recuperação contextual
+adotada, como state, checkpointer, armazenamento persistente ou RAG, e como essas
+informações são utilizadas pela aplicação;
+● Segurança e autonomia: apresentar os principais controles de segurança, proteção
+de credenciais, validações, limites de autonomia, bloqueios e aprovação humana
+quando aplicável, incluindo o comportamento esperado diante de uma entrada
+adversarial ou prompt injection;
+7
 
-## 3. RESULTADOS ESPERADOS (ENTREGA)
-O projeto deverá ser entregue até 20/07/2026 às 22h, via AVA, por meio do envio do link do repositório GitHub. O mini-projeto corresponde a 30% da nota do módulo e poderá ser desenvolvido individualmente ou em grupos de até 3 alunos.
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+● Instalação e execução: fornecer instruções de configuração, instalação, execução e
+testes, incluindo as variáveis de ambiente necessárias por meio de .env.example , sem
+expor credenciais, tokens ou informações sensíveis;
+● QA, observabilidade e DevOps: apresentar as principais evidências de qualidade e
+operação da solução, incluindo testes realizados, análise de código com IA, os sinais de
+observabilidade utilizados, pipeline, análise de logs, anomalia identificada e estimativa
+de tendência ou risco de falha;
+● Automação low-code/no-code: descrever o fluxo integrado à aplicação, indicando
+seu gatilho, sua relação com a solução principal e a saída produzida. Quando utilizado,
+também poderá ser apresentado ChatOps ou outro mecanismo de alerta ou
+notificação;
+● Cenários de uso: documentar dois cenários, sendo um fluxo principal e um cenário
+de risco, falha ou exceção, apresentando exemplos de entrada, comportamento
+esperado e resultado produzido;
+● Análise crítica e limitações: apresentar pelo menos um refinamento relevante
+realizado durante o desenvolvimento, indicando o problema observado, a alteração
+aplicada e o resultado obtido, além das principais limitações, possibilidades de
+evolução e link do vídeo de demonstração.
+5.3. USO DO QUADRO DO GITHUB
+Crie um GitHub Project para organizar o desenvolvimento utilizando as colunas
+Backlog, A Fazer, Em Andamento, Bloqueado, Em Revisão e Concluído. Os cards deverão
+refletir o processo real, e não ser criados apenas ao final.
+Cada card deverá representar uma atividade real do projeto e conter uma descrição clara da
+tarefa, seu objetivo e o resultado esperado. Quando aplicável, o card poderá ser relacionado a
+branches, pull requests, testes ou outras evidências produzidas durante o desenvolvimento.
+Para apoiar a organização do trabalho, os temas abaixo podem ser utilizados como
+referência para a criação dos cards:
+● definição do problema, escopo e arquitetura da solução;
+● implementação do fluxo com LangGraph;
+● desenvolvimento da tool e integração;
+● implementação de memória, contexto ou RAG;
+● segurança, governança e tratamento de entradas adversariais;
+● implementação de logs e demais sinais de observabilidade;
+● análise de código e criação ou refinamento de testes com IA;
+● configuração do pipeline e análise de logs;
+● detecção de anomalias e análise de tendência ou risco de falha;
+● integração da automação low-code/no-code;
+8
 
-O repositório deverá estar acessível e conter:
-* README.md completo;
-* código-fonte do agente implementado com LangGraph;
-* pelo menos uma ferramenta integrada ao agente;
-* exemplos de entrada e saída da execução;
-* registro dos principais prompts utilizados em arquivo .md;
-* apresentação da ideia do projeto em até 2 slides.
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+● documentação, README.md, vídeo e preparação da entrega.
+O quadro deve refletir de forma consistente o fluxo de desenvolvimento, garantindo
+coerência entre tarefas, commits, branches e artefatos gerados ao longo do ciclo de
+implementação.
+5.4. USO DO REPOSITÓRIO NO GITHUB
+● Utilize um repositório no GitHub para controle de versionamento, inclusive em sua
+conta pessoal. O histórico deverá permitir identificar claramente a evolução do projeto.
+● Adicionar o professor como colaborador, conforme as orientações fornecidas para a
+avaliação.
+● Utilizar as branches main e develop e criar feature branches a partir da develop.
+● Relacionar branches, cards e pull requests sempre que possível.
+● Criar commits naturalmente, de acordo com a evolução do projeto, utilizando
+mensagens semânticas, claras, objetivas e coerentes com cada avanço realizado.
+● Manter o código final integrado na main e não alterar o repositório após o prazo.
+● Não versionar chaves, tokens, senhas, arquivos .env ou dados sensíveis.
+● Incluir .env.example, dependências, comandos de execução, testes e workflows.
+● Organizar toda a documentação e as evidências do projeto no diretório /docs ,
+utilizando subpastas quando necessário, como /docs/prompts , /docs/qa e
+/docs/evidencias .
+Sugestão de branches — feature/langgraph-agente, feature/tool-integracao, feature/memoria-rag,
+feature/governanca, feature/observabilidade, feature/qa-inteligente, feature/devops-anomalias,
+feature/low-code e docs/readme-video.
+5.5. GRAVAÇÃO DE VÍDEO
+O estudante deverá gravar um vídeo com duração recomendada de até 10 minutos,
+admitindo-se o limite máximo de 12 minutos, publicá-lo no YouTube como não listado, inserir
+o link no README.md do repositório e submetê-lo no AVA junto com os demais links do
+projeto. O vídeo deverá priorizar os seguintes pontos:
+● Problema, objetivo e classificação da solução;
+● Visão resumida da arquitetura e das integrações;
+● Dois cenários de uso, sendo um fluxo principal e um cenário de risco, falha, exceção ou
+comportamento anômalo;
+9
 
-A apresentação deverá ser submetida via AVA ou versionada no próprio repositório, conforme orientação do professor. Os slides devem apresentar, de forma objetiva, o problema escolhido, o processo automatizado, a proposta do agente, as ferramentas utilizadas e o fluxo geral da solução.
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+● Evidência de segurança, bloqueio ou aprovação humana, quando aplicável;
+● Uma evidência de QA;
+● Pipeline, análise de logs, detecção de anomalias e estimativa de tendência ou risco de
+falha;
+● Demonstração resumida da automação low-code/no-code;
+● Principais limitações e melhorias futuras;
+Sugestão de roteiro:
+● 0:00 a 1:00 — problema, objetivo e classificação da solução;
+● 1:00 a 2:00 — visão resumida da arquitetura e das integrações;
+● 2:00 a 4:00 — dois cenários de uso, sendo um fluxo principal e um cenário de risco,
+falha, exceção ou comportamento anômalo;
+● 4:00 a 5:00 — evidência de segurança, bloqueio ou aprovação humana, quando
+aplicável;
+● 5:00 a 6:00 — uma evidência de QA;
+● 6:00 a 8:00 — pipeline, análise de logs, detecção de anomalias e estimativa de
+tendência ou risco de falha;
+● 8:00 a 9:00 — demonstração resumida da automação low-code/no-code;
+● 9:00 a 10:00 — principais limitações e melhorias futuras.
+6. CRITÉRIOS DE AVALIAÇÃO
+A tabela abaixo apresenta os critérios que serão avaliados durante a correção do projeto. A
+nota possui variação de 0 (zero) a 10 (dez). As faixas de pontuação foram padronizadas em 0
+e 1,00; 0 / 0,25 / 0,50; ou 0 / 0,25 / 0,75, conforme o peso de cada bloco.
+Serão desconsiderados e atribuídos nota 0 (zero) a projetos que apresentarem plágio de
+soluções encontradas na internet ou de outros colegas. Também poderão receber nota zero
+os projetos com credenciais expostas, artefatos inacessíveis ou código que o estudante não
+consiga explicar durante a demonstração.
+Apresentação do Projeto
+Nº Critério de Avaliação 0 1,00
+O estudante entregou O vídeo não foi
+o vídeo de entregue, está
+demonstração no inacessível, O vídeo está acessível, respeita o limite máximo
+1 YouTube como não ultrapassa 12 de 12 minutos e cobre de forma clara os pontos
+listado, com duração minutos ou não previstos no item 5.5.
+recomendada de até 10 demonstra o
+minutos e limite funcionamento e as
+10
 
-Importante:
+|     |     |  Atualizado em  |     | 14 de ago. de 2026 |
+| --- | --- | --------------- | --- | ------------------ |
+ Criado por: xxx
+|  máximo de 12 minutos,  |  evidências técnicas  |     |     |     |
+| ----------------------- | --------------------- | --- | --- | --- |
+|  cobrindo os pontos     |  solicitadas.         |     |     |     |
+ descritos no item 5.5?
+ Uso adequado do quadro do GitHub
+|  Nº   Critério de Avaliação  |  0  |  0,25  |     |  0,50  |
+| ---------------------------- | --- | ------ | --- | ------ |
+ Os cards existem, mas  Os cards representam de
+|     |  O quadro não existe,  |  representam apenas  |  forma coerente as  |     |
+| --- | ---------------------- | -------------------- | ------------------- | --- |
+ O estudante organizou
+ está inacessível ou   parte do trabalho ou   principais atividades do
+ o escopo do projeto em
+ 2   não possui cards   possuem descrições   projeto e possuem
+ cards no quadro do
+ relacionados ao   pouco claras sobre a   descrições suficientes
+ GitHub?
+|     |  projeto.  |  atividade e o        |  para compreender o que      |     |
+| --- | ---------- | --------------------- | ---------------------------- | --- |
+|     |            |  resultado esperado.  |  foi planejado e realizado.  |     |
+ Os cards não foram   A movimentação   O andamento dos cards
+ O estudante manteve o
+ movimentados ou   ocorreu de forma   foi atualizado de forma
+ quadro atualizado
+ foram organizados   parcial ou irregular,   coerente, permitindo
+ 3   durante o
+ apenas ao final do   sem representar   acompanhar a evolução
+ desenvolvimento?
+|     |  projeto.  |  claramente a           |  real do projeto durante o  |     |
+| --- | ---------- | ----------------------- | --------------------------- | --- |
+|     |            |  evolução do trabalho.  |  desenvolvimento.           |     |
+ Uso adequado do GitHub e README.md
+|  Nº   Critério de Avaliação  |  0  |  0,25  |     |  0,75  |
+| ---------------------------- | --- | ------ | --- | ------ |
+ O repositório não
+ O repositório utiliza
+ existe, está
+|     |     |  branches, mas  |  O desenvolvimento utiliza  |     |
+| --- | --- | --------------- | --------------------------- | --- |
+ inacessível ou
+|  O estudante utilizou  |     |  apresenta fluxo  |  de forma coerente  |     |
+| ---------------------- | --- | ----------------- | ------------------- | --- |
+ concentra o
+|  adequadamente  |     |  inconsistente,  |  develop ,  feature  |     |
+| --------------- | --- | ---------------- | -------------------- | --- |
+ desenvolvimento
+ branches, commits e o   histórico concentrado   branches e  main ,  com
+|  4  |  diretamente na  |     |     |     |
+| --- | ---------------- | --- | --- | --- |
+ fluxo de versionamento   em poucas alterações   commits incrementais e
+ main ,  sem histórico
+|  do projeto?  |     |  ou commits com  |     |     |
+| ------------- | --- | ---------------- | --- | --- |
+ mensagens semânticas,
+ que permita
+|     |     |  mensagens genéricas  |  claras e relacionadas à  |     |
+| --- | --- | --------------------- | ------------------------- | --- |
+ compreender a
+ e pouco
+ evolução real do projeto.
+ evolução do projeto.
+ representativas.
+ O README.md apresenta
+ O README.md existe,
+ de forma clara a solução,
+ mas possui instruções
+ sua arquitetura,
+|                         |  O README.md está     |  incompletas,          |                            |     |
+| ----------------------- | --------------------- | ---------------------- | -------------------------- | --- |
+|  O README.md e a        |                       |                        |  instruções de             |     |
+|                         |  ausente ou não       |  informações           |                            |     |
+|  documentação           |                       |                        |  configuração e execução,  |     |
+|                         |  fornece informações  |  importantes ausentes  |                            |     |
+|  5   permitem           |                       |                        |  principais decisões       |     |
+|                         |  suficientes para     |  ou documentação       |                            |     |
+|  compreender, executar  |                       |                        |  técnicas, cenários e      |     |
+|                         |  compreender e        |  insuficiente para     |                            |     |
+|  e avaliar a solução?   |                       |                        |  evidências necessárias    |     |
+|                         |  executar o projeto.  |  compreender           |                            |     |
+ para compreender,
+ plenamente a
+ reproduzir e avaliar o
+ solução.
+ projeto.
+ Aplicação, arquitetura agêntica e integrações
+|  Nº   Critério de Avaliação  |  0  |  0,25  |     |  0,75  |
+| ---------------------------- | --- | ------ | --- | ------ |
+ 11
 
-* Não serão aceitos projetos submetidos após a data limite.
-* Teste o link do repositório antes da submissão para garantir que ele está acessível.
-* Não modifique o repositório após a entrega até receber a nota.
-* Não versione chaves de API, tokens ou informações sensíveis no repositório.
-* Todos os alunos serão avaliados pelos mesmos critérios, sem divisão por nível de experiência.
-* Em projetos em grupo, a entrega será coletiva, mas a avaliação será individual conforme a contribuição de cada integrante. Por isso, todos os alunos deverão manter evidências rastreáveis de participação no repositório, como commits, implementação, documentação, revisão ou organização da entrega.
+|     |     |  Atualizado em  |     | 14 de ago. de 2026 |
+| --- | --- | --------------- | --- | ------------------ |
+ Criado por: xxx
+ A aplicação executa de
+|     |  A aplicação não  |  A aplicação executa  |     |     |
+| --- | ----------------- | --------------------- | --- | --- |
+ ponta a ponta, possui
+|                         |  executa, depende    |  parcialmente ou        |                         |     |
+| ----------------------- | -------------------- | ----------------------- | ----------------------- | --- |
+|  A aplicação está       |                      |                         |  problema e domínio     |     |
+|                         |  exclusivamente de   |  demonstra apenas       |                         |     |
+|  funcional e demonstra  |                      |                         |  claramente definidos,  |     |
+|                         |  respostas fixas ou  |  um dos cenários        |                         |     |
+|  6   adequadamente o    |                      |                         |  demonstra os dois      |     |
+|                         |  não permite         |  esperados,             |                         |     |
+|  problema e os          |                      |                         |  cenários esperados e   |     |
+|                         |  compreender o       |  apresentando           |                         |     |
+|  cenários definidos?    |                      |                         |  produz uma saída       |     |
+|                         |  problema que        |  limitações relevantes  |                         |     |
+ estruturada e adequada
+|     |  pretende resolver.  |  no fluxo.  |     |     |
+| --- | -------------------- | ----------- | --- | --- |
+ ao domínio.
+ O grafo possui state
+ tipado, nodes claros,
+ O grafo existe, mas
+ execução sequencial,
+|     |  Não há LangGraph  |  possui estado  |     |     |
+| --- | ------------------ | --------------- | --- | --- |
+ ramificação condicional,
+|  O fluxo foi modelado  |  funcional ou o fluxo  |  confuso, nodes  |     |     |
+| ---------------------- | ---------------------- | ---------------- | --- | --- |
+ paralelização simples,
+|  7   adequadamente com  |  não possui state,  |  excessivamente  |     |     |
+| ----------------------- | ------------------- | ---------------- | --- | --- |
+ condição de parada e
+|  LangGraph?  |  nodes e edges  |  acoplados ou  |     |     |
+| ------------ | --------------- | -------------- | --- | --- |
+ separação coerente
+|     |  compreensíveis.  |  controle de fluxo  |     |     |
+| --- | ----------------- | ------------------- | --- | --- |
+ entre decisões do
+ incompleto.
+ modelo e regras
+ determinísticas.
+ A solução possui uma
+ A tool existe, mas
+|                         |  Não há tool    |                         |  tool funcional integrada  |     |
+| ----------------------- | --------------- | ----------------------- | -------------------------- | --- |
+|  A solução utiliza      |                 |  apresenta              |                            |     |
+|                         |  funcional ou   |                         |  por MCP, API, serviço,    |     |
+|  8   adequadamente uma  |                 |  integração, validação  |                            |     |
+|                         |  integração     |                         |  backend ou webhook,       |     |
+|  tool integrada?        |                 |  ou tratamento de       |                            |     |
+|                         |  demonstrável.  |                         |  com validação e           |     |
+ falhas incompleto.
+ tratamento de falhas.
+ A solução utiliza de
+ Existe uma
+ forma coerente uma
+ estratégia de
+ estratégia de memória
+ contexto, memória
+|                         |  Não há estratégia    |                       |  ou recuperação            |     |
+| ----------------------- | --------------------- | --------------------- | -------------------------- | --- |
+|  A solução utiliza uma  |                       |  ou recuperação, mas  |                            |     |
+|                         |  de memória ou        |                       |  contextual adequada ao    |     |
+|  estratégia de          |                       |  sua utilização é     |                            |     |
+|                         |  recuperação          |                       |  domínio, como  state ,    |     |
+|  memória ou             |                       |  limitada, pouco      |                            |     |
+|  9                      |  contextual, ou o     |                       |  checkpointer,             |     |
+|  recuperação            |                       |  documentada ou       |                            |     |
+|                         |  contexto é inserido  |                       |  armazenamento             |     |
+|  contextual adequada    |                       |  não demonstra        |                            |     |
+|                         |  de forma fixa e      |                       |  persistente ou RAG,       |     |
+|  ao domínio?            |                       |  claramente o uso de  |                            |     |
+|                         |  descontrolada.       |                       |  recuperando e utilizando  |     |
+ informações
+ informações relevantes
+ relevantes pela
+ conforme a necessidade
+ aplicação.
+ da aplicação.
+ Segurança, observabilidade e resiliência
+|  Nº   Critério de Avaliação  |  0  |  0,25  |     |  0,75  |
+| ---------------------------- | --- | ------ | --- | ------ |
+ A solução protege
+ Existem controles de
+ credenciais, valida ações
+|     |  Não há proteção  |  segurança, mas  |     |     |
+| --- | ----------------- | ---------------- | --- | --- |
+ e entradas e demonstra
+|                          |  adequada de          |  estão incompletos  |                          |     |
+| ------------------------ | --------------------- | ------------------- | ------------------------ | --- |
+|  A solução aplica        |                       |                     |  um cenário adversarial  |     |
+|                          |  segredos, validação  |  ou o cenário       |                          |     |
+|  controles adequados     |                       |                     |  no qual ações não       |     |
+|  10                      |  das ações ou         |  adversarial não    |                          |     |
+|  de segurança e limites  |                       |                     |  autorizadas são         |     |
+|                          |  tratamento de        |  demonstra          |                          |     |
+|  de autonomia?           |                       |                     |  bloqueadas. Aprovação   |     |
+|                          |  entradas não         |  claramente o       |                          |     |
+ humana é utilizada
+|     |  confiáveis.  |  comportamento  |     |     |
+| --- | ------------- | --------------- | --- | --- |
+ quando aplicável ao
+ seguro da aplicação.
+ domínio.
+ 12
 
-## 4. REQUISITOS DA APLICAÇÃO
-O projeto deverá atender aos seguintes requisitos técnicos e de execução:
+|     |     |  Atualizado em  |     | 14 de ago. de 2026 |
+| --- | --- | --------------- | --- | ------------------ |
+ Criado por: xxx
+ A solução produz e
+ correlaciona pelo menos
+|  A execução possui  |  Não há sinais  |     |  dois sinais de  |     |
+| ------------------- | --------------- | --- | ---------------- | --- |
+ Há apenas um sinal,
+|  pelo menos dois  |  suficientes para  |     |  observabilidade,  |     |
+| ----------------- | ------------------ | --- | ------------------ | --- |
+ os sinais não
+|  sinais de  |  investigar a  |     |  incluindo logs  |     |
+| ----------- | -------------- | --- | ---------------- | --- |
+ possuem correlação
+ 11   observabilidade   execução e as   estruturados, e permite
+ suficiente ou o
+ correlacionados e   falhas não são   identificar decisões, erros
+ tratamento de falhas
+|  tratamento adequado  |  tratadas  |     |  e latência. Também trata  |     |
+| --------------------- | ---------- | --- | -------------------------- | --- |
+ está incompleto.
+|  de falhas?  |  adequadamente.  |     |  falhas com timeout, retry  |     |
+| ------------ | ---------------- | --- | --------------------------- | --- |
+ ou fallback, quando
+ necessário.
+ QA, DevOps Inteligente e Low-Code
+|  Nº   Critério de Avaliação  |  0  |  0,25  |     |  0,50  |
+| ---------------------------- | --- | ------ | --- | ------ |
+ A IA é utilizada em code
+ review de uma alteração
+|     |     |  Há code review ou  |  real e na geração ou  |     |
+| --- | --- | ------------------- | ---------------------- | --- |
+ Não há evidência   testes gerados, mas   refinamento de testes
+ O estudante aplicou
+ relevante de uso de   com cobertura   relevantes, incluindo
+ 12   IA em code review e
+|     |  IA em revisão de  |  superficial, sem  |  pelo menos um dos  |     |
+| --- | ------------------ | ------------------ | ------------------- | --- |
+ testes relevantes?
+|     |  código ou testes.  |  validação crítica ou    |  seguintes tipos:          |     |
+| --- | ------------------- | ------------------------ | -------------------------- | --- |
+|     |                     |  priorização por risco.  |  integração, aceitação ou  |     |
+ E2E, com priorização por
+ risco ou impacto.
+ O pipeline executa lint,
+ testes e build ou
+|  A solução contempla    |                       |                          |  validação equivalente; a  |     |
+| ----------------------- | --------------------- | ------------------------ | -------------------------- | --- |
+|                         |  Não há pipeline      |  Há pipeline e uma       |                            |     |
+|  DevOps inteligente,    |                       |                          |  IA explica logs de pelo   |     |
+|                         |  funcional nem        |  análise parcial, mas    |                            |     |
+|  detecção de            |                       |                          |  menos duas etapas,        |     |
+|                         |  análise de logs,     |  faltam etapas, sinais,  |                            |     |
+|  13   anomalias e       |                       |                          |  detecta e explica uma     |     |
+|                         |  anomalias ou         |  evidências ou           |                            |     |
+|  estimativa de          |                       |                          |  anomalia e produz uma     |     |
+|                         |  estimativa de risco  |  interpretação           |                            |     |
+|  tendência ou risco de  |                       |                          |  estimativa simples de     |     |
+|                         |  de falha.            |  estruturada.            |                            |     |
+|  falha?                 |                       |                          |  tendência ou risco. O     |     |
+ deploy é considerado
+ apenas quando aplicável.
+ Há automação low-code
+ ou no-code integrada à
+ Existe um fluxo
+|  O estudante integrou  |                    |                       |  solução principal, com     |     |
+| ---------------------- | ------------------ | --------------------- | --------------------------- | --- |
+|                        |  Não há fluxo      |  visual isolado,      |                             |     |
+|  uma automação         |                    |                       |  trigger, integração com a  |     |
+|  14                    |  low-code/no-code  |  incompleto ou sem    |                             |     |
+|  low-code ou no-code   |                    |                       |  aplicação ou serviço,      |     |
+|                        |  demonstrável.     |  integração real com  |                             |     |
+|  ao projeto?           |                    |                       |  saída observável e         |     |
+ a aplicação.
+ instruções de
+ reprodução.
+ Análise crítica e evidências
+|  Nº   Critério de Avaliação  |  0               |  0,25            |                           |  0,50  |
+| ---------------------------- | ---------------- | ---------------- | ------------------------- | ------ |
+|  O estudante                 |                  |  Há menção a um  |  O estudante apresenta o  |        |
+|  documentou um               |  Não há análise  |  problema ou     |  problema ou              |        |
+ refinamento relevante   crítica ou   alteração, mas sem   comportamento
+ 15
+ da solução e   evidências de   mostrar claramente   observado, a alteração
+ apresentou evidências   refinamento.   a decisão e o   realizada, a justificativa, o
+|  do desenvolvimento?  |     |  resultado.  |  resultado obtido e  |     |
+| --------------------- | --- | ------------ | -------------------- | --- |
+ 13
 
-1. Definir um processo real a ser automatizado, descrevendo o objetivo do agente, a entrada esperada, as etapas principais e a saída produzida.
-2. Implementar o agente com LangGraph, utilizando um fluxo organizado com estado, nós e conexões entre as etapas.
-3. Integrar pelo menos uma ferramenta ao agente, como leitura de arquivo, escrita de relatório, chamada a API, consulta a dados ou execução de função controlada.
-4. Utilizar memória ou contexto durante a execução, mantendo informações relevantes no estado do agente ou em uma estrutura simples de apoio.
-5. Registrar os principais prompts utilizados em arquivo .md, incluindo prompts usados para planejar, implementar, corrigir ou melhorar o agente.
-6. Documentar no README.md como o agente funciona, como executar o projeto e quais decisões principais foram tomadas.
-7. Manter o projeto versionado no GitHub. Em projetos em grupo, cada integrante deverá apresentar contribuição rastreável, pois a entrega será coletiva, mas a avaliação considerará a participação individual de cada aluno
-
-## 5. ROTEIRO DA APLICAÇÃO
-Abaixo seguem as etapas recomendadas para o desenvolvimento do mini-projeto.
-
-### 5.1. FORMAÇÃO DOS GRUPOS E IDEIA INICIAL
-Primeiros passos do projeto. Nesta etapa, o aluno ou grupo deverá definir o escopo da solução e apresentar a ideia inicial.
-
-* Definir se o projeto será desenvolvido individualmente ou em grupo de até 3 alunos.
-* Escolher a temática ou case do projeto.
-* Definir qual processo será automatizado pelo agente.
-* Criar o repositório no GitHub.
-* Preparar uma apresentação de até 2 slides com a ideia do projeto.
-
-A apresentação deve conter, de forma objetiva:
-
-* problema escolhido;
-* processo que será automatizado;
-* proposta do agente;
-* entrada esperada;
-* saída esperada;
-* visão geral do fluxo da solução.
-
-### 5.2. DEFINIÇÃO DO AGENTE
-O projeto deverá apresentar claramente o agente que será construído e qual papel ele terá dentro da solução.
-
-* Definir o objetivo do agente.
-* Informar quais entradas o agente irá receber.
-* Informar quais saídas o agente deverá produzir.
-* Descrever quais etapas principais o agente deverá executar.
-* Explicar, de forma breve, por que a solução pode ser considerada um agente.
-
-Exemplos de agentes possíveis:
-
-* agente para revisar trechos de código;
-* agente para analisar logs de pipeline;
-* agente para classificar issues;
-* agente para gerar relatórios técnicos;
-* agente para consultar dados de uma API;
-* agente para apoiar decisões dentro do case escolhido pelo aluno ou grupo.
-
-
-### 5.3. IMPLEMENTAÇÃO COM LANGGRAPH, FERRAMENTA E CONTEXTO
-
-O agente deverá ser implementado utilizando LangGraph, organizando o fluxo em etapas claras.
-
-O projeto deve conter:
-
-* estado compartilhado para armazenar informações da execução;
-* nós responsáveis pelas etapas principais do processo;
-conexões entre os nós;
-* pelo menos uma ferramenta integrada ao fluxo;
-* uso de contexto ou memória durante a execução;
-* geração de uma resposta final estruturada.
-
-São exemplos de ferramentas aceitas:
-* leitura de arquivo;
-* escrita de relatório;
-* chamada a uma API;
-* consulta a dados locais;
-* análise de logs;
-* processamento de texto;
-* execução de uma função controlada;
-* busca de informações em documentos do projeto.
-
-A ferramenta deve ter uma função clara dentro do processo automatizado, contribuindo para que o agente processe a entrada e gere uma saída útil.
-
-Uma estrutura possível de fluxo seria:
-
-Entrada do usuário
-  ↓
-Preparação do contexto
-  ↓
-Análise do agente
-  ↓
-Uso de ferramenta
-  ↓
-Geração da resposta final
-
-
-O aluno ou grupo poderá adaptar esse fluxo conforme a necessidade do projeto.
-
-### 5.4. DOCUMENTAÇÃO, PROMPTS E REPOSITÓRIO
-O projeto deverá estar documentado de forma clara no repositório.
-
-O README.md deve conter:
-
-* nome do projeto;
-* descrição do problema;
-* objetivo do agente;
-* explicação do fluxo com LangGraph;
-* ferramenta utilizada pelo agente;
-* instruções para executar o projeto;
-* exemplo de entrada;
-* exemplo de saída;
-* principais decisões tomadas;
-* limitações da solução.
-
-Os principais prompts utilizados deverão ser registrados em um arquivo .md, por exemplo:
-
-docs/prompts.md
-
-Esse arquivo deve conter os prompts mais relevantes usados para planejar, implementar, corrigir ou melhorar o agente.
-
-O repositório deve estar organizado, com histórico de commits compatível com o desenvolvimento realizado. Em projetos em grupo, cada integrante deverá apresentar contribuição rastreável, pois a entrega será coletiva, mas a avaliação considerará a participação individual de cada aluno.
-
-### 6. CRITÉRIOS DE AVALIAÇÃO
-A nota varia de 0 a 10 pontos e corresponde a 30% da avaliação do módulo. Todos os alunos serão avaliados pelos mesmos critérios, sem divisão por nível de experiência.
-
-Projetos com plágio de soluções encontradas na internet ou de colegas receberão nota 0. O uso de materiais, documentações e ferramentas de IA é permitido como apoio, desde que a solução entregue seja própria.
-
-| Nº | Critério de Avaliação | Pontuação |
-| --- | --- | --- |
-| 1 | Versionamento com branches e commits semânticos | 1,0 |
-| 2 | Contribuição individual e produtividade | 1,0 |
-| 3 | Organização dos arquivos, documentação e prompts | 2,0 |
-| 4 | Ideia do projeto e apresentação | 1,0 |
-| 5 | Implementação do agente com LangGraph | 1,0 |
-| 6 | Uso de ferramenta integrada ao agente | 1,0 |
-| 7 | Cuidados básicos de segurança | 1,0 |
-| 8 | Contexto, memória e validação básica | 2,0 |
-| | **Total** | **10,0** |
-
-#### Uso do GitHub e colaboração
-
-| Nº | Critério de Avaliação | 0 | 0,5 | 1,0 |
-| --- | --- | --- | --- | --- |
-| 1 | Versionamento com branches e commits semânticos | O repositório não apresenta branches e commits. | O repositório possui commits, mas as mensagens não seguem um padrão semântico consistente, dificultando a rastreabilidade das alterações. | O repositório possui commits claros, incrementais e alinhados ao padrão de commits semânticos, permitindo acompanhar a evolução do projeto. |
-| 2 | Contribuição individual e produtividade | Sem evidências claras de participação. | Participação parcial ou pouco rastreável. | Contribuiu com a concepção da aplicação por meio de commits frequentes, implementação de funcionalidades, elaboração ou melhoria da documentação, revisão de código em Pull Requests ou organização da entrega coletiva. |
-
-| Nº | Critério de Avaliação | 0 | 1,0 | 2,0 |
-| --- | --- | --- | --- | --- |
-| 3 | Organização dos arquivos, documentação e prompts | O repositório não apresenta a documentação mínima solicitada ou possui arquivos desorganizados, dificultando a compreensão e execução do projeto. | O repositório apresenta parte da documentação solicitada, mas o README.md, os registros de prompts ou os exemplos de execução estão incompletos ou pouco organizados. | O repositório apresentou documentação completa e organizada, incluindo README.md, registro dos principais prompts, exemplos de entrada e saída e instruções claras de execução. |
-
-#### Aplicação
- 
-| Nº | Critério de Avaliação | 0 | 0,5 | 1,0 |
-| --- | --- | --- | --- | --- |
-| 4 | Ideia do projeto e apresentação | Não entregou slides ou a proposta não tem relação com agentes. | Elaborou uma apresentação com ideia, mas não evidenciou problema, agente ou fluxo. | Elaborou uma apresentação com até 2 slides, contendo problema, agente, entrada, saída e fluxo geral. |
-| 5 | Implementação do agente com LangGraph | Não usa LangGraph ou não há agente funcional. | Utilizou LangGraph, mas o fluxo está incompleto, pouco claro ou com funcionamento parcial. | O código-fonte apresentou a implementação do agente por meio do framework LangGraph, utilizando um grafo de estados (StateGraph) para o controle de fluxo e tomada de decisão. |
-| 6 | Uso de ferramenta integrada ao agente | Não utiliza ferramenta ou a ação é apenas simulada. | Usou ferramenta simples, mas com baixa integração ao fluxo. | O código-fonte apresentou a integração de ferramentas externas (como APIs, sistemas de arquivos ou funções customizadas) ao agente de IA, viabilizando a execução autônoma de ações estruturadas. |
-| 7 | Cuidados básicos de segurança | O projeto expõe credenciais, tokens, chaves de API ou informações sensíveis no código ou no repositório. | O projeto demonstrou algum cuidado com informações sensíveis, mas ainda apresenta configuração pouco clara ou risco de exposição. | O projeto não expôs credenciais, tokens ou chaves de API, utiliza .gitignore para ignorar arquivos sensíveis e, quando necessário, fornece .env.example apenas com os nomes das variáveis, sem valores reais. |
-
-| Nº | Critério de Avaliação | 0 | 1,0 | 2,0 |
-| --- | --- | --- | --- | --- |
-| 8 | Contexto, memória e validação básica | Não demonstrou uso de contexto, memória ou validação mínima. | Usou contexto ou memória de forma limitada, com pouca validação de entrada, saída ou uso da ferramenta. | Usou estado ou memória para apoiar a execução do agente e implementou validações básicas de entrada, saída ou uso da ferramenta, evitando o processamento de dados malformados. |
-
-## 7. CHECKLIST FINAL DE ENTREGA
-
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+evidências relacionadas
+ao desenvolvimento.
+TOTAL: 10,00 pontos
+7. CHECKLIST FINAL DE ENTREGA
 Antes de submeter no AVA, confira:
+Repositório e organização:
+Criei o repositório no GitHub, adicionei o professor como colaborador e confirmei que
+nenhum segredo ou arquivo .env foi versionado.
+Organizei e mantive atualizado o quadro Kanban durante o desenvolvimento.
+Utilizei o fluxo develop → feature/* → develop → main , com commits
+semânticos e coerentes com a evolução do projeto.
+Mantive na main a versão final e funcional da aplicação.
+Domínio, arquitetura e agente:
+Defini o problema, o domínio e demonstrei dois cenários de uso, incluindo um cenário
+de risco, falha, exceção ou anomalia.
+Implementei o fluxo principal com LangGraph, incluindo state, nodes, execução
+sequencial, ramificação condicional, paralelização e condição de parada.
+Implementei uma tool funcional integrada por MCP, API, serviço, backend ou
+webhook;
+Adotei uma estratégia de memória ou recuperação contextual adequada à aplicação.
+Segurança, observabilidade e resiliência:
+Apliquei controles de segurança, incluindo validação de payloads, parâmetros,
+schemas e permissões, limites de autonomia, aprovação humana quando necessária
+e um cenário adversarial de prompt injection ou entrada não confiável.
+Produzi e correlacionei pelo menos dois sinais de observabilidade, sendo logs
+estruturados e um segundo sinal entre trace, métrica ou auditoria, registrando
+informações como erros e latência..
+Tratei falhas nas integrações, utilizando timeout, retry limitado ou fallback quando
+necessário.
+QA, DevOps e Low-Code:
+Realizei code review com apoio de IA e gerei ou refinei testes relevantes, incluindo
+pelo menos um dos seguintes tipos: integração, aceitação ou E2E, com priorização
+baseada em risco, impacto ou criticidade;
+14
 
-### Repositório e organização
-* Criei o repositório no GitHub e ele está acessível para avaliação.
-* O repositório contém o código-fonte do agente.
-* O projeto está organizado e possui histórico de commits compatível com o desenvolvimento realizado.
-* Em projetos em grupo, cada integrante possui uma contribuição rastreável.
-
-### Agente e implementação
-* Defini o processo que será automatizado pelo agente.
-O agente possui objetivo, entrada e saída claramente definidos.
-* Implementei o agente usando LangGraph.
-* O fluxo utiliza estado, nós e conexões entre etapas.
-* O agente executa de forma funcional e gera uma saída estruturada.
-
-### Ferramentas, contexto e validação
-* O agente utiliza pelo menos uma ferramenta integrada.
-* A ferramenta executa uma ação real, como ler arquivo, escrever relatório, consultar dados, chamar API, analisar logs ou executar função controlada.
-* O agente utiliza contexto ou memória durante a execução.
-* A solução possui validação básica de entrada, saída ou uso da ferramenta.
-* Não foram versionadas chaves, tokens ou informações sensíveis no repositório.
-
-### README.md e prompts
-* O README.md apresenta o problema, o objetivo do agente e o funcionamento geral da solução.
-* O README.md explica como executar o projeto.
-* O README.md descreve o fluxo com LangGraph e a ferramenta utilizada.
-* O README.md apresenta exemplo de entrada e saída.
-* Registrei os principais prompts utilizados em arquivo .md.
-
-## Apresentação
-* Preparei a apresentação da ideia do projeto em até 2 slides.
-* Os slides apresentam o problema, a proposta do agente, a entrada, a saída, a ferramenta utilizada e o fluxo geral da solução.
-* A apresentação foi submetida via AVA ou versionada no repositório, conforme orientação do professor.
-
-# Submissão
-* Submeti o link do repositório GitHub no AVA.
-* Conferi se o link está acessível antes da submissão.
-* Realizei a entrega antes do prazo: 20/07/2026 às 15h.
-Não modificarei o repositório após a entrega até receber a nota.
-
-
+Atualizado em 14 de ago. de 2026
+Criado por: xxx
+Configurei pipeline com lint, testes e build ou equivalente e utilizei IA para analisar
+logs de pelo menos duas etapas, detectar uma anomalia e produzir uma estimativa
+simples de tendência ou risco de falha;
+Integrei uma automação low-code/no-code à solução principal, com trigger e saída
+observável.
+README.md e evidências:
+O README.md permite compreender, configurar, executar e avaliar a solução,
+incluindo as principais instruções do agente e a configuração do modelo por variável
+de ambiente.
+Documentei pelo menos um ciclo de refinamento, apresentando o problema
+observado, a alteração realizada e o resultado obtido.
+Organizei as principais evidências de testes, observabilidade, QA, DevOps e
+low-code/no-code;
+Incluí no README.md o link do vídeo de demonstração.
+Vídeo e submissão:
+Gravei o vídeo com duração recomendada de até 10 minutos, sem ultrapassar 12
+minutos, e publiquei como não listado.
+Demonstrei os dois cenários e os principais artefatos técnicos, incluindo pipeline,
+análise de logs, anomalia, estimativa de tendência ou risco e fluxo low-code/no-code.
+Mantive no repositório e no quadro do GitHub as evidências necessárias para
+acompanhar e avaliar o desenvolvimento individual.
+Submeti no AVA os links do repositório, quadro e vídeo antes do prazo e não alterei o
+repositório após a entrega.
+15

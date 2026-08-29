@@ -1,0 +1,67 @@
+name: User Story
+description: Template para criação de User Stories
+title: "[STORY] "
+labels: ["story"]
+type: Feature
+
+body:
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User Story
+      description: Descreva no formato Como / Quero / Para.
+      placeholder: |
+        Como cliente,
+        quero buscar produtos,
+        para encontrar itens rapidamente.
+    validations:
+      required: true
+
+  - type: textarea
+    id: bdd
+    attributes:
+      label: Critérios de aceitação — BDD
+      description: Use Dado / Quando / Então.
+      placeholder: |
+        Cenário 1:
+
+        Dado que ...
+        Quando ...
+        Então ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: objectives
+    attributes:
+      label: Objetivo
+      description: Lista de objetivos que devem ser realizados no decorrer da demanda.
+      placeholder: |
+        - Objetivo 1
+        - Objetivo 2
+        - Objetivo 3
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Escopo
+      description: Lista de pontos/trechos/arquivos que a demanda propõe modificar.
+      placeholder: |
+        - Módulo / camada afetada
+        - Arquivo ou componente específico
+        - Integrações envolvidas
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: expected-results
+    attributes:
+      label: Resultado esperado
+      description: Checklist de resultados esperados ao final da demanda.
+      options:
+        - label: Descreva aqui o primeiro resultado esperado
+        - label: Descreva aqui o segundo resultado esperado
+    validations:
+      required: true
