@@ -48,7 +48,7 @@ OUTPUT_DIR = Path(__file__).resolve().parents[2] / "output"
 
 # temperature=0 deixa a extração determinística e reduz muito o risco de o
 # modelo entrar em loop de repetição e gerar um tool call malformado.
-_extraction_llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0)
+_extraction_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 
 
 def _invoke_structured(schema: type[BaseModel], prompt: str) -> BaseModel | None:

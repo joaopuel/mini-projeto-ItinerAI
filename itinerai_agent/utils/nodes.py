@@ -21,10 +21,10 @@ _TOOLS = [
 ]
 _TOOLS_BY_NAME = {tool.__name__: tool for tool in _TOOLS}
 
-_llm = ChatGroq(model="llama-3.1-8b-instant")
+_llm = ChatGroq(model="openai/gpt-oss-120b")
 _llm_with_tools = _llm.bind_tools(_TOOLS)
 
-# O llama-3.1-8b-instant às vezes "vaza" as tool calls no formato nativo do Llama
+# Modelos menores às vezes "vazam" as tool calls no formato nativo do Llama
 # (<function=nome>{json}</function>) como TEXTO da resposta, em vez de gerar
 # tool_calls estruturados — a Groq não parseia, o campo tool_calls fica vazio e o
 # texto cru acabaria impresso no terminal. Este regex recupera essas chamadas.

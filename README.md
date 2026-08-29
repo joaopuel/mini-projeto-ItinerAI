@@ -64,7 +64,7 @@ resultados — mantendo o contexto da conversa em um estado compartilhado.
 | **Python 3.12.9** | Linguagem base |
 | **LangGraph** | Orquestração do agente como grafo de estados (`StateGraph`) |
 | **pydantic** | Estado do grafo e todos os modelos de dados |
-| **Groq** — `llama-3.1-8b-instant` | LLM do agente (via `langchain-groq`) |
+| **Groq** — `openai/gpt-oss-120b` | LLM do agente e da extração (via `langchain-groq`) |
 | **requests + beautifulsoup4** | Busca e parsing das páginas da Wikipédia |
 | **sqlite3** (stdlib) | Memória persistente da última viagem |
 
@@ -290,10 +290,9 @@ viajar) que eu pesquiso as informações para você.
 - **Agente de tool-calling (ReAct), não um pipeline fixo.** O LLM decide quando
   pedir dados, pesquisar e montar o roteiro. Novas funcionalidades entram como
   **ferramentas**, não como novos nós rígidos.
-- **Validação e memória determinísticas (regex + SQLite), sem LLM.** O
-  `llama-3.1-8b-instant` é pequeno e frágil; tirar validação e persistência do
-  caminho do modelo as torna baratas, previsíveis e testáveis, e evita
-  sobrecarregar o modelo.
+- **Validação e memória determinísticas (regex + SQLite), sem LLM.** Tirar
+  validação e persistência do caminho do modelo as torna baratas, previsíveis e
+  testáveis, e não depende do julgamento (nem da disponibilidade) do LLM.
 - **Schemas de ferramenta pequenos + `InjectedToolArg`.** Dados grandes (a lista
   de atrações) são injetados a partir do estado e escondidos do modelo, evitando
   falhas de tool-calling.

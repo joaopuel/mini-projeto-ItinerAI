@@ -35,7 +35,11 @@ neste documento sem alinhar antes com o usuário.
 - **LangGraph** — orquestração do agente como um grafo de estados.
 - **pydantic** — definição do estado do grafo e de todos os modelos de dados
   (ex.: pontos turísticos, dias do itinerário).
-- **Groq** — modelo `llama-3.1-8b-instant` como LLM do agente.
+- **Groq** — modelo `openai/gpt-oss-120b` como LLM do agente (e como LLM de
+  extração em `tools.py`). O `llama-3.1-8b-instant` original foi desligado pela
+  Groq em 16/08/2026; `openai/gpt-oss-120b` está na camada gratuita (limites de
+  taxa: 30 req/min, 8K tokens/min, 1K req/dia, 200K tokens/dia). A
+  externalização do nome do modelo para variável de ambiente é a tarefa T03.
 - Autenticação com a Groq via variável de ambiente `GROQ_API_KEY` (nunca
   hardcode a chave; carregue de `.env`/ambiente).
 - **requests + beautifulsoup4** — busca e parsing de páginas da Wikipédia,
@@ -56,8 +60,8 @@ nós por etapa:
   que podem falhar; em seguida segue para `call_llm`. Ver "Memória persistente"
   abaixo.
 - `call_llm` invoca o LLM com as tools de `tools.py` vinculadas via
-  `bind_tools`; também recupera as tool calls que o modelo fraco eventualmente
-  "vaza" como texto (ver "Robustez com o `llama-3.1-8b-instant`" abaixo).
+  `bind_tools`; também recupera as tool calls que o modelo eventualmente
+  "vaza" como texto (ver "Robustez em tool-calling" abaixo).
 - Uma aresta condicional (`should_call_tools`) verifica se a resposta do LLM
   pediu alguma tool: se sim, roteia para `call_tools`; se não, vai para
   `END`.
@@ -83,9 +87,9 @@ informativa em português (e sem acionar nenhuma tool):
 
 Regras de design (não remover sem alinhar):
 
-- **Detecção 100% por regex, sem nenhuma chamada ao LLM.** O
-  `llama-3.1-8b-instant` é fraco; a validação precisa ser determinística,
-  barata e previsível, sem sobrecarregar o modelo.
+- **Detecção 100% por regex, sem nenhuma chamada ao LLM.** A validação precisa
+  ser determinística, barata e previsível, sem sobrecarregar o modelo nem
+  depender do julgamento dele.
 - Os padrões de **prompt injection** cobrem os 6 idiomas mais falados:
   português, inglês, espanhol, francês, mandarim e híndi.
 - O **filtro de idioma** barra apenas scripts não-latinos (mandarim/híndi), que
@@ -159,10 +163,12 @@ Todas já implementadas e registradas em `nodes.py`:
 O nome do arquivo gerado segue o padrão `itinerario-<destino>-<n>-dias.md`; se
 já existir, ganha sufixo sequencial no padrão Windows (` (2)`, ` (3)`, …).
 
-## Robustez com o `llama-3.1-8b-instant`
+## Robustez em tool-calling
 
-O modelo é pequeno e frágil em tool-calling. Regras aprendidas (não remover sem
-motivo — cada uma corrige um `tool_use_failed`/crash real):
+Estas regras nasceram com o `llama-3.1-8b-instant` (modelo pequeno e frágil,
+hoje substituído por `openai/gpt-oss-120b`). O `gpt-oss-120b` erra muito menos,
+mas as proteções continuam — cada uma corrige um `tool_use_failed`/crash real e
+o custo delas é baixo (não remover sem motivo):
 
 - O LLM de extração (`_extraction_llm`) usa `temperature=0`; os prompts de
   extração pedem no máximo ~15 itens e proíbem repetição (evita loops que
