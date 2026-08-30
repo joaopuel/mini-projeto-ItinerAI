@@ -947,3 +947,190 @@ evidência mais tarde.
 Está funcionando. Agora atualize o prompts.md com os prompts mais recentes e
 importantes. Faça o commit das modificações e crie um PR.
 ```
+
+---
+
+## Análise dos logs do CI antecipada para a T14
+
+* Data: 2026-08-30 17:30
+* Autor: joaopuel
+* Tipo: Análise / Documentação
+
+### Prompt original
+```
+Em vez de adicionar a análise de log de CI a task [DOCS] Análise de logs de CI
+com IA, anomalia e estimativa de risco, vamos adicionar junto a esta task [TECH]
+Integrar a aplicação ao webhook do n8n que está sendo implementada. Baixe o
+resultado do CI do github dos testes e lint e crie uma análise em
+docs/analise-ci.md. Siga as orientações presentes na task [DOCS] Análise de logs
+de CI com IA, anomalia e estimativa de risco para a análise.
+```
+
+---
+
+## Versionamento dos logs do CI como evidência
+
+* Data: 2026-08-30 17:45
+* Autor: joaopuel
+* Tipo: Documentação
+
+### Prompt original
+```
+Adicione o arquivo de logs baixados em docs/evidences
+```
+
+---
+
+## Code review com IA do PR #40 e priorização por risco
+
+* Data: 2026-08-30 17:55
+* Autor: joaopuel
+* Tipo: Análise / Documentação
+
+### Prompt original
+```
+Também vamos trabalhar a task [DOCS] Code review com IA de uma alteração real e
+priorização por risco junto a esta implementação. Gere uma análise de CR em
+/docs/analise-cr.md referente as implementações realizadas em
+https://github.com/joaopuel/mini-projeto-ItinerAI/pull/40. Classifique pontos com
+priorização baseada em risco, impacto ou criticidade.
+```
+
+---
+
+## Ajuste da análise de CR: sem decisões e com achados bloqueantes
+
+* Data: 2026-08-30 18:05
+* Autor: joaopuel
+* Tipo: Documentação / Ajuste
+
+### Prompt original
+```
+Remova a parte de decisão da análise de CR. Adicione que erros críticos também
+são bloqueantes. Importante: proibido realizar commit até que eu solicite.
+```
+
+---
+
+## Publicação da análise de CR como comentário do PR
+
+* Data: 2026-08-30 18:12
+* Autor: joaopuel
+* Tipo: Automação / GitHub
+
+### Prompt original
+```
+Adicione a análise como comentário do PR usando o github cli
+```
+
+---
+
+## Correção dos achados do code review
+
+* Data: 2026-08-30 18:20
+* Autor: joaopuel
+* Tipo: Correção de bug
+
+### Prompt original
+```
+Realize os ajustes apontados pelo PR. O ponto "Pipeline não tem varredura de
+segredos" será mapeado para entregas futuras, proibido alteração no CI nesta
+demanda.
+```
+
+---
+
+## Renomeação da pasta de evidências para o nome do backlog
+
+* Data: 2026-08-30 18:50
+* Autor: joaopuel
+* Tipo: Ajuste
+
+### Prompt original
+```
+Ajuste a pasta docs/evidences para ter o nome original da demanda evidencias
+```
+
+---
+
+## Commit das correções do code review
+
+* Data: 2026-08-30 18:58
+* Autor: joaopuel
+* Tipo: Versionamento
+
+### Prompt original
+```
+Faça o commit das alterações
+```
+
+---
+
+## Fechamento da análise de CR com o veredito de merge
+
+* Data: 2026-08-30 19:05
+* Autor: joaopuel
+* Tipo: Documentação
+
+### Prompt original
+```
+Adicione ao final da análise de CR quais pontos foram corrigidos e se o PR pode
+seguir para o merge. Faça também um novo comentário no PR com esta nova análise.
+```
+
+---
+
+## Revisão após os testes verdes e a rotação do token do n8n
+
+* Data: 2026-08-30 19:15
+* Autor: joaopuel
+* Tipo: Documentação / Ajuste
+
+### Prompt original
+```
+Refaça a última análise e faça um novo comentário. Os testes passaram e foi
+gerado novo token para integração n8n para resolver problema de exposição de
+token.
+```
+
+---
+
+## Definição do escopo da entrega final: A1 para versão futura
+
+* Data: 2026-08-30 19:22
+* Autor: joaopuel
+* Tipo: Documentação / Ajuste
+
+### Prompt original
+```
+Ajuste novamente a análise. O CI não vai mais ser alterado para a entrega final,
+o ponto A1 será mapeado para uma outra versão futura da aplicação. Para a entrega
+final, somente serão realizadas as demandas já previstas em backlog.
+```
+
+---
+
+## Commit do fechamento e comentário enxuto no PR
+
+* Data: 2026-08-30 19:28
+* Autor: joaopuel
+* Tipo: Versionamento
+
+### Prompt original
+```
+Ótimo. Agora faça o commit e faça um novo comentário apenas com a nova análise.
+```
+
+---
+
+## Registro dos prompts do ciclo de code review
+
+* Data: 2026-08-30 19:35
+* Autor: joaopuel
+* Tipo: Documentação / Versionamento
+
+### Prompt original
+```
+Adicione os últimos prompts relevantes ao arquivo docs/prompts.md e faça o
+commit.
+```
