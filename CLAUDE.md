@@ -393,6 +393,8 @@ Estrutura baseada na organização recomendada pela documentação do LangGraph
 
 ```
 mini-projeto-ItinerAI/
+├── .github/workflows/
+│   └── ci.yml              # pipeline de CI: lint, testes, cobertura, build (T10/#21)
 ├── itinerai_agent/         # todo o código do agente
 │   ├── utils/
 │   │   ├── __init__.py
@@ -419,9 +421,9 @@ mini-projeto-ItinerAI/
 ├── .env                    # variáveis de ambiente locais (não versionado)
 ├── itinerai_memory.db      # memória persistente SQLite da última viagem (não versionado)
 ├── itinerai_audit.db       # trilha de auditoria SQLite (não versionado)
-├── pyproject.toml          # config de pytest + cobertura (T07/#18)
+├── pyproject.toml          # config de pytest + cobertura + Ruff (T07/#18, T10/#21)
 ├── requirements.txt        # dependências do projeto
-├── requirements-dev.txt    # dependências de teste (pytest, pytest-cov)
+├── requirements-dev.txt    # deps de teste + lint (pytest, pytest-cov, ruff, diff-cover)
 └── langgraph.json          # arquivo de configuração do LangGraph
 ```
 
@@ -461,6 +463,9 @@ mini-projeto-ItinerAI/
   `init_db`/`record_audit_step`/`load_audit_trail`/`format_audit_trail` + o
   wrapper best-effort `try_record` + o modelo `AuditStep`) — ver "Trilha de
   auditoria" acima. `show_audit.py` (raiz) é o comando de exibição.
+- `.github/workflows/ci.yml` é o pipeline de CI (jobs `lint`/`test`/`build`) —
+  ver "Integração contínua (CI)" abaixo. As regras do Ruff ficam em
+  `[tool.ruff*]` no `pyproject.toml`.
 - Itinerários gerados são salvos como arquivo `.md` em `output/`.
 
 ## Configuração de ambiente
@@ -483,12 +488,13 @@ mini-projeto-ItinerAI/
     cai para `INFO`. Ver "Observabilidade / logging". T04/#15.
   - `LOG_TO_STDERR` (padrão desligado) — quando ligado (`1`/`true`/`yes`/`on`),
     espelha os logs no stderr além do arquivo, para depuração.
-- `.env`, `output/`, `logs/` e os bancos `itinerai_memory.db` /
+- `.env`, `output/`, `logs/`, `.ruff_cache/` e os bancos `itinerai_memory.db` /
   `itinerai_audit.db` devem estar no `.gitignore`.
 - A memória persistente, a trilha de auditoria e o logging estruturado usam só a
   stdlib (`sqlite3`, `logging`) — nenhuma dependência extra no
-  `requirements.txt`. As dependências de teste (`pytest`, `pytest-cov`) ficam em
-  `requirements-dev.txt` — ver "Testes".
+  `requirements.txt`. As dependências de teste e de lint (`pytest`, `pytest-cov`,
+  `coverage[toml]`, `ruff`, `diff-cover`) ficam em `requirements-dev.txt` — ver
+  "Testes" e "Integração contínua (CI)".
 
 ## Testes (`tests/`, T07/#18)
 
@@ -497,12 +503,12 @@ Suíte de testes **unitários** com `pytest` + `pytest-cov`; **gate de cobertura
 (não alterar sem alinhar):
 
 - **Deps de teste isoladas** em `requirements-dev.txt` (`-r requirements.txt` +
-  `pytest` + `pytest-cov` + `coverage[toml]`, todos pinados). O
-  `requirements.txt` de produção continua só com as libs do agente.
-- **Configuração** em `pyproject.toml` — o primeiro do projeto, contém só
-  `[tool.pytest.ini_options]` e `[tool.coverage.*]` (sem `[build-system]`: o
-  ItinerAI não é pacote instalável). `addopts = --cov=itinerai_agent
-  --cov-report=term-missing --cov-fail-under=70`.
+  `pytest` + `pytest-cov` + `coverage[toml]` + `ruff` + `diff-cover`, todos
+  pinados). O `requirements.txt` de produção continua só com as libs do agente.
+- **Configuração** em `pyproject.toml` — o primeiro do projeto, contém
+  `[tool.pytest.ini_options]`, `[tool.coverage.*]` e `[tool.ruff*]` (T10/#21);
+  sem `[build-system]` (o ItinerAI não é pacote instalável). `addopts =
+  --cov=itinerai_agent --cov-report=term-missing --cov-fail-under=70`.
 - **Nenhum teste acessa a rede ou exige a `GROQ_API_KEY` real.**
   `tests/conftest.py` injeta `GROQ_API_KEY=test-key` em nível de módulo, **antes**
   de qualquer import de `itinerai_agent` — necessário porque `tools.py`/`nodes.py`
@@ -523,6 +529,45 @@ Suíte de testes **unitários** com `pytest` + `pytest-cov`; **gate de cobertura
   compilado ponta a ponta.
 - **Rodar**: `pip install -r requirements-dev.txt && pytest`. O `pytest` sai com
   erro se a cobertura ficar abaixo de 70% (mesmo com todos os testes verdes).
+
+## Integração contínua (CI) (`.github/workflows/ci.yml`)
+
+Pipeline do GitHub Actions (T10/#21, §4.8) disparado em `push` e `pull_request`
+para `develop` e `main`. **Três jobs paralelos e independentes** — a separação em
+etapas legíveis é o que viabiliza a análise de logs de duas etapas distintas
+exigida pela T11/#22. Regras de design (não alterar sem alinhar):
+
+- **`lint`** — Ruff, o equivalente Python do ESLint (que não analisa Python).
+  `ruff check --output-format=github .` é **bloqueante**; `ruff format --check
+  --diff .` roda com `continue-on-error: true` (**informativo**) — a base nunca
+  passou por um formatador e a normalização virá num commit próprio; tornar o
+  `format` bloqueante é só remover o `continue-on-error`. As regras ficam em
+  `[tool.ruff]` no `pyproject.toml`: `line-length = 100`, `select = ["E4", "E7",
+  "E9", "F"]` (conjunto padrão do Ruff; **E501 fora de propósito**), com
+  `per-file-ignores` de `E402` para `main.py`, `show_audit.py` e
+  `tests/conftest.py` (imports após código no topo, intencionais).
+- **`test`** — `pytest` com os relatórios `xml`/`html`/`term-missing` e
+  `--cov-fail-under=0` (sobrepõe o `addopts`: o passo do pytest falha só por
+  teste quebrado). Os gates de cobertura são **passos separados**: (1) global,
+  `coverage report --fail-under=70`; (2) do **código novo**, `diff-cover
+  coverage.xml --compare-branch=origin/<base> --fail-under=70`, **só em
+  `pull_request`** (`diff-cover` só olha arquivos presentes no `coverage.xml`,
+  isto é `itinerai_agent/**`). O `coverage.xml` + HTML + relatórios do
+  `diff-cover` sobem como o artefato `coverage-report`.
+- **`build`** — compila o grafo (`build_graph()` + o `graph` de módulo) usando
+  **só as dependências de produção** (`requirements.txt`) e valida a integridade
+  do `langgraph.json` (chaves `dependencies`/`graphs`, alvo `...:graph`, arquivo
+  do grafo existente). Redundante com `tests/test_agent.py` de propósito: é a
+  etapa de "build" do §4.8 e prova que o grafo sobe sem as libs de dev.
+- **Sem `GROQ_API_KEY` real e sem rede.** Nenhum job referencia secret; a suíte
+  mocka todo HTTP/LLM e o `conftest.py` injeta a chave dummy. Só o `build` passa
+  um literal descartável (`GROQ_API_KEY: ci-dummy-key`) porque importa
+  `itinerai_agent.agent` sem passar pelo `conftest` — o `ChatGroq` lê a variável
+  no import mas não chama a API.
+- **Python 3.12.9** fixo (`actions/setup-python@v5`, `cache: pip`);
+  `concurrency` cancela runs superados; `permissions: contents: read`.
+- Badge de status no `README.md` (aponta para `?branch=develop`, onde o
+  desenvolvimento acontece).
 
 ## Convenções de código
 

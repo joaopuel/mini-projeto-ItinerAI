@@ -520,19 +520,28 @@ etapas distintas exigida por T11).
 
 **Checklist técnico**
 
-- [ ] Criar `.github/workflows/ci.yml` disparado em `push` e `pull_request`
-      para `develop` e `main`
-- [ ] Configurar Python 3.12.9 e cache de dependências
-- [ ] Etapa de **lint**: adicionar o Ruff ao projeto, configurar as regras em
+- [x] Criar `.github/workflows/ci.yml` disparado em `push` e `pull_request`
+      para `develop` e `main` (jobs paralelos `lint`/`test`/`build`)
+- [x] Configurar Python 3.12.9 e cache de dependências
+      (`actions/setup-python@v5`, `cache: pip`)
+- [x] Etapa de **lint**: adicionar o Ruff ao projeto, configurar as regras em
       `pyproject.toml` e executar `ruff check .` e `ruff format --check .`
-- [ ] Etapa de **testes**: executar `pytest` com relatório de cobertura
-- [ ] Etapa de **cobertura**: falhar o build quando a cobertura for inferior a
-      **70%** (`--cov-fail-under=70`)
-- [ ] Etapa de **build/validação**: validar a importação do grafo
-      (`build_graph()`) e a integridade do `langgraph.json`
-- [ ] Publicar o relatório de cobertura como artefato do workflow
-- [ ] Garantir que o pipeline rode sem `GROQ_API_KEY` e sem acesso à rede
-- [ ] Adicionar o badge de status do CI ao `README.md`
+      — `ruff check` é bloqueante; `ruff format --check` é informativo
+      (`continue-on-error`) até a base ser normalizada
+- [x] Etapa de **testes**: executar `pytest` com relatório de cobertura
+      (`xml` + `html` + `term-missing`)
+- [x] Etapa de **cobertura**: falhar o build quando a cobertura for inferior a
+      **70%** — gate global (`coverage report --fail-under=70`) **e** gate do
+      código novo (`diff-cover --fail-under=70` nas linhas alteradas do PR)
+- [x] Etapa de **build/validação**: validar a importação do grafo
+      (`build_graph()`) e a integridade do `langgraph.json` — job `build`, só
+      com as deps de produção
+- [x] Publicar o relatório de cobertura como artefato do workflow
+      (artefato `coverage-report`)
+- [x] Garantir que o pipeline rode sem `GROQ_API_KEY` e sem acesso à rede
+      (mocks + chave dummy do `conftest`; só o `build` passa um literal
+      descartável)
+- [x] Adicionar o badge de status do CI ao `README.md`
 
 ---
 
