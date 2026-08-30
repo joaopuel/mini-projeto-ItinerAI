@@ -2,7 +2,10 @@
 itinerário .md)."""
 
 import json
+import logging
+import os
 import re
+import time
 import unicodedata
 from collections import Counter
 from pathlib import Path
@@ -14,6 +17,8 @@ from bs4 import BeautifulSoup
 from langchain_core.tools import InjectedToolArg
 from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import RequestException, Timeout
 
 from itinerai_agent.utils.prompts import (
     ATTRACTION_EXTRACTION_PROMPT,
@@ -26,9 +31,18 @@ from itinerai_agent.utils.state import (
     WikipediaPageResult,
 )
 
+logger = logging.getLogger(__name__)
+
 WIKIPEDIA_BASE_URL = "https://en.wikipedia.org/wiki"
 _REQUEST_HEADERS = {"User-Agent": "ItinerAI/1.0 (https://github.com/joaopuel/mini-projeto-ItinerAI)"}
 _MAX_PAGE_TEXT_CHARS = 8000
+
+# Resiliência das chamadas HTTP à Wikipédia (T02/#13): timeout configurável por
+# ambiente e retry limitado com backoff exponencial apenas em erros de transporte.
+WIKIPEDIA_TIMEOUT = float(os.getenv("WIKIPEDIA_TIMEOUT", "10"))
+_WIKIPEDIA_MAX_RETRIES = 2       # tentativas ADICIONAIS após a primeira
+_WIKIPEDIA_BACKOFF_BASE = 0.5    # s → espera 0.5s, depois 1.0s (0.5 * 2**attempt)
+_RETRYABLE_HTTP_ERRORS = (Timeout, RequestsConnectionError)
 
 MAX_ATTRACTIONS_PER_DAY = 3
 
@@ -49,8 +63,10 @@ ITINERARY_OVERFLOW_NOTE = (
 OUTPUT_DIR = Path(__file__).resolve().parents[2] / "output"
 
 # temperature=0 deixa a extração determinística e reduz muito o risco de o
-# modelo entrar em loop de repetição e gerar um JSON malformado.
-_extraction_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
+# modelo entrar em loop de repetição e gerar um JSON malformado. max_retries=2
+# torna explícito o retry limitado que o SDK da Groq já faz em erros
+# transitórios de rede/API (T02/#13).
+_extraction_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0, max_retries=2)
 
 
 def _extract_json_payload(text: str) -> dict | list | None:
@@ -89,11 +105,15 @@ def _invoke_structured(schema: type[BaseModel], prompt: str) -> BaseModel | None
     """
     try:
         response = _extraction_llm.invoke(prompt)
-    except Exception:
+    except Exception as exc:
+        # O SDK da Groq já faz retry limitado (max_retries=2) em erros
+        # transitórios; aqui só registramos o fallback e degradamos.
+        logger.warning("Extração LLM (%s) falhou: %s", schema.__name__, type(exc).__name__)
         return None
     content = response.content if isinstance(response.content, str) else ""
     payload = _extract_json_payload(content)
     if payload is None:
+        logger.info("Extração LLM (%s): resposta sem JSON válido", schema.__name__)
         return None
     # O gpt-oss às vezes devolve só a lista, sem o objeto que a envolve.
     if isinstance(payload, list):
@@ -102,7 +122,11 @@ def _invoke_structured(schema: type[BaseModel], prompt: str) -> BaseModel | None
             payload = {field_names[0]: payload}
     try:
         return schema.model_validate(payload)
-    except Exception:
+    except Exception as exc:
+        logger.info(
+            "Extração LLM (%s): JSON não bate com o schema (%s)",
+            schema.__name__, type(exc).__name__,
+        )
         return None
 
 
@@ -123,6 +147,9 @@ class TouristAttractionSearchResult(BaseModel):
     destination: str
     source_url: str | None
     found: bool
+    # True quando a busca falhou por indisponibilidade da Wikipédia (rede), e
+    # não por o destino não ter informação — ver merge_pages / AGENT_SYSTEM_PROMPT.
+    unavailable: bool = False
     attractions: list[TouristAttraction] = Field(default_factory=list)
 
 
@@ -138,11 +165,44 @@ class ItineraryFileResult(BaseModel):
     itinerary: Itinerary
 
 
+def _get_wikipedia(url: str) -> requests.Response:
+    """GET com timeout explícito (`WIKIPEDIA_TIMEOUT`) e retry limitado com
+    backoff exponencial.
+
+    Repete no máximo `_WIKIPEDIA_MAX_RETRIES` vezes, apenas em erros de
+    transporte transitórios (`Timeout`, `ConnectionError`). Erros de status HTTP
+    são tratados pelo chamador (`raise_for_status`); o esgotamento das
+    tentativas propaga a última exceção.
+    """
+    for attempt in range(_WIKIPEDIA_MAX_RETRIES + 1):
+        try:
+            return requests.get(url, headers=_REQUEST_HEADERS, timeout=WIKIPEDIA_TIMEOUT)
+        except _RETRYABLE_HTTP_ERRORS as exc:
+            if attempt >= _WIKIPEDIA_MAX_RETRIES:
+                logger.warning(
+                    "Wikipédia %s: %s — %d tentativas sem sucesso",
+                    url, type(exc).__name__, attempt + 1,
+                )
+                raise
+            wait = _WIKIPEDIA_BACKOFF_BASE * (2**attempt)
+            logger.warning(
+                "Wikipédia %s: %s — nova tentativa %d/%d em %.1fs",
+                url, type(exc).__name__, attempt + 1, _WIKIPEDIA_MAX_RETRIES, wait,
+            )
+            time.sleep(wait)
+    raise RuntimeError("unreachable")  # o loop sempre retorna ou levanta
+
+
 def _fetch_wikipedia_page(title: str) -> tuple[str, str] | None:
     """Busca uma página da Wikipédia em inglês pelo título e retorna
-    (texto_da_pagina, url), ou None se a página não existir."""
+    (texto_da_pagina, url), ou None se a página não existir.
+
+    Propaga as exceções de `requests` (`Timeout`/`ConnectionError` após os
+    retries de `_get_wikipedia`, `HTTPError` para status != 404) — quem trata é
+    `fetch_page_attractions`.
+    """
     url = f"{WIKIPEDIA_BASE_URL}/{quote(title.replace(' ', '_'))}"
-    response = requests.get(url, headers=_REQUEST_HEADERS, timeout=10)
+    response = _get_wikipedia(url)
     if response.status_code == 404:
         return None
     response.raise_for_status()
@@ -187,15 +247,19 @@ def fetch_page_attractions(
     trabalho de cada ramo do fan-out da busca no grafo
     (`fetch_tourism_page` / `fetch_destination_page`).
 
-    Determinística no fluxo de controle: em 404, página sem conteúdo ou
-    falha de rede, devolve `found=False` (o outro ramo serve de fallback).
-    A guarda de `Exception` só previne regressão — a política de resiliência
-    (timeout/retry/backoff/log) é escopo da tarefa T02/#13.
+    Em 404 ou página sem conteúdo, devolve `found=False`. Em falha de rede
+    (após os retries de `_get_wikipedia`), devolve `found=False,
+    unavailable=True` — `merge_pages` usa isso para distinguir "indisponível"
+    de "não existe". Só captura erros de `requests` (`RequestException`); um
+    bug fora disso volta a propagar (falha alto em bug, degrada em rede).
     """
     try:
         fetched = _fetch_wikipedia_page(title)
-    except Exception:
-        return WikipediaPageResult(kind=kind, found=False)
+    except RequestException as exc:
+        logger.warning(
+            "Busca da Wikipédia para '%s' falhou: %s", title, type(exc).__name__
+        )
+        return WikipediaPageResult(kind=kind, found=False, unavailable=True)
     if fetched is None:
         return WikipediaPageResult(kind=kind, found=False)
     page_text, url = fetched
@@ -225,6 +289,7 @@ def search_tourist_attractions(destination: str) -> TouristAttractionSearchResul
         (f"Tourism in {destination}", "tourism"),
         (destination, "destination"),
     )
+    unavailable = False
     for title, kind in candidates:
         result = fetch_page_attractions(title, destination, kind)
         if result.attractions:
@@ -234,11 +299,13 @@ def search_tourist_attractions(destination: str) -> TouristAttractionSearchResul
                 found=True,
                 attractions=result.attractions,
             )
+        unavailable = unavailable or result.unavailable
 
     return TouristAttractionSearchResult(
         destination=destination,
         source_url=None,
         found=False,
+        unavailable=unavailable,
         attractions=[],
     )
 

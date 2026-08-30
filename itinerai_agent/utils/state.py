@@ -36,6 +36,9 @@ class WikipediaPageResult(BaseModel):
 
     kind: Literal["tourism", "destination"]
     found: bool = False
+    # True quando a página não pôde ser acessada (falha de rede após os retries),
+    # para distinguir "indisponível" de "página não existe / sem atrações".
+    unavailable: bool = False
     source_url: str | None = None
     attractions: list[TouristAttraction] = Field(default_factory=list)
 

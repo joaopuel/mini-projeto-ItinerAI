@@ -291,10 +291,17 @@ def merge_pages(state: AgentState) -> dict:
     else:
         chosen = None
 
+    # Se não achamos atrações E algum ramo caiu por indisponibilidade da
+    # Wikipédia (falha de rede após os retries), sinaliza `unavailable` para o
+    # LLM avisar "problema técnico" em vez de "destino sem informação".
+    pages = [page for page in (tourism, destination_page) if page is not None]
+    unavailable = chosen is None and any(page.unavailable for page in pages)
+
     result = TouristAttractionSearchResult(
         destination=pending.destination,
         source_url=chosen.source_url if chosen else None,
         found=chosen is not None,
+        unavailable=unavailable,
         attractions=chosen.attractions if chosen else [],
     )
     return {

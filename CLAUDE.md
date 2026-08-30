@@ -119,8 +119,10 @@ Regras de design (não remover sem alinhar):
 ## Memória persistente (`memory.py`)
 
 O agente guarda em **SQLite** os dados da última viagem, para poder retomá-la
-numa nova execução caso a busca de atrações ou a geração do roteiro falhe (e
-falham de fato: uma falha de rede em `tools.py` propaga e derruba o processo).
+numa nova execução caso a geração do roteiro falhe. Falhas de rede na Wikipédia
+não derrubam mais o processo (ver "Resiliência das integrações" abaixo), mas a
+gravação do `.md` e outros erros fora de rede ainda podem — a memória é a rede
+de segurança.
 
 Regras de design (não alterar sem alinhar):
 
@@ -160,8 +162,9 @@ Todas já implementadas e registradas em `nodes.py`:
   (`Tourism in <destino>` → `<destino>`). No grafo roda como fan-out/fan-in
   paralelo (ver "Paralelização da busca da Wikipédia"); a função em `tools.py` é
   a especificação sequencial e o que o `bind_tools` inspeciona. A unidade por
-  ramo é `fetch_page_attractions(title, destination, kind)` (fetch + extração,
-  com guarda mínima de `Exception` → `found=False`).
+  ramo é `fetch_page_attractions(title, destination, kind)` (fetch com
+  timeout/retry + extração; captura só `RequestException` → `found=False`, e
+  `unavailable=True` em falha de rede — ver "Resiliência das integrações").
 - `build_itinerary(destination, num_days)` — monta o roteiro e **grava o `.md`**
   em `output/`. Agrupa as atrações por proximidade e as distribui pelos
   `num_days` dias (**no máximo 3 atrações por dia**, sem divisão por período do
@@ -208,12 +211,42 @@ alinhar):
   mesmo `source_url`, mesma mensagem de "não encontrado". O custo é 1 chamada a
   mais ao LLM de extração por busca (as duas páginas são sempre extraídas), mas
   em paralelo (sem custo de latência).
-- Resiliência de rede completa (timeout/retry/backoff/log) **não** está aqui —
-  é a tarefa T02/#13. `fetch_page_attractions` só tem a guarda mínima
-  `try/except → found=False` para não regredir o caminho feliz (agora as duas
-  páginas são sempre buscadas).
+- A resiliência de rede (timeout/retry/backoff/log/`unavailable`) fica em
+  `fetch_page_attractions` e `_get_wikipedia` — ver "Resiliência das
+  integrações" abaixo (T02/#13).
 - `main.py` passa `recursion_limit=50` no `graph.invoke` — o fan-out consome
   alguns supersteps a mais por busca.
+
+## Resiliência das integrações (`tools.py`)
+
+Política explícita e determinística de falhas nas integrações externas (T02/#13,
+§4.6). Regras de design (não alterar sem alinhar):
+
+- **HTTP da Wikipédia** (`_get_wikipedia`): timeout **configurável** por
+  `WIKIPEDIA_TIMEOUT` (env, padrão 10s) + **retry limitado** (máx. 2 tentativas
+  adicionais) com **backoff exponencial** (0,5s → 1,0s). Repete **só** em erros
+  de transporte transitórios (`Timeout`, `ConnectionError`); erros de status
+  HTTP (incl. 5xx) e o esgotamento das tentativas propagam a exceção.
+- **Exceções específicas, não `except Exception`**: `fetch_page_attractions`
+  captura só `requests.exceptions.RequestException`. Um bug fora de rede volta a
+  propagar (falha alto em bug, degrada em rede).
+- **`unavailable`**: falha de rede após os retries → `WikipediaPageResult(
+  found=False, unavailable=True)`. `merge_pages` propaga para o
+  `TouristAttractionSearchResult`, e o `AGENT_SYSTEM_PROMPT` orienta o LLM a
+  dizer "problema técnico ao acessar a Wikipédia, tente de novo" — diferente de
+  "não encontrei informações do destino" (`found=False` sem `unavailable`).
+- **Extração do LLM** (`_invoke_structured`): `_extraction_llm` usa
+  `max_retries=2` (retry limitado que o SDK da Groq já faz internamente em erros
+  transitórios). O `except Exception` continua (o SDK trata as exceções
+  específicas; estreitar exigiria um import de `groq.*` frágil), mas agora
+  **registra** cada fallback via `logging` em vez de mascarar.
+- **Logging**: `logging.getLogger(__name__)` em `tools.py`; cada tentativa, erro
+  e fallback vira `logger.warning`/`logger.info`. `itinerai_agent/__init__.py`
+  põe um `NullHandler` no logger do pacote → terminal 100% limpo até a **T04**
+  (#15) plugar o handler JSON + arquivo + `run_id`.
+- **Fora de escopo desta task**: logs estruturados em JSON/arquivo e o `run_id`
+  (T04), a trilha de auditoria (T05) e os testes unitários da política
+  (T07/#18). Retry de 5xx também não entra (Wikipédia raramente devolve 5xx).
 
 ## Robustez em tool-calling
 
@@ -315,6 +348,8 @@ mini-projeto-ItinerAI/
 - Requer Python 3.12.9.
 - Variável de ambiente obrigatória: `GROQ_API_KEY` (carregada via `.env` em
   desenvolvimento local, nunca commitada).
+- Variável opcional: `WIKIPEDIA_TIMEOUT` (segundos; padrão `10`) — timeout das
+  requisições HTTP à Wikipédia. Ver "Resiliência das integrações".
 - `.env`, `output/` e o banco `itinerai_memory.db` devem estar no `.gitignore`.
 - A memória persistente usa `sqlite3` da stdlib — nenhuma dependência extra no
   `requirements.txt`.

@@ -138,17 +138,21 @@ logs estruturados (T04).
 
 **Checklist técnico**
 
-- [ ] Definir política de retry limitado (máximo de 2 novas tentativas) com
-      backoff exponencial para as chamadas HTTP da Wikipédia
-- [ ] Manter timeout explícito e configurável por variável de ambiente
-- [ ] Tratar apenas exceções específicas (`Timeout`, `ConnectionError`,
-      `HTTPError`) em vez de `except Exception`
-- [ ] Implementar fallback: quando todas as tentativas falharem, devolver ao
-      agente uma mensagem amigável em português em vez de propagar a exceção
-- [ ] Aplicar o mesmo tratamento às falhas de geração estruturada
-      (`_invoke_structured`)
-- [ ] Registrar tentativa, erro e fallback nos logs estruturados
+- [x] Definir política de retry limitado (máximo de 2 novas tentativas) com
+      backoff exponencial para as chamadas HTTP da Wikipédia (`_get_wikipedia`)
+- [x] Manter timeout explícito e configurável por variável de ambiente
+      (`WIKIPEDIA_TIMEOUT`, padrão 10s)
+- [x] Tratar apenas exceções específicas (`RequestException` /
+      `Timeout` / `ConnectionError`) em vez de `except Exception` no caminho HTTP
+- [x] Implementar fallback: falha de rede após os retries → `unavailable=True`,
+      `merge_pages` + `AGENT_SYSTEM_PROMPT` produzem mensagem amigável, sem
+      propagar a exceção
+- [x] Aplicar o mesmo tratamento a `_invoke_structured` — `max_retries=2`
+      explícito no `_extraction_llm` (retry do SDK da Groq) + logging do fallback
+- [x] Registrar tentativa, erro e fallback via `logging` (`NullHandler` no
+      pacote; os handlers JSON/arquivo/`run_id` vêm com a T04/#15)
 - [ ] Cobrir a política com testes unitários que simulem timeout e erro HTTP
+      — **adiado para a T07/#18** (bootstrap da suíte de testes)
 
 ---
 
