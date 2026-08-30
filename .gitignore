@@ -28,6 +28,13 @@ itinerai_audit.db
 itinerai_audit.db-journal
 itinerai_audit.db-wal
 
+# Testes / cobertura — T07/#18
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
 # LangGraph local artifacts
 .langgraph_api/
 .langgraph/

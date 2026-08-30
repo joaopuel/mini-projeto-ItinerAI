@@ -1,0 +1,20 @@
+# Primeiro pyproject.toml do projeto — contém APENAS configuração de teste e
+# cobertura (T07/#18). O ItinerAI não é um pacote instalável (variante
+# requirements.txt do LangGraph), portanto NÃO há [build-system].
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "--cov=itinerai_agent --cov-report=term-missing --cov-fail-under=70"
+
+[tool.coverage.run]
+source = ["itinerai_agent"]
+branch = false
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise RuntimeError\\(\"unreachable\"\\)",
+    "if __name__ == .__main__.:",
+]
