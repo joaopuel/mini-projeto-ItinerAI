@@ -902,3 +902,48 @@ commit das modificações em uma nova branch e crie o PR. No PR é obrigatório
 incluir "Closes #<número-da-issue>". Traduza também os prompts para português
 brasileiro, se necessário.
 ```
+
+---
+
+## Planejamento da T14 — integração da aplicação ao webhook do n8n
+
+* Data: 2026-08-30 16:05
+* Autor: joaopuel
+* Tipo: Planejamento
+
+### Prompt original
+```
+Agora planeje a implementação prevista na task
+https://github.com/joaopuel/mini-projeto-ItinerAI/issues/25.
+```
+
+---
+
+## Restrição: implementação estática e sem testes unitários
+
+* Data: 2026-08-30 16:20
+* Autor: joaopuel
+* Tipo: Instrução direta
+
+### Prompt original
+```
+Antes de executar, acrescente esta restrição ao plano: é proibido rodar qualquer
+comando para executar, construir, compilar ou testar a aplicação. As
+implementações devem ser feitas estaticamente. É proibido criar qualquer teste
+unitário para a nova implementação — o CI vai falhar e isso será usado como
+evidência mais tarde.
+```
+
+---
+
+## Registro dos prompts, commit e PR da integração com o n8n (T14/#25)
+
+* Data: 2026-08-30 17:21
+* Autor: joaopuel
+* Tipo: Documentação / Versionamento
+
+### Prompt original
+```
+Está funcionando. Agora atualize o prompts.md com os prompts mais recentes e
+importantes. Faça o commit das modificações e crie um PR.
+```
