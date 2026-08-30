@@ -717,3 +717,31 @@ e planeje as modificações descritas.
 Adicione os últimos prompts em /docs/prompts em português brasileiro. Depois
 faça o commit das mudanças e abra um PR.
 ```
+
+---
+
+## Leitura da issue #14 e planejamento da config por variável de ambiente
+
+* Data: 2026-08-29 22:15
+* Autor: joaopuel
+* Tipo: Planejamento
+
+### Prompt original
+```
+Agora leia a issue https://github.com/joaopuel/mini-projeto-ItinerAI/issues/14
+e planeje a implementação descrita.
+```
+
+---
+
+## Registro dos prompts, commit e PR da config por variável de ambiente
+
+* Data: 2026-08-29 23:00
+* Autor: joaopuel
+* Tipo: Documentação / Versionamento
+
+### Prompt original
+```
+Adicione os últimos prompts em /docs/prompts.md em português brasileiro.
+Faça o commit de todas as modificações e abra um PR.
+```

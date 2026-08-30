@@ -3,7 +3,6 @@ itinerário .md)."""
 
 import json
 import logging
-import os
 import re
 import time
 import unicodedata
@@ -20,6 +19,7 @@ from pydantic import BaseModel, Field
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import RequestException, Timeout
 
+from itinerai_agent.utils.config import GROQ_MODEL, WIKIPEDIA_TIMEOUT
 from itinerai_agent.utils.prompts import (
     ATTRACTION_EXTRACTION_PROMPT,
     ITINERARY_CLUSTERING_PROMPT,
@@ -37,9 +37,9 @@ WIKIPEDIA_BASE_URL = "https://en.wikipedia.org/wiki"
 _REQUEST_HEADERS = {"User-Agent": "ItinerAI/1.0 (https://github.com/joaopuel/mini-projeto-ItinerAI)"}
 _MAX_PAGE_TEXT_CHARS = 8000
 
-# Resiliência das chamadas HTTP à Wikipédia (T02/#13): timeout configurável por
-# ambiente e retry limitado com backoff exponencial apenas em erros de transporte.
-WIKIPEDIA_TIMEOUT = float(os.getenv("WIKIPEDIA_TIMEOUT", "10"))
+# Resiliência das chamadas HTTP à Wikipédia (T02/#13): o timeout vem de
+# `config.WIKIPEDIA_TIMEOUT` (env); retry limitado com backoff exponencial
+# apenas em erros de transporte.
 _WIKIPEDIA_MAX_RETRIES = 2       # tentativas ADICIONAIS após a primeira
 _WIKIPEDIA_BACKOFF_BASE = 0.5    # s → espera 0.5s, depois 1.0s (0.5 * 2**attempt)
 _RETRYABLE_HTTP_ERRORS = (Timeout, RequestsConnectionError)
@@ -62,11 +62,12 @@ ITINERARY_OVERFLOW_NOTE = (
 # projeto (não do cwd), para funcionar de qualquer diretório de execução.
 OUTPUT_DIR = Path(__file__).resolve().parents[2] / "output"
 
-# temperature=0 deixa a extração determinística e reduz muito o risco de o
-# modelo entrar em loop de repetição e gerar um JSON malformado. max_retries=2
+# O modelo vem de `config.GROQ_MODEL` (T03/#14); temperature=0 deixa a extração
+# determinística e reduz muito o risco de o modelo entrar em loop de repetição e
+# gerar um JSON malformado (fixo aqui, à parte de GROQ_TEMPERATURE). max_retries=2
 # torna explícito o retry limitado que o SDK da Groq já faz em erros
 # transitórios de rede/API (T02/#13).
-_extraction_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0, max_retries=2)
+_extraction_llm = ChatGroq(model=GROQ_MODEL, temperature=0, max_retries=2)
 
 
 def _extract_json_payload(text: str) -> dict | list | None:

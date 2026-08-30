@@ -35,11 +35,12 @@ neste documento sem alinhar antes com o usuário.
 - **LangGraph** — orquestração do agente como um grafo de estados.
 - **pydantic** — definição do estado do grafo e de todos os modelos de dados
   (ex.: pontos turísticos, dias do itinerário).
-- **Groq** — modelo `openai/gpt-oss-120b` como LLM do agente (e como LLM de
-  extração em `tools.py`). O `llama-3.1-8b-instant` original foi desligado pela
-  Groq em 16/08/2026; `openai/gpt-oss-120b` está na camada gratuita (limites de
-  taxa: 30 req/min, 8K tokens/min, 1K req/dia, 200K tokens/dia). A
-  externalização do nome do modelo para variável de ambiente é a tarefa T03.
+- **Groq** — LLM do agente e da extração via `langchain-groq`. Modelo e
+  temperatura do agente são configuráveis por `GROQ_MODEL` / `GROQ_TEMPERATURE`
+  (T03/#14; ver "Configuração de ambiente"), com padrão `openai/gpt-oss-120b` /
+  `0.7`. O `llama-3.1-8b-instant` original foi desligado pela Groq em
+  16/08/2026; `openai/gpt-oss-120b` está na camada gratuita (limites: 30
+  req/min, 8K tokens/min, 1K req/dia, 200K tokens/dia).
 - Autenticação com a Groq via variável de ambiente `GROQ_API_KEY` (nunca
   hardcode a chave; carregue de `.env`/ambiente).
 - **requests + beautifulsoup4** — busca e parsing de páginas da Wikipédia,
@@ -223,10 +224,11 @@ Política explícita e determinística de falhas nas integrações externas (T02
 §4.6). Regras de design (não alterar sem alinhar):
 
 - **HTTP da Wikipédia** (`_get_wikipedia`): timeout **configurável** por
-  `WIKIPEDIA_TIMEOUT` (env, padrão 10s) + **retry limitado** (máx. 2 tentativas
-  adicionais) com **backoff exponencial** (0,5s → 1,0s). Repete **só** em erros
-  de transporte transitórios (`Timeout`, `ConnectionError`); erros de status
-  HTTP (incl. 5xx) e o esgotamento das tentativas propagam a exceção.
+  `WIKIPEDIA_TIMEOUT` (em `config.py`, padrão 10s) + **retry limitado** (máx. 2
+  tentativas adicionais) com **backoff exponencial** (0,5s → 1,0s). Repete
+  **só** em erros de transporte transitórios (`Timeout`, `ConnectionError`);
+  erros de status HTTP (incl. 5xx) e o esgotamento das tentativas propagam a
+  exceção.
 - **Exceções específicas, não `except Exception`**: `fetch_page_attractions`
   captura só `requests.exceptions.RequestException`. Um bug fora de rede volta a
   propagar (falha alto em bug, degrada em rede).
@@ -300,6 +302,7 @@ mini-projeto-ItinerAI/
 ├── itinerai_agent/         # todo o código do agente
 │   ├── utils/
 │   │   ├── __init__.py
+│   │   ├── config.py       # variáveis de ambiente (GROQ_MODEL, GROQ_TEMPERATURE, WIKIPEDIA_TIMEOUT)
 │   │   ├── tools.py        # tools: busca de pontos turísticos, geração do .md
 │   │   ├── validation.py   # validação de entrada do usuário (anti prompt injection, idioma, URLs)
 │   │   ├── memory.py       # memória persistente da última viagem em SQLite (retomada)
@@ -338,6 +341,9 @@ mini-projeto-ItinerAI/
   (tool-calling)" acima para o padrão atual de roteamento.
 - `validation.py` concentra a validação de entrada do usuário (funções puras de
   regex + mensagens de recusa) — ver "Validação de entrada" acima.
+- `config.py` concentra a leitura das variáveis de ambiente (constantes
+  `GROQ_MODEL`, `GROQ_TEMPERATURE`, `WIKIPEDIA_TIMEOUT` lidas no import) — ver
+  "Configuração de ambiente" abaixo.
 - `memory.py` concentra a memória persistente em SQLite (funções puras
   `init_db`/`save_trip_memory`/`load_trip_memory` + o modelo `TripMemory`) —
   ver "Memória persistente" acima.
@@ -346,10 +352,18 @@ mini-projeto-ItinerAI/
 ## Configuração de ambiente
 
 - Requer Python 3.12.9.
-- Variável de ambiente obrigatória: `GROQ_API_KEY` (carregada via `.env` em
-  desenvolvimento local, nunca commitada).
-- Variável opcional: `WIKIPEDIA_TIMEOUT` (segundos; padrão `10`) — timeout das
-  requisições HTTP à Wikipédia. Ver "Resiliência das integrações".
+- **Todas as variáveis são lidas em `itinerai_agent/utils/config.py`** (no
+  import, após `load_dotenv()` do `main.py`), com padrões que preservam o
+  comportamento anterior — rodar só com `GROQ_API_KEY` não muda nada.
+- Variável obrigatória: `GROQ_API_KEY` (nunca commitada; consumida direto pela
+  `langchain-groq`, não passa por `config.py`).
+- Variáveis opcionais:
+  - `GROQ_MODEL` (padrão `openai/gpt-oss-120b`) — modelo do agente **e** da
+    extração. T03/#14.
+  - `GROQ_TEMPERATURE` (padrão `0.7`) — temperatura só do LLM do agente (`_llm`);
+    a extração (`_extraction_llm`) usa `temperature=0` fixo, à parte.
+  - `WIKIPEDIA_TIMEOUT` (segundos; padrão `10`) — timeout das requisições HTTP à
+    Wikipédia. Ver "Resiliência das integrações".
 - `.env`, `output/` e o banco `itinerai_memory.db` devem estar no `.gitignore`.
 - A memória persistente usa `sqlite3` da stdlib — nenhuma dependência extra no
   `requirements.txt`.

@@ -164,20 +164,24 @@ logs estruturados (T04).
 **Descrição**
 
 O §4.10 exige que o modelo utilizado seja configurado por variável de ambiente.
-Hoje `itinerai_agent/utils/nodes.py:24` fixa o modelo no código
-(`ChatGroq(model="llama-3.1-8b-instant")`); apenas a `GROQ_API_KEY` vem do
-ambiente. Externalizar o nome do modelo (e a temperatura) para variáveis de
-ambiente, com valores padrão seguros, e documentá-las no `.env.example`.
+Hoje `itinerai_agent/utils/nodes.py:32` fixa o modelo no código
+(`ChatGroq(model="openai/gpt-oss-120b")`, duplicado em `tools.py`); apenas a
+`GROQ_API_KEY` vem do ambiente. Externalizar o nome do modelo (e a temperatura)
+para variáveis de ambiente, com valores padrão seguros, e documentá-las no
+`.env.example`.
 
 **Checklist técnico**
 
-- [ ] Criar as variáveis `GROQ_MODEL` e `GROQ_TEMPERATURE` com leitura via
-      `os.getenv` e valores padrão iguais aos atuais
-- [ ] Aplicar as variáveis ao `_llm` e ao `_extraction_llm` (mantendo
+- [x] Criar as variáveis `GROQ_MODEL` e `GROQ_TEMPERATURE` com leitura via
+      `os.getenv` e valores padrão iguais aos atuais (novo `utils/config.py`,
+      que também absorve o `WIKIPEDIA_TIMEOUT` da T02)
+- [x] Aplicar as variáveis ao `_llm` e ao `_extraction_llm` (mantendo
       `temperature=0` no LLM de extração)
-- [ ] Atualizar o `.env.example` com as novas variáveis, sem valores sensíveis
-- [ ] Documentar as variáveis na seção de instalação do `README.md`
-- [ ] Garantir que nenhuma credencial ou chave permaneça no código-fonte
+- [x] Atualizar o `.env.example` com as novas variáveis, sem valores sensíveis
+- [x] Documentar as variáveis na seção de instalação do `README.md`
+- [x] Garantir que nenhuma credencial ou chave permaneça no código-fonte
+      (`.env` no `.gitignore`; `os.getenv` só em `config.py`; `.env.example` só
+      com nomes)
 
 ---
 
