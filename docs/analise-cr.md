@@ -29,7 +29,7 @@ variáveis de ambiente, documentação e a análise de logs do CI.
 | Severidade | Significado | Efeito sobre a entrega |
 | --- | --- | --- |
 | 🔴 **Crítico** | Exposição de credencial, perda de dado ou falha de segurança explorável | **Bloqueante** |
-| 🟠 Alto | Defeito provável ou lacuna estrutural de garantia | Exige tarefa registrada antes da entrega final |
+| 🟠 Alto | Defeito provável ou lacuna estrutural de garantia | Não bloqueia; pode ser endereçado numa versão posterior, com o risco residual assumido por escrito |
 | 🟡 Médio | Defeito latente, contradição entre código e documentação, ou lacuna de rastreabilidade | Entra no backlog com prazo |
 | 🔵 Baixo | Cosmético, organizacional ou sem impacto observável | Oportunístico |
 
@@ -145,10 +145,14 @@ O projeto inteiro se apoia na premissa "segredo só no ambiente" — `GROQ_API_K
 `N8N_WEBHOOK_TOKEN`, credencial SMTP. Sem gate automatizado, essa premissa é
 sustentada apenas por disciplina, e o C1 é a prova de que a disciplina falha.
 
-### Correção
+### Correção — mapeada para uma versão futura
 
 Um passo `gitleaks` no job `lint`, bloqueante. É a causa-raiz do C1: sem ele,
 nada impede a próxima credencial de entrar pelo mesmo caminho.
+
+**Não entra na entrega final**, por decisão de escopo: o CI não será mais
+alterado, e a entrega fica restrita às demandas já previstas no backlog
+(`docs/tasks.md`). Ver "Risco residual assumido", ao final.
 
 ---
 
@@ -376,6 +380,106 @@ Duas observações sobre a ordem:
 - **C1 e A1 andam juntos.** Corrigir apenas o C1 remove o sintoma e deixa a
   causa: nada impede a próxima credencial de entrar pelo mesmo caminho. A
   varredura de segredos é o que transforma a regra em garantia.
+
+> Esta priorização é a da revisão original, e permanece como registro do
+> raciocínio. A ordem foi seguida com **uma exceção deliberada**: o A1 saiu do
+> escopo desta entrega — ver "Risco residual assumido".
+
+---
+
+## Situação após as correções
+
+Atualizado em 2026-08-30, após os commits `86f2ece` (correções), `4563ec3`
+(testes) e `3f39737` (documentação e renomeação), com o
+[run 33338449639](https://github.com/joaopuel/mini-projeto-ItinerAI/actions/runs/33338449639)
+do CI **verde nos três jobs** e a credencial do n8n rotacionada.
+
+| ID | Sev. | Situação | Commit |
+| --- | --- | --- | --- |
+| **C1** | 🔴 | **Fechado.** `config.py` voltou a ler do ambiente **e a credencial foi rotacionada no n8n** — o valor que ficou no histórico é hoje um token morto. | `86f2ece` + rotação |
+| **A1** | 🟠 | **Fora do escopo da entrega final.** Mapeado para uma versão futura da aplicação — o CI não será mais alterado. | — |
+| **A2** | 🟠 | **Fechado e verificado no CI.** 238 testes passando; `notifications.py` saiu de 44% para **100%**. | `4563ec3` |
+| **M1** | 🟡 | Corrigido — POST com tentativa única; regressão travada por `test_timeout_does_not_retry`. | `86f2ece` |
+| **M2** | 🟡 | Corrigido — docstring ajustado ao comportamento real **e** captura ampla na fronteira de `notify_recipient`. | `86f2ece` |
+| **M3** | 🟡 | Corrigido — `_record_offer_outcome` emite log e auditoria para `declined`, `cancelled` e `invalid_email`. | `86f2ece` |
+| **M4** | 🟡 | Corrigido — o comentário registra que a aplicação é a mais estrita das duas pontas. | `86f2ece` |
+| **B1** | 🔵 | Resolvido — pasta renomeada para `docs/evidencias/`, com a exceção registrada no `CLAUDE.md`. | `3f39737` |
+| **B2** | 🔵 | Corrigido — desfecho `cancelled` distinto de `invalid_email`. | `86f2ece` |
+| **B3** | 🔵 | Não corrigido, por decisão registrada (custo supera o benefício). | — |
+| **B4** | 🔵 | Não corrigido, por decisão registrada (custo supera o benefício). | — |
+
+---
+
+## O PR pode seguir para o merge?
+
+### ✅ Sim — as duas condições bloqueantes foram atendidas
+
+#### 1. C1 fechado pela rotação da credencial
+
+O código voltou a ler o token do ambiente (`86f2ece`) e **uma nova credencial foi
+gerada no n8n**. É a rotação que efetivamente encerra o achado: o valor exposto
+nos commits `025c998` e `53c706a` continua no histórico — o git é imutável —, mas
+deixou de ser uma credencial válida. O que restou é um token morto.
+
+A prevenção também está no lugar: `N8N_WEBHOOK_TOKEN` é lido por `os.getenv`, de
+modo que o **novo** token não tem caminho para o repositório.
+
+> Sugestão de higiene, não condição: um **squash merge** manteria a `develop`
+> livre dos dois commits de "falha de segurança", que são artefatos do exercício
+> de code review e não trabalho de produto. As referências por SHA feitas neste
+> documento continuam resolvendo pelo PR.
+
+#### 2. A2 fechado e verificado no CI
+
+Os testes foram escritos sob a restrição de implementação estática — sem uma
+única execução — e eu registrei que aquilo era hipótese, não garantia. O
+[run 33338449639](https://github.com/joaopuel/mini-projeto-ItinerAI/actions/runs/33338449639)
+resolveu a hipótese, com os três jobs verdes:
+
+| Métrica | Antes (run 33333506048) | Agora (run 33338449639) |
+| --- | --- | --- |
+| Testes | 200 | **238** |
+| Cobertura global | 94% | **99%** |
+| `notifications.py` | 44% | **100%** |
+| `nodes.py` | 96% | **100%** |
+| `diff-cover` (código novo) | **50% — reprovado** | **100% — 0 linhas descobertas** |
+
+O `diff-cover`, que era o único gate vermelho, passou com 89 de 89 linhas
+cobertas. E vale registrar: a suíte passou **no primeiro run**, sem correção
+intermediária — as quatro execuções vermelhas anteriores são dos commits que
+precedem `4563ec3`, quando o código novo ainda não tinha teste algum.
+
+### Risco residual assumido
+
+**A1 — varredura de segredos no CI — não entra na entrega final.** O pipeline não
+será mais alterado, e a entrega fica restrita às demandas já previstas no backlog
+(`docs/tasks.md`); o A1 está mapeado para uma **versão futura da aplicação**.
+
+A decisão é de escopo, não uma reavaliação do achado: ele continua válido e
+continua sendo a causa-raiz do C1. O que muda é quem carrega o risco no
+intervalo. Registrando o que fica em aberto, para a decisão ser informada e não
+implícita:
+
+- **Nenhum gate do CI detecta uma credencial commitada.** Ruff olha sintaxe e
+  imports, `diff-cover` olha cobertura, e o secret scanning do GitHub não dispara
+  em string aleatória sem prefixo de provedor. Foi assim que o C1 passou por
+  `lint` e `build` verdes.
+- **A premissa "segredo só no ambiente"** — que vale para `GROQ_API_KEY`,
+  `N8N_WEBHOOK_TOKEN` e a credencial SMTP — segue sustentada por disciplina e
+  revisão humana, não por automação.
+- **Uma repetição do C1 depende de alguém notar no code review**, como aconteceu
+  aqui. Funcionou uma vez; não é garantia.
+
+O risco é aceitável para o escopo de uma entrega avaliativa, com repositório de
+um único autor e credenciais descartáveis. Deixa de ser aceitável se a aplicação
+ganhar mais colaboradores ou credenciais de valor real — que é exatamente o
+gatilho para o A1 sair da versão futura e virar prioridade.
+
+### Veredito
+
+**Liberado para merge.** Nove dos onze achados corrigidos; um fora do escopo por
+decisão registrada, com o risco residual assumido acima (A1); dois não corrigidos
+por custo superior ao benefício (B3, B4), com o raciocínio neste documento.
 
 ---
 
