@@ -656,3 +656,64 @@ Crie um commit separado para a troca de modelo.
 Ok. Adicione os prompts mais importantes em /docs/prompts em português
 brasileiro e faça o commit de todas as modificações feitas.
 ```
+
+---
+
+## Diagnóstico do itinerário vazio (extração no gpt-oss-120b)
+
+* Data: 2026-08-29 19:20
+* Autor: joaopuel
+* Tipo: Correção / Investigação
+
+### Prompt original
+```
+Tive esta conversa com o agente, mas a saída não traz nenhuma atração. O que
+aconteceu? (destino "Portugal", 5 dias → o arquivo gerado só tinha "Não
+encontramos atrações para montar o roteiro deste destino" e dias livres)
+
+[depois de instrumentar com logs de debug e rodar de novo]
+Este é o resultado: os logs mostram BadRequestError 400 "Tool choice is
+required, but model did not call a tool" (tool_use_failed), com o
+failed_generation trazendo a lista de atrações correta — só que como texto.
+```
+
+---
+
+## Abertura do PR da paralelização para a develop
+
+* Data: 2026-08-29 20:10
+* Autor: joaopuel
+* Tipo: Versionamento
+
+### Prompt original
+```
+Agora crie o PR para a develop.
+```
+
+---
+
+## Leitura da issue #13 e planejamento da resiliência
+
+* Data: 2026-08-29 20:30
+* Autor: joaopuel
+* Tipo: Planejamento
+
+### Prompt original
+```
+Agora leia a issue https://github.com/joaopuel/mini-projeto-ItinerAI/issues/13
+e planeje as modificações descritas.
+```
+
+---
+
+## Registro dos prompts, commit e PR da resiliência
+
+* Data: 2026-08-29 21:40
+* Autor: joaopuel
+* Tipo: Documentação / Versionamento
+
+### Prompt original
+```
+Adicione os últimos prompts em /docs/prompts em português brasileiro. Depois
+faça o commit das mudanças e abra um PR.
+```
