@@ -2,7 +2,6 @@
 (o fluxo ponta a ponta com o grafo compilado é a T08)."""
 
 import json
-import types
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage

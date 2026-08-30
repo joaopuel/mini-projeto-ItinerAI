@@ -1,5 +1,7 @@
 # ItinerAI
 
+[![CI](https://github.com/joaopuel/mini-projeto-ItinerAI/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/joaopuel/mini-projeto-ItinerAI/actions/workflows/ci.yml)
+
 **Agente de IA, construído com LangGraph, que cria itinerários de viagem dia a
 dia a partir de um destino e uma duração — tudo pelo terminal.** O agente
 pesquisa pontos turísticos na Wikipédia, agrupa as atrações por proximidade e
@@ -321,6 +323,21 @@ pytest
 O relatório de cobertura (`term-missing`) é impresso ao final; o `pytest` sai com
 erro se a cobertura ficar abaixo de 70%.
 
+### Integração contínua (CI)
+
+Todo `push` e `pull request` para `develop` e `main` dispara o pipeline do
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)), com três
+jobs paralelos:
+
+- **lint** — `ruff check` (bloqueante) e `ruff format --check` (informativo);
+- **test** — `pytest` + gate de cobertura global (≥ 70%) + gate de cobertura do
+  código novo (`diff-cover` ≥ 70% das linhas alteradas no PR);
+- **build** — compila o grafo (`build_graph()`) só com as dependências de
+  produção e valida a integridade do `langgraph.json`.
+
+O relatório de cobertura (`coverage.xml` + HTML) é publicado como artefato do
+workflow. O pipeline roda sem `GROQ_API_KEY` real e sem acesso à rede.
+
 ## Exemplo de entrada e saída
 
 ### Conversa no terminal
@@ -420,6 +437,8 @@ Baseada na organização recomendada pela documentação do LangGraph (variante
 
 ```
 mini-projeto-ItinerAI/
+├── .github/workflows/
+│   └── ci.yml              # pipeline de CI: lint, testes, cobertura, build (T10/#21)
 ├── itinerai_agent/         # todo o código do agente
 │   ├── utils/
 │   │   ├── tools.py        # ferramentas: busca de atrações, geração do .md
@@ -438,9 +457,9 @@ mini-projeto-ItinerAI/
 ├── main.py                 # ponto de entrada: loop de chat no terminal
 ├── show_audit.py           # exibe a trilha de auditoria de um run_id
 ├── .env.example            # modelo das variáveis de ambiente (sem valores)
-├── pyproject.toml          # config de pytest + cobertura
+├── pyproject.toml          # config de pytest + cobertura + Ruff
 ├── requirements.txt        # dependências do projeto
-├── requirements-dev.txt    # dependências de teste
+├── requirements-dev.txt    # dependências de teste + lint (pytest, ruff, diff-cover)
 └── langgraph.json          # configuração do LangGraph
 ```
 

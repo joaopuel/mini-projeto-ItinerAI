@@ -1,0 +1,168 @@
+# Pipeline de CI do ItinerAI (T10/#21, §4.8).
+#
+# Três jobs paralelos e independentes, para logs separados e legíveis — a
+# separação em etapas é o que viabiliza a análise de logs de duas etapas
+# distintas exigida pela T11/#22:
+#
+#   * lint  — Ruff (`ruff check` bloqueante; `ruff format --check` informativo)
+#   * test  — pytest + gate de cobertura global (≥70%) + gate de cobertura do
+#             código novo (diff-cover ≥70%, só em pull request)
+#   * build — compila o grafo (`build_graph()`) só com as deps de produção e
+#             valida a integridade do `langgraph.json`
+#
+# Roda sem `GROQ_API_KEY` real e sem acesso à rede: a suíte de testes mocka todo
+# HTTP/LLM e o `tests/conftest.py` injeta uma chave dummy; só o job `build` passa
+# uma chave descartável (o `ChatGroq` lê a variável no import, mas não chama a
+# API).
+
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12.9"
+
+jobs:
+  # ------------------------------------------------------------------- LINT
+  lint:
+    name: Lint (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Instalar dependências de dev
+        run: pip install -r requirements-dev.txt
+
+      - name: ruff check (bloqueante)
+        run: ruff check --output-format=github .
+
+      - name: ruff format --check (informativo, não bloqueia o build)
+        # A base de código nunca passou por um formatador; enquanto isso não for
+        # normalizado num commit próprio, este passo só reporta o diff. Trocar
+        # para bloqueante é uma linha (remover o continue-on-error).
+        # `if: always()` garante que o diff apareça mesmo quando o `ruff check`
+        # acima falha (etapa distinta para a análise de logs da T11/#22).
+        if: always()
+        continue-on-error: true
+        run: ruff format --check --diff .
+
+  # ------------------------------------------------------------------ TESTES
+  test:
+    name: Testes + cobertura
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # diff-cover precisa do histórico e da branch base
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Instalar dependências de dev
+        run: pip install -r requirements-dev.txt
+
+      - name: Executar testes (pytest)
+        # --cov-fail-under=0 sobrepõe o addopts do pyproject: este passo falha
+        # apenas por teste quebrado; os gates de cobertura são passos separados.
+        run: pytest --cov-report=xml --cov-report=html --cov-report=term-missing --cov-fail-under=0
+
+      - name: Gate de cobertura global (>= 70%)
+        run: coverage report --fail-under=70
+
+      - name: Gate de cobertura do código novo (diff-cover >= 70%)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          diff-cover coverage.xml \
+            --compare-branch="origin/${{ github.base_ref }}" \
+            --fail-under=70 \
+            --html-report diff-cover.html \
+            --markdown-report diff-cover.md \
+            || DIFF_COVER_EXIT=$?
+          if [ -f diff-cover.md ]; then
+            {
+              echo '## Cobertura do código novo (diff-cover)'
+              cat diff-cover.md
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "${DIFF_COVER_EXIT:-0}"
+
+      - name: Publicar relatório de cobertura (artefato)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
+            diff-cover.html
+            diff-cover.md
+          if-no-files-found: ignore
+
+  # -------------------------------------------------------- BUILD / VALIDAÇÃO
+  build:
+    name: Validação de build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Instalar dependências de produção
+        run: pip install -r requirements.txt
+
+      - name: Compilar o grafo (build_graph) só com deps de produção
+        env:
+          GROQ_API_KEY: ci-dummy-key   # ChatGroq exige a variável no import; nenhuma chamada de rede
+        run: |
+          python - <<'PY'
+          from itinerai_agent.agent import build_graph, graph
+
+          compiled = build_graph()
+          assert hasattr(compiled, "invoke"), "grafo compilado não expõe .invoke"
+          assert graph is not None, "itinerai_agent.agent.graph não foi compilado no import"
+          print("OK: build_graph() compilou o grafo")
+          PY
+
+      - name: Validar integridade do langgraph.json
+        run: |
+          python - <<'PY'
+          import json
+          import pathlib
+
+          cfg = json.loads(pathlib.Path("langgraph.json").read_text(encoding="utf-8"))
+          assert cfg.get("dependencies"), "langgraph.json: 'dependencies' ausente/vazio"
+          assert cfg.get("graphs"), "langgraph.json: 'graphs' ausente/vazio"
+
+          target = cfg["graphs"].get("itinerai_agent", "")
+          module_path, _, symbol = target.partition(":")
+          assert symbol == "graph", f"esperado '...:graph', veio {target!r}"
+          assert pathlib.Path(module_path).is_file(), f"grafo não encontrado: {module_path}"
+          print("OK: langgraph.json íntegro")
+          PY
