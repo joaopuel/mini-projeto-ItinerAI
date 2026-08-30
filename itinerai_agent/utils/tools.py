@@ -19,7 +19,9 @@ from pydantic import BaseModel, Field
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import RequestException, Timeout
 
+from itinerai_agent.utils import audit
 from itinerai_agent.utils.config import GROQ_MODEL, WIKIPEDIA_TIMEOUT
+from itinerai_agent.utils.logging_config import run_id_var
 from itinerai_agent.utils.prompts import (
     ATTRACTION_EXTRACTION_PROMPT,
     ITINERARY_CLUSTERING_PROMPT,
@@ -104,17 +106,25 @@ def _invoke_structured(schema: type[BaseModel], prompt: str) -> BaseModel | None
     não bate) — as tools degradam tratando como "nada encontrado" em vez de
     derrubar o agente.
     """
+    run_id = run_id_var.get()
+    start = time.perf_counter()
     try:
         response = _extraction_llm.invoke(prompt)
     except Exception as exc:
         # O SDK da Groq já faz retry limitado (max_retries=2) em erros
         # transitórios; aqui só registramos o fallback e degradamos.
+        elapsed_ms = (time.perf_counter() - start) * 1000
         logger.warning("Extração LLM (%s) falhou: %s", schema.__name__, type(exc).__name__)
+        audit.try_record(
+            run_id, "llm_extraction", "tool", "fallback", elapsed_ms, "invoke_exception"
+        )
         return None
     content = response.content if isinstance(response.content, str) else ""
     payload = _extract_json_payload(content)
     if payload is None:
+        elapsed_ms = (time.perf_counter() - start) * 1000
         logger.info("Extração LLM (%s): resposta sem JSON válido", schema.__name__)
+        audit.try_record(run_id, "llm_extraction", "tool", "fallback", elapsed_ms, "no_json")
         return None
     # O gpt-oss às vezes devolve só a lista, sem o objeto que a envolve.
     if isinstance(payload, list):
@@ -122,13 +132,21 @@ def _invoke_structured(schema: type[BaseModel], prompt: str) -> BaseModel | None
         if len(field_names) == 1:
             payload = {field_names[0]: payload}
     try:
-        return schema.model_validate(payload)
+        parsed = schema.model_validate(payload)
     except Exception as exc:
+        elapsed_ms = (time.perf_counter() - start) * 1000
         logger.info(
             "Extração LLM (%s): JSON não bate com o schema (%s)",
             schema.__name__, type(exc).__name__,
         )
+        audit.try_record(
+            run_id, "llm_extraction", "tool", "fallback", elapsed_ms, "schema_mismatch"
+        )
         return None
+    audit.try_record(
+        run_id, "llm_extraction", "tool", "ok", (time.perf_counter() - start) * 1000
+    )
+    return parsed
 
 
 class _ExtractedAttractions(BaseModel):
@@ -189,6 +207,12 @@ def _get_wikipedia(url: str) -> requests.Response:
             logger.warning(
                 "Wikipédia %s: %s — nova tentativa %d/%d em %.1fs",
                 url, type(exc).__name__, attempt + 1, _WIKIPEDIA_MAX_RETRIES, wait,
+            )
+            # Cada retry é uma linha pontual na trilha (T05); o resultado final
+            # (ok/erro + latência) é gravado por `fetch_page_attractions`.
+            audit.try_record(
+                run_id_var.get(), "wikipedia_fetch", "tool", "retry",
+                error=type(exc).__name__,
             )
             time.sleep(wait)
     raise RuntimeError("unreachable")  # o loop sempre retorna ou levanta
@@ -254,13 +278,22 @@ def fetch_page_attractions(
     de "não existe". Só captura erros de `requests` (`RequestException`); um
     bug fora disso volta a propagar (falha alto em bug, degrada em rede).
     """
+    run_id = run_id_var.get()
+    fetch_start = time.perf_counter()
     try:
         fetched = _fetch_wikipedia_page(title)
     except RequestException as exc:
+        fetch_ms = (time.perf_counter() - fetch_start) * 1000
         logger.warning(
             "Busca da Wikipédia para '%s' falhou: %s", title, type(exc).__name__
         )
+        audit.try_record(
+            run_id, "wikipedia_fetch", "tool", "error", fetch_ms, type(exc).__name__
+        )
         return WikipediaPageResult(kind=kind, found=False, unavailable=True)
+    audit.try_record(
+        run_id, "wikipedia_fetch", "tool", "ok", (time.perf_counter() - fetch_start) * 1000
+    )
     if fetched is None:
         return WikipediaPageResult(kind=kind, found=False)
     page_text, url = fetched

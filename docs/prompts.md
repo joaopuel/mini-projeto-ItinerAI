@@ -785,3 +785,32 @@ Usando o GitHub CLI, leia a issue https://github.com/joaopuel/mini-projeto-Itine
 Traduza os prompts em inglês em docs/prompts.md para português brasileiro.
 Depois faça o commit de todas as modificações e abra um PR.
 ```
+
+---
+
+## Implementação da trilha de auditoria (issue #16)
+
+* Data: 2026-08-30 00:17
+* Autor: joaopuel
+* Tipo: Instrução direta
+
+### Prompt original
+```
+Implemente a issue https://github.com/joaopuel/mini-projeto-ItinerAI/issues/16 no lugar.
+```
+
+---
+
+## Registro dos prompts, commit, PR e review da trilha de auditoria
+
+* Data: 2026-08-30 00:20
+* Autor: joaopuel
+* Tipo: Documentação / Versionamento
+
+### Prompt original
+```
+Adicione os últimos prompts dessa sessão em português no arquivo /docs/prompts.md.
+Adicione apenas prompts relevantes, ou seja, que não contenham perguntas e que
+sejam solicitações de implementação/modificação. Faça commit de todas as
+modificações, abra o PR e mova a task para review.
+```

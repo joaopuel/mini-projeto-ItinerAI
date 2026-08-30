@@ -2,6 +2,7 @@ import functools
 import json
 import logging
 import re
+import time
 from uuid import uuid4
 
 from langchain_core.messages import (
@@ -14,6 +15,7 @@ from langchain_core.messages import (
 from langchain_groq import ChatGroq
 from langgraph.graph import END
 
+from itinerai_agent.utils import audit
 from itinerai_agent.utils.config import GROQ_MODEL, GROQ_TEMPERATURE
 from itinerai_agent.utils.logging_config import run_id_var
 from itinerai_agent.utils.memory import TripMemory, save_trip_memory
@@ -55,25 +57,41 @@ _llm_with_tools = _llm.bind_tools(_TOOLS)
 
 def _logged_node(fn):
     """Instrumenta um nó do grafo: loga `node_start` / `node_end` (e
-    `node_error` + traceback, re-levantando) e publica o `run_id` do turno no
+    `node_error` + traceback, re-levantando), **mede a latência** (T05/#16) e
+    grava uma linha na trilha de auditoria, e publica o `run_id` do turno no
     `ContextVar`, para as chamadas mais profundas (`tools.py`) o herdarem —
     inclusive nos ramos paralelos do fan-out, que rodam em threads próprias."""
 
     @functools.wraps(fn)
     def wrapper(state: AgentState) -> dict:
-        token = run_id_var.set(getattr(state, "run_id", "") or "-")
+        run_id = getattr(state, "run_id", "") or "-"
+        token = run_id_var.set(run_id)
+        start = time.perf_counter()
         try:
             logger.info("node_start", extra={"node": fn.__name__})
             try:
                 result = fn(state)
             except Exception as exc:
+                duration_ms = (time.perf_counter() - start) * 1000
                 logger.error(
                     "node_error",
-                    extra={"node": fn.__name__, "error": type(exc).__name__},
+                    extra={
+                        "node": fn.__name__,
+                        "error": type(exc).__name__,
+                        "duration_ms": round(duration_ms, 1),
+                    },
                     exc_info=True,
                 )
+                audit.try_record(
+                    run_id, fn.__name__, "node", "error", duration_ms, type(exc).__name__
+                )
                 raise
-            logger.info("node_end", extra={"node": fn.__name__})
+            duration_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                "node_end",
+                extra={"node": fn.__name__, "duration_ms": round(duration_ms, 1)},
+            )
+            audit.try_record(run_id, fn.__name__, "node", "ok", duration_ms)
             return result
         finally:
             run_id_var.reset(token)
@@ -278,8 +296,11 @@ def call_llm(state: AgentState) -> dict:
         response = _llm_with_tools.invoke(
             [SystemMessage(content=AGENT_SYSTEM_PROMPT), *state.messages]
         )
-    except Exception:
+    except Exception as exc:
         logger.warning("llm_exception_fallback", extra={"node": "call_llm"})
+        audit.try_record(
+            state.run_id, "llm_agent", "tool", "fallback", error=type(exc).__name__
+        )
         return {
             "messages": [
                 AIMessage(
@@ -356,9 +377,11 @@ def call_tools(state: AgentState) -> dict:
         if call["name"] == "build_itinerary":
             args["attractions"] = state.tourist_attractions
 
+        tool_start = time.perf_counter()
         try:
             result = tool_fn(**args)
         except Exception as exc:
+            tool_ms = (time.perf_counter() - tool_start) * 1000
             logger.error(
                 "tool_executed",
                 extra={
@@ -367,9 +390,14 @@ def call_tools(state: AgentState) -> dict:
                     "tool_args": logged_args,
                     "status": "error",
                     "error": type(exc).__name__,
+                    "duration_ms": round(tool_ms, 1),
                 },
             )
+            audit.try_record(
+                state.run_id, call["name"], "tool", "error", tool_ms, type(exc).__name__
+            )
             raise
+        tool_ms = (time.perf_counter() - tool_start) * 1000
         logger.info(
             "tool_executed",
             extra={
@@ -377,8 +405,10 @@ def call_tools(state: AgentState) -> dict:
                 "tool": call["name"],
                 "tool_args": logged_args,
                 "status": "ok",
+                "duration_ms": round(tool_ms, 1),
             },
         )
+        audit.try_record(state.run_id, call["name"], "tool", "ok", tool_ms)
 
         if call["name"] == "build_itinerary":
             update["itinerary"] = result.itinerary

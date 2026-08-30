@@ -248,8 +248,11 @@ Política explícita e determinística de falhas nas integrações externas (T02
   `logging_config.py` e ganham o `run_id` do turno — ver "Observabilidade /
   logging" abaixo. `itinerai_agent/__init__.py` mantém só o `NullHandler` (a
   aplicação é quem configura o logging).
-- **Fora de escopo desta task**: a trilha de auditoria em SQLite com latência
-  por passo (T05) e os testes unitários da política (T07/#18). Retry de 5xx
+- **Trilha de auditoria (T05/#16)**: os retries de `_get_wikipedia`, a
+  indisponibilidade em `fetch_page_attractions` e os fallbacks de
+  `_invoke_structured` também viram linhas em `execution_audit`
+  (`status` `retry`/`error`/`fallback`) — ver "Trilha de auditoria" abaixo. Os
+  testes unitários da política continuam adiados para a T07/#18. Retry de 5xx
   também não entra (Wikipédia raramente devolve 5xx).
 
 ## Observabilidade / logging (`logging_config.py`)
@@ -281,21 +284,65 @@ SQLite com latência é a T05). Regras de design (não alterar sem alinhar):
   filhos).
 - **Instrumentação** em `nodes.py`: os decorators `_logged_node` (nos 8 nós) e
   `_logged_router` (nos 2 roteadores) emitem `node_start`/`node_end`/`node_error`
-  e `routing_decision`. Eventos semânticos pontuais: `validation_blocked` (com o
-  motivo: `prompt_injection` / `non_latin_script` / `url`, mapeado da mensagem de
-  recusa sem tocar em `validation.py`), `memory_persisted`, `llm_decision`,
-  `llm_exception_fallback`, `leaked_tool_calls_recovered`/`_unrecoverable`,
-  `tool_executed` (nome, args resumidos, status), `search_dispatched`,
-  `page_fetched`, `search_merged`. `main.py` emite `run_start`/`run_end`/
-  `run_error`.
+  e `routing_decision`; o `_logged_node` também mede a latência do nó
+  (`perf_counter`) — o `duration_ms` entra nos eventos `node_end`/`node_error` e
+  numa linha da trilha de auditoria (T05). Eventos semânticos pontuais:
+  `validation_blocked` (com o motivo: `prompt_injection` / `non_latin_script` /
+  `url`, mapeado da mensagem de recusa sem tocar em `validation.py`),
+  `memory_persisted`, `llm_decision`, `llm_exception_fallback`,
+  `leaked_tool_calls_recovered`/`_unrecoverable`, `tool_executed` (nome, args
+  resumidos, status, `duration_ms`), `search_dispatched`, `page_fetched`,
+  `search_merged`. `main.py` emite `run_start`/`run_end`/`run_error`.
 - **Nada de segredos nem conteúdo de mensagens.** Os nós logam só metadados
   (contagens, nomes de tools, decisões, booleanos, o destino) — nunca o texto do
   usuário, a resposta do LLM, a lista de atrações ou o itinerário. Como defesa em
   profundidade, o `JsonFormatter` ainda redige o valor de `GROQ_API_KEY` da
   string final e trunca valores string longos (500 chars).
 - **Nível** configurável por `LOG_LEVEL` (padrão `INFO`; valor inválido cai para
-  `INFO`). Timestamps em **UTC** ISO-8601 (a `memory.py` e a futura auditoria da
-  T05 usam hora local — padronizar fica para a T05/T06).
+  `INFO`). Timestamps em **UTC** ISO-8601 (`…Z`); a trilha de auditoria (T05)
+  usa **o mesmo formato UTC** para casar com os logs. Só a `memory.py` fica em
+  hora local (dado de produto, não correlacionado com os sinais).
+
+## Trilha de auditoria (`audit.py`)
+
+Segundo sinal de observabilidade do §4.6 (T05/#16): uma tabela SQLite
+`execution_audit`, **uma linha por passo executado** (nó do grafo ou tool) com a
+**latência medida**, correlacionada aos logs (T04) pelo **mesmo `run_id`**. A
+T06/#17 cruza os dois para reconstruir uma execução real, achar o gargalo e
+investigar um erro. Regras de design (não alterar sem alinhar):
+
+- **Espelha o padrão de `memory.py`**: `sqlite3` da stdlib (sem dependência
+  nova), `_connect` que abre/commita/fecha por chamada (fecha explícito por
+  causa do lock de arquivo no Windows), funções puras com `db_path` opcional que
+  cai para `AUDIT_DB_PATH` em tempo de chamada (testável na T07).
+- **Banco próprio** `itinerai_audit.db` (raiz do projeto, **não versionado**),
+  separado do `itinerai_memory.db`: a trilha é *append-only* e cresce a cada
+  turno; apagar o arquivo reseta. `_connect` usa `timeout=10` porque os dois
+  ramos do fan-out da busca escrevem de threads diferentes.
+- **Colunas** (do checklist da T05): `run_id`, `step`, `step_type`
+  (`node` | `tool` | `turn`), `status` (`ok` | `error` | `retry` | `fallback`),
+  `duration_ms` (REAL, `NULL` em linhas de `retry`), `error` (tipo da exceção /
+  motivo do fallback), `created_at` (UTC ISO-8601 `…Z`). Mais um `id` rowid para
+  ordenação estável e um índice em `run_id`.
+- **Best-effort**: a instrumentação chama `audit.try_record(...)`, que monta o
+  `AuditStep`, chama a função pura `record_audit_step` e **engole** qualquer erro
+  (só loga `audit_write_failed`). Auditar **nunca** derruba um turno. As funções
+  puras (`record_audit_step`, `load_audit_trail`, `format_audit_trail`, `init_db`)
+  propagam erros — quem degrada é o `try_record`.
+- **Onde as linhas nascem**: `_logged_node` (latência de cada nó, `ok`/`error`);
+  `call_tools` (a tool `build_itinerary`); `fetch_page_attractions` (o passo
+  `wikipedia_fetch`, só a parte de rede); `_get_wikipedia` (linhas `retry`);
+  `_invoke_structured` (o passo `llm_extraction`, `ok`/`fallback` com o motivo);
+  `call_llm` (linha `fallback` do `llm_agent`); `_run_turn` em `main.py` (a linha
+  `turn` `graph_invoke` com a latência ponta a ponta). Todos leem o `run_id` de
+  `run_id_var.get()` (fundo de `tools.py`) ou de `state.run_id`.
+- **Exibir uma trilha**: `python show_audit.py <run_id>` (script na raiz; a
+  lógica fica na função pura `audit.format_audit_trail`, que mostra a tabela de
+  passos, o passo mais lento e o total do turno). Pegue o `run_id` de qualquer
+  linha de `logs/itinerai.log`.
+- **Fora de escopo (T05)**: testes unitários das funções de auditoria →
+  **T07/#18** (bootstrap do `pytest`); o documento de evidências cruzando os
+  dois sinais → **T06/#17**; poda/retenção do `itinerai_audit.db`.
 
 ## Robustez em tool-calling
 
@@ -354,6 +401,7 @@ mini-projeto-ItinerAI/
 │   │   ├── validation.py   # validação de entrada do usuário (anti prompt injection, idioma, URLs)
 │   │   ├── memory.py       # memória persistente da última viagem em SQLite (retomada)
 │   │   ├── logging_config.py  # bootstrap do logging estruturado em JSON + run_id (T04/#15)
+│   │   ├── audit.py        # trilha de auditoria + latência por passo em SQLite (T05/#16)
 │   │   ├── prompts.py      # prompts do agente e das extrações
 │   │   ├── nodes.py        # funções de nó do grafo (validação, persistência, LLM, tools, fan-out da busca)
 │   │   └── state.py        # definição do estado do grafo (modelos pydantic)
@@ -364,8 +412,10 @@ mini-projeto-ItinerAI/
 ├── output/                 # itinerários .md gerados pelo agente (não versionado)
 ├── logs/                   # logs estruturados em JSON (itinerai.log; não versionado)
 ├── main.py                 # ponto de entrada: loop de chat via terminal
+├── show_audit.py           # exibe a trilha de auditoria de um run_id (T05/#16)
 ├── .env                    # variáveis de ambiente locais (não versionado)
 ├── itinerai_memory.db      # memória persistente SQLite da última viagem (não versionado)
+├── itinerai_audit.db       # trilha de auditoria SQLite (não versionado)
 ├── requirements.txt        # dependências do projeto
 └── langgraph.json          # arquivo de configuração do LangGraph
 ```
@@ -375,8 +425,9 @@ mini-projeto-ItinerAI/
 - `state.py` define o estado do grafo (`AgentState`) com `pydantic.BaseModel`:
   `messages`, `run_id`, `destination`, `num_days`, `tourist_attractions`,
   `itinerary`, `pending_search` e `page_results`. O `run_id` (T04/#15) é gerado
-  por turno em `main.py` e propagado para correlacionar os logs estruturados —
-  ver "Observabilidade / logging". A duração (`num_days`) fica no estado —
+  por turno em `main.py` e propagado para correlacionar os logs estruturados e a
+  trilha de auditoria — ver "Observabilidade / logging" e "Trilha de auditoria".
+  A duração (`num_days`) fica no estado —
   além de ser passada a `build_itinerary` — para poder ser persistida pela
   memória e permitir a retomada da conversa (populada em `call_tools` a partir
   de `build_itinerary`). `pending_search` (modelo `PendingSearch`) e
@@ -401,6 +452,10 @@ mini-projeto-ItinerAI/
 - `memory.py` concentra a memória persistente em SQLite (funções puras
   `init_db`/`save_trip_memory`/`load_trip_memory` + o modelo `TripMemory`) —
   ver "Memória persistente" acima.
+- `audit.py` concentra a trilha de auditoria em SQLite (funções puras
+  `init_db`/`record_audit_step`/`load_audit_trail`/`format_audit_trail` + o
+  wrapper best-effort `try_record` + o modelo `AuditStep`) — ver "Trilha de
+  auditoria" acima. `show_audit.py` (raiz) é o comando de exibição.
 - Itinerários gerados são salvos como arquivo `.md` em `output/`.
 
 ## Configuração de ambiente
@@ -423,10 +478,11 @@ mini-projeto-ItinerAI/
     cai para `INFO`. Ver "Observabilidade / logging". T04/#15.
   - `LOG_TO_STDERR` (padrão desligado) — quando ligado (`1`/`true`/`yes`/`on`),
     espelha os logs no stderr além do arquivo, para depuração.
-- `.env`, `output/`, `logs/` e o banco `itinerai_memory.db` devem estar no
-  `.gitignore`.
-- A memória persistente usa `sqlite3` da stdlib e o logging estruturado usa só
-  stdlib — nenhuma dependência extra no `requirements.txt`.
+- `.env`, `output/`, `logs/` e os bancos `itinerai_memory.db` /
+  `itinerai_audit.db` devem estar no `.gitignore`.
+- A memória persistente, a trilha de auditoria e o logging estruturado usam só a
+  stdlib (`sqlite3`, `logging`) — nenhuma dependência extra no
+  `requirements.txt`. Os testes (`pytest`) entram na T07/#18.
 
 ## Convenções de código
 

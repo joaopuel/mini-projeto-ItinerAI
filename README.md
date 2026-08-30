@@ -127,8 +127,9 @@ ferramentas até formular a resposta final, e a busca da Wikipédia roda como um
 `messages`, `run_id`, `destination`, `num_days`, `tourist_attractions`,
 `itinerary`, `pending_search` e `page_results` (este último com um reducer que
 mescla as escritas concorrentes dos dois ramos do fan-out). O `run_id` é gerado
-por turno e correlaciona os logs estruturados (ver "Observabilidade"). Toda
-estrutura trocada entre nós é um modelo pydantic (nunca `dict` solto).
+por turno e correlaciona os logs estruturados **e** a trilha de auditoria (ver
+"Observabilidade"). Toda estrutura trocada entre nós é um modelo pydantic (nunca
+`dict` solto).
 
 Os nós ficam em `itinerai_agent/utils/nodes.py`:
 
@@ -207,18 +208,30 @@ para o agente refazer a busca e o roteiro sem o usuário redigitar nada.
 
 ## Observabilidade
 
-Cada turno da conversa produz **logs estruturados em JSON** (uma linha por
-evento) em `logs/itinerai.log`, correlacionados por um **`run_id`** gerado por
-turno. Os decorators de nó (`nodes.py`) registram entrada/saída de cada nó, a
-decisão de roteamento, a execução de cada tool (nome, argumentos resumidos,
-status), os bloqueios da validação (com o motivo) e as falhas.
+O §4.6 pede **dois sinais correlacionados**. Cada turno da conversa produz os
+dois, unidos por um **`run_id`** gerado por turno:
 
-O módulo `itinerai_agent/utils/logging_config.py` faz o bootstrap com um
-formatter JSON escrito à mão (**só stdlib**, sem dependência nova). O terminal do
-usuário permanece limpo — a saída vai só para o arquivo (`LOG_TO_STDERR=1`
-espelha no stderr para depuração). Segredos (`GROQ_API_KEY`) e o conteúdo das
-mensagens **nunca** são registrados. O nível é configurável por `LOG_LEVEL`
-(padrão `INFO`).
+**1. Logs estruturados em JSON** (uma linha por evento) em `logs/itinerai.log`.
+Os decorators de nó (`nodes.py`) registram entrada/saída de cada nó, a decisão de
+roteamento, a execução de cada tool (nome, argumentos resumidos, status,
+latência), os bloqueios da validação (com o motivo) e as falhas. O módulo
+`itinerai_agent/utils/logging_config.py` faz o bootstrap com um formatter JSON
+escrito à mão (**só stdlib**). O terminal do usuário permanece limpo — a saída
+vai só para o arquivo (`LOG_TO_STDERR=1` espelha no stderr para depuração).
+Segredos (`GROQ_API_KEY`) e o conteúdo das mensagens **nunca** são registrados.
+Nível configurável por `LOG_LEVEL` (padrão `INFO`).
+
+**2. Trilha de auditoria** em SQLite (`itinerai_audit.db`, tabela
+`execution_audit`), uma linha por passo executado (nó / tool / turno) com a
+**latência medida** — `itinerai_agent/utils/audit.py`, espelhando o padrão de
+`memory.py` (só stdlib, funções puras). Para inspecionar um turno:
+
+```bash
+python show_audit.py <run_id>     # o run_id aparece em qualquer linha do log
+```
+
+Mostra a tabela de passos com duração, o passo mais lento (gargalo) e o total do
+turno. Auditar é best-effort: uma falha ao gravar nunca derruba um turno.
 
 ## Como executar
 
@@ -358,9 +371,10 @@ viajar) que eu pesquiso as informações para você.
   configurável (`WIKIPEDIA_TIMEOUT`), retry limitado com backoff e um fallback
   amigável quando a Wikipédia está indisponível — sem derrubar o processo. A
   viagem também é persistida *antes* das buscas, como rede de segurança extra.
-- **Observabilidade sem poluir o terminal.** Logs estruturados em JSON em
-  `logs/`, correlacionados por um `run_id` por turno, só stdlib. Segredos e
-  conteúdo de mensagens nunca são registrados.
+- **Dois sinais de observabilidade correlacionados, sem poluir o terminal.**
+  Logs estruturados em JSON (`logs/`) + trilha de auditoria com latência por
+  passo (SQLite), unidos pelo `run_id` do turno. Só stdlib. Segredos e conteúdo
+  de mensagens nunca são registrados; auditar é best-effort.
 - **Saída em arquivo `.md`, não no terminal.** O roteiro fica em um artefato
   reutilizável; o terminal só informa o nome do arquivo.
 - **Wikipédia como única fonte de dados.** Fonte pública e gratuita, alinhada ao
@@ -394,6 +408,7 @@ mini-projeto-ItinerAI/
 │   │   ├── validation.py   # validação de entrada (anti-injeção, idioma, URLs)
 │   │   ├── memory.py       # memória persistente da última viagem (SQLite)
 │   │   ├── logging_config.py  # logging estruturado em JSON + run_id (T04/#15)
+│   │   ├── audit.py        # trilha de auditoria + latência por passo (SQLite, T05/#16)
 │   │   ├── prompts.py      # prompts do agente e das extrações
 │   │   ├── nodes.py        # nós do grafo (validação, memória, LLM, tools)
 │   │   └── state.py        # estado do grafo (modelos pydantic)
@@ -402,6 +417,7 @@ mini-projeto-ItinerAI/
 ├── output/                 # itinerários .md gerados (não versionado)
 ├── logs/                   # logs estruturados em JSON (não versionado)
 ├── main.py                 # ponto de entrada: loop de chat no terminal
+├── show_audit.py           # exibe a trilha de auditoria de um run_id
 ├── .env.example            # modelo das variáveis de ambiente (sem valores)
 ├── requirements.txt        # dependências do projeto
 └── langgraph.json          # configuração do LangGraph
