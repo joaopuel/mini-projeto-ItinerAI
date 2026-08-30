@@ -196,8 +196,8 @@ persistência usa apenas o `sqlite3` da stdlib (sem dependência extra) e um
 Na próxima execução, o `main.py` carrega essa memória e, se houver uma viagem
 salva, **mostra-a** e oferece:
 
-- **retomá-la**, se ficou incompleta (ex.: uma falha de rede na busca derrubou o
-  processo); ou
+- **retomá-la**, se ficou incompleta (ex.: uma falha na gravação do roteiro
+  derrubou o processo); ou
 - **refazê-la**, se o itinerário já havia sido concluído.
 
 Ao aceitar, o estado é pré-preenchido e uma mensagem sintética reafirma a viagem,
@@ -250,10 +250,14 @@ para o agente refazer a busca e o roteiro sem o usuário redigitar nada.
 
    ```dotenv
    GROQ_API_KEY=coloque_sua_chave_aqui
+
+   # Opcional — timeout (s) das requisições à Wikipédia. Padrão: 10
+   WIKIPEDIA_TIMEOUT=10
    ```
 
    > O `.env` está no `.gitignore` e **nunca** deve ser versionado. O
-   > `.env.example` traz apenas o nome da variável, sem valor.
+   > `.env.example` traz apenas os nomes das variáveis, sem valores sensíveis.
+   > `WIKIPEDIA_TIMEOUT` é opcional; sem ele o padrão de 10s é usado.
 
 5. **Rode o agente:**
 
@@ -328,8 +332,10 @@ viajar) que eu pesquiso as informações para você.
 - **Recuperação de tool calls "vazadas" como texto.** O modelo às vezes emite a
   chamada no formato nativo do Llama como texto; `_repair_leaked_response` (em
   `nodes.py`) a reconstrói por regex, para o roteiro não se perder.
-- **Persistir a viagem *antes* das buscas que podem falhar.** Uma falha de rede
-  na Wikipédia pode derrubar o processo; salvar antes garante a retomada.
+- **Resiliência nas integrações externas.** A busca da Wikipédia tem timeout
+  configurável (`WIKIPEDIA_TIMEOUT`), retry limitado com backoff e um fallback
+  amigável quando a Wikipédia está indisponível — sem derrubar o processo. A
+  viagem também é persistida *antes* das buscas, como rede de segurança extra.
 - **Saída em arquivo `.md`, não no terminal.** O roteiro fica em um artefato
   reutilizável; o terminal só informa o nome do arquivo.
 - **Wikipédia como única fonte de dados.** Fonte pública e gratuita, alinhada ao
