@@ -20,3 +20,11 @@ GROQ_TEMPERATURE = float(os.getenv("GROQ_TEMPERATURE", "0.7"))
 # --- Integrações externas (Wikipédia) — T02/#13 ---
 # Timeout (em segundos) das requisições HTTP à Wikipédia.
 WIKIPEDIA_TIMEOUT = float(os.getenv("WIKIPEDIA_TIMEOUT", "10"))
+
+# --- Observabilidade (logging) — T04/#15 ---
+# Nível dos logs estruturados em `logs/itinerai.log`: DEBUG / INFO / WARNING /
+# ERROR. Valor inválido cai para INFO. Padrão INFO.
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+# Espelhar os logs no stderr além do arquivo (para depuração). Padrão desligado,
+# para manter o terminal 100% limpo para o usuário. Aceita 1/true/yes/on.
+LOG_TO_STDERR = os.getenv("LOG_TO_STDERR", "").strip().lower() in {"1", "true", "yes", "on"}

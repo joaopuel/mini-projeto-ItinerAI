@@ -1,4 +1,6 @@
+import functools
 import json
+import logging
 import re
 from uuid import uuid4
 
@@ -13,16 +15,33 @@ from langchain_groq import ChatGroq
 from langgraph.graph import END
 
 from itinerai_agent.utils.config import GROQ_MODEL, GROQ_TEMPERATURE
+from itinerai_agent.utils.logging_config import run_id_var
 from itinerai_agent.utils.memory import TripMemory, save_trip_memory
 from itinerai_agent.utils.prompts import AGENT_SYSTEM_PROMPT
-from itinerai_agent.utils.state import AgentState, PendingSearch
+from itinerai_agent.utils.state import AgentState, PendingSearch, WikipediaPageResult
 from itinerai_agent.utils.tools import (
     TouristAttractionSearchResult,
     build_itinerary,
     fetch_page_attractions,
     search_tourist_attractions,
 )
-from itinerai_agent.utils.validation import validate_user_input
+from itinerai_agent.utils.validation import (
+    FOREIGN_LANGUAGE_MESSAGE,
+    INJECTION_MESSAGE,
+    URL_MESSAGE,
+    validate_user_input,
+)
+
+logger = logging.getLogger(__name__)
+
+# Mapeia a mensagem de recusa (constante de `validation.py`) → o motivo do
+# bloqueio, para o log. Opção deliberada: zero mudança em `validation.py` (cujo
+# design é "não alterar sem alinhar") — só importamos as 3 constantes.
+_VALIDATION_REASONS = {
+    INJECTION_MESSAGE: "prompt_injection",
+    FOREIGN_LANGUAGE_MESSAGE: "non_latin_script",
+    URL_MESSAGE: "url",
+}
 
 _TOOLS = [
     search_tourist_attractions,
@@ -32,6 +51,87 @@ _TOOLS_BY_NAME = {tool.__name__: tool for tool in _TOOLS}
 
 _llm = ChatGroq(model=GROQ_MODEL, temperature=GROQ_TEMPERATURE)
 _llm_with_tools = _llm.bind_tools(_TOOLS)
+
+
+def _logged_node(fn):
+    """Instrumenta um nó do grafo: loga `node_start` / `node_end` (e
+    `node_error` + traceback, re-levantando) e publica o `run_id` do turno no
+    `ContextVar`, para as chamadas mais profundas (`tools.py`) o herdarem —
+    inclusive nos ramos paralelos do fan-out, que rodam em threads próprias."""
+
+    @functools.wraps(fn)
+    def wrapper(state: AgentState) -> dict:
+        token = run_id_var.set(getattr(state, "run_id", "") or "-")
+        try:
+            logger.info("node_start", extra={"node": fn.__name__})
+            try:
+                result = fn(state)
+            except Exception as exc:
+                logger.error(
+                    "node_error",
+                    extra={"node": fn.__name__, "error": type(exc).__name__},
+                    exc_info=True,
+                )
+                raise
+            logger.info("node_end", extra={"node": fn.__name__})
+            return result
+        finally:
+            run_id_var.reset(token)
+
+    return wrapper
+
+
+def _logged_router(fn):
+    """Instrumenta uma função de roteamento: loga `routing_decision` com o nome
+    do router e a decisão retornada."""
+
+    @functools.wraps(fn)
+    def wrapper(state: AgentState) -> str:
+        token = run_id_var.set(getattr(state, "run_id", "") or "-")
+        try:
+            decision = fn(state)
+            logger.info(
+                "routing_decision",
+                extra={"router": fn.__name__, "decision": str(decision)},
+            )
+            return decision
+        finally:
+            run_id_var.reset(token)
+
+    return wrapper
+
+
+def _summarize_args(raw: dict) -> dict:
+    """Resumo seguro dos argumentos de uma tool para o log: strings longas são
+    truncadas e coleções viram `<tipo len=N>`. Recebe só os argumentos vindos do
+    LLM (ex.: destination, num_days) — nunca a lista de atrações injetada pelo
+    grafo em `call_tools`."""
+    summary: dict = {}
+    for key, value in raw.items():
+        if isinstance(value, str):
+            summary[key] = value if len(value) <= 120 else value[:120] + "…"
+        elif isinstance(value, (int, float, bool)) or value is None:
+            summary[key] = value
+        elif hasattr(value, "__len__"):
+            summary[key] = f"<{type(value).__name__} len={len(value)}>"
+        else:
+            summary[key] = f"<{type(value).__name__}>"
+    return summary
+
+
+def _log_page_fetched(node: str, result: WikipediaPageResult) -> None:
+    """Loga `page_fetched` para um ramo do fan-out da busca (só metadados)."""
+    logger.info(
+        "page_fetched",
+        extra={
+            "node": node,
+            "kind": result.kind,
+            "found": result.found,
+            "unavailable": result.unavailable,
+            "attraction_count": len(result.attractions),
+        },
+    )
+
 
 # Modelos menores às vezes "vazam" as tool calls no formato nativo do Llama
 # (<function=nome>{json}</function>) como TEXTO da resposta, em vez de gerar
@@ -91,15 +191,22 @@ def _repair_leaked_response(response: AIMessage) -> AIMessage:
         return response
     calls = _parse_leaked_tool_calls(content)
     if not calls:
+        logger.warning("leaked_tool_calls_unrecoverable")
         return AIMessage(
             content=(
                 "Desculpe, me atrapalhei ao preparar seu pedido. Pode reformular ou tentar "
                 "novamente em instantes?"
             )
         )
-    return AIMessage(content="", tool_calls=_drop_premature_build_itinerary(calls))
+    kept = _drop_premature_build_itinerary(calls)
+    logger.info(
+        "leaked_tool_calls_recovered",
+        extra={"count": len(kept), "tools": [call["name"] for call in kept]},
+    )
+    return AIMessage(content="", tool_calls=kept)
 
 
+@_logged_node
 def validate_input(state: AgentState) -> dict:
     # Porta de entrada do grafo: valida a última mensagem do usuário antes de
     # ela chegar ao LLM. Se violar uma regra (prompt injection, idioma em
@@ -110,10 +217,18 @@ def validate_input(state: AgentState) -> dict:
         return {}
     refusal = validate_user_input(str(last_message.content))
     if refusal is not None:
+        logger.info(
+            "validation_blocked",
+            extra={
+                "node": "validate_input",
+                "reason": _VALIDATION_REASONS.get(refusal, "unknown"),
+            },
+        )
         return {"messages": [AIMessage(content=refusal)]}
     return {}
 
 
+@_logged_router
 def route_after_validation(state: AgentState) -> str:
     # Se a validação inseriu uma resposta (AIMessage), encerra o turno; caso
     # contrário, a última mensagem ainda é a do usuário e seguimos para
@@ -123,6 +238,7 @@ def route_after_validation(state: AgentState) -> str:
     return "persist_memory"
 
 
+@_logged_node
 def persist_memory(state: AgentState) -> dict:
     # Roda logo após a validação (só no caminho válido): salva os dados da
     # viagem coletados até aqui (destino, datas, duração) na memória persistente.
@@ -142,9 +258,18 @@ def persist_memory(state: AgentState) -> dict:
             completed=state.itinerary is not None,
         )
     )
+    logger.info(
+        "memory_persisted",
+        extra={
+            "node": "persist_memory",
+            "has_num_days": state.num_days is not None,
+            "completed": state.itinerary is not None,
+        },
+    )
     return {}
 
 
+@_logged_node
 def call_llm(state: AgentState) -> dict:
     # Rede de segurança: se o LLM falhar ao gerar a resposta (ex.: uma tool
     # call malformada que a Groq rejeita com tool_use_failed), respondemos com
@@ -154,6 +279,7 @@ def call_llm(state: AgentState) -> dict:
             [SystemMessage(content=AGENT_SYSTEM_PROMPT), *state.messages]
         )
     except Exception:
+        logger.warning("llm_exception_fallback", extra={"node": "call_llm"})
         return {
             "messages": [
                 AIMessage(
@@ -176,9 +302,25 @@ def call_llm(state: AgentState) -> dict:
         kept = _drop_premature_build_itinerary(calls)
         if len(kept) != len(calls):
             message = AIMessage(content=message.content, tool_calls=kept, id=message.id)
+    final_calls = getattr(message, "tool_calls", None)
+    if final_calls:
+        logger.info(
+            "llm_decision",
+            extra={
+                "node": "call_llm",
+                "outcome": "tool_calls",
+                "tools": [call["name"] for call in final_calls],
+            },
+        )
+    else:
+        logger.info(
+            "llm_decision",
+            extra={"node": "call_llm", "outcome": "plain_answer"},
+        )
     return {"messages": [message]}
 
 
+@_logged_router
 def route_after_llm(state: AgentState) -> str:
     # 3 saídas: sem tool call → fim do turno (condição de parada); busca de
     # atrações → fan-out paralelo das páginas da Wikipédia (dispatch_search);
@@ -192,6 +334,7 @@ def route_after_llm(state: AgentState) -> str:
     return "call_tools"
 
 
+@_logged_node
 def call_tools(state: AgentState) -> dict:
     # A busca de atrações NÃO passa por aqui: `route_after_llm` a roteia sempre
     # para o fan-out `dispatch_search → fetch_* → merge_pages`. Este nó trata as
@@ -203,6 +346,9 @@ def call_tools(state: AgentState) -> dict:
     for call in last_message.tool_calls:
         tool_fn = _TOOLS_BY_NAME[call["name"]]
         args = dict(call["args"])
+        # Resumo dos argumentos ANTES da injeção da lista de atrações (que fica
+        # oculta do modelo e não deve ir para o log).
+        logged_args = _summarize_args(call["args"])
 
         # A construção do itinerário usa as atrações já encontradas e guardadas
         # no estado; injetamos aqui para o LLM não precisar re-serializar essa
@@ -210,7 +356,29 @@ def call_tools(state: AgentState) -> dict:
         if call["name"] == "build_itinerary":
             args["attractions"] = state.tourist_attractions
 
-        result = tool_fn(**args)
+        try:
+            result = tool_fn(**args)
+        except Exception as exc:
+            logger.error(
+                "tool_executed",
+                extra={
+                    "node": "call_tools",
+                    "tool": call["name"],
+                    "tool_args": logged_args,
+                    "status": "error",
+                    "error": type(exc).__name__,
+                },
+            )
+            raise
+        logger.info(
+            "tool_executed",
+            extra={
+                "node": "call_tools",
+                "tool": call["name"],
+                "tool_args": logged_args,
+                "status": "ok",
+            },
+        )
 
         if call["name"] == "build_itinerary":
             update["itinerary"] = result.itinerary
@@ -244,6 +412,7 @@ def _require_pending_search(state: AgentState) -> PendingSearch:
     return pending
 
 
+@_logged_node
 def dispatch_search(state: AgentState) -> dict:
     # Origem única do fan-out da busca: extrai destino e tool_call_id da tool
     # call pedida pelo LLM e guarda em `pending_search`, para os nós `fetch_*` e
@@ -251,29 +420,38 @@ def dispatch_search(state: AgentState) -> dict:
     call = _pending_search_call(state.messages[-1])
     destination = str((call["args"] if call else {}).get("destination", "")).strip()
     tool_call_id = call["id"] if call else ""
+    logger.info(
+        "search_dispatched",
+        extra={"node": "dispatch_search", "destination": destination},
+    )
     return {
         "pending_search": PendingSearch(destination=destination, tool_call_id=tool_call_id)
     }
 
 
+@_logged_node
 def fetch_tourism_page(state: AgentState) -> dict:
     # Ramo paralelo 1: página "Tourism in <destino>".
     pending = _require_pending_search(state)
     result = fetch_page_attractions(
         f"Tourism in {pending.destination}", pending.destination, "tourism"
     )
+    _log_page_fetched("fetch_tourism_page", result)
     return {"page_results": {"tourism": result}}
 
 
+@_logged_node
 def fetch_destination_page(state: AgentState) -> dict:
     # Ramo paralelo 2: página "<destino>".
     pending = _require_pending_search(state)
     result = fetch_page_attractions(
         pending.destination, pending.destination, "destination"
     )
+    _log_page_fetched("fetch_destination_page", result)
     return {"page_results": {"destination": result}}
 
 
+@_logged_node
 def merge_pages(state: AgentState) -> dict:
     # Fan-in determinístico (sem LLM): prioriza a página "Tourism in <destino>"
     # quando ela rendeu atrações; senão a página do destino; senão found=False.
@@ -287,10 +465,13 @@ def merge_pages(state: AgentState) -> dict:
 
     if tourism is not None and tourism.attractions:
         chosen = tourism
+        chosen_kind = "tourism"
     elif destination_page is not None and destination_page.attractions:
         chosen = destination_page
+        chosen_kind = "destination"
     else:
         chosen = None
+        chosen_kind = "none"
 
     # Se não achamos atrações E algum ramo caiu por indisponibilidade da
     # Wikipédia (falha de rede após os retries), sinaliza `unavailable` para o
@@ -304,6 +485,16 @@ def merge_pages(state: AgentState) -> dict:
         found=chosen is not None,
         unavailable=unavailable,
         attractions=chosen.attractions if chosen else [],
+    )
+    logger.info(
+        "search_merged",
+        extra={
+            "node": "merge_pages",
+            "chosen": chosen_kind,
+            "found": result.found,
+            "unavailable": result.unavailable,
+            "attraction_count": len(result.attractions),
+        },
     )
     return {
         "destination": result.destination,

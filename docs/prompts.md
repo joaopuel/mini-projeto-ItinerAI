@@ -611,7 +611,7 @@ deve começar com "docs:".
 
 ### Prompt original
 ```
-Using github cli, read the issue https://github.com/joaopuel/mini-projeto-ItinerAI/issues/12. Create a plan to implement what is requested in the issue.
+Usando o GitHub CLI, leia a issue https://github.com/joaopuel/mini-projeto-ItinerAI/issues/12. Crie um plano para implementar o que é solicitado na issue.
 ```
 
 ---
@@ -744,4 +744,44 @@ e planeje a implementação descrita.
 ```
 Adicione os últimos prompts em /docs/prompts.md em português brasileiro.
 Faça o commit de todas as modificações e abra um PR.
+```
+
+---
+
+## Leitura da issue #15 e planejamento dos logs estruturados
+
+* Data: 2026-08-29 23:30
+* Autor: joaopuel
+* Tipo: Planejamento
+
+### Prompt original
+```
+Usando o GitHub CLI, leia a issue https://github.com/joaopuel/mini-projeto-ItinerAI/issues/15. Crie um plano para implementar a funcionalidade descrita.
+```
+
+---
+
+## Implementação estática sem execução de comandos
+
+* Data: 2026-08-29 22:37
+* Autor: joaopuel
+* Tipo: Instrução direta
+
+### Prompt original
+```
+É proibido executar qualquer comando para compilar, buildar, rodar ou testar o código. A implementação deve ser feita de forma estática. Agora prossiga com a implementação.
+```
+
+---
+
+## Tradução dos prompts em inglês, commit e PR dos logs estruturados
+
+* Data: 2026-08-29 23:55
+* Autor: joaopuel
+* Tipo: Documentação / Versionamento
+
+### Prompt original
+```
+Traduza os prompts em inglês em docs/prompts.md para português brasileiro.
+Depois faça o commit de todas as modificações e abra um PR.
 ```

@@ -17,6 +17,7 @@ gera um arquivo `.md` pronto para você levar na mala.
 - [Ferramentas do agente](#ferramentas-do-agente)
 - [Validação de entrada](#validação-de-entrada)
 - [Memória persistente](#memória-persistente)
+- [Observabilidade](#observabilidade)
 - [Como executar](#como-executar)
 - [Exemplo de entrada e saída](#exemplo-de-entrada-e-saída)
 - [Principais decisões tomadas](#principais-decisões-tomadas)
@@ -123,10 +124,11 @@ ferramentas até formular a resposta final, e a busca da Wikipédia roda como um
 ```
 
 **Estado compartilhado** (`AgentState`, em `itinerai_agent/utils/state.py`):
-`messages`, `destination`, `num_days`, `tourist_attractions`, `itinerary`,
-`pending_search` e `page_results` (este último com um reducer que mescla as
-escritas concorrentes dos dois ramos do fan-out). Toda estrutura trocada entre
-nós é um modelo pydantic (nunca `dict` solto).
+`messages`, `run_id`, `destination`, `num_days`, `tourist_attractions`,
+`itinerary`, `pending_search` e `page_results` (este último com um reducer que
+mescla as escritas concorrentes dos dois ramos do fan-out). O `run_id` é gerado
+por turno e correlaciona os logs estruturados (ver "Observabilidade"). Toda
+estrutura trocada entre nós é um modelo pydantic (nunca `dict` solto).
 
 Os nós ficam em `itinerai_agent/utils/nodes.py`:
 
@@ -203,6 +205,21 @@ salva, **mostra-a** e oferece:
 Ao aceitar, o estado é pré-preenchido e uma mensagem sintética reafirma a viagem,
 para o agente refazer a busca e o roteiro sem o usuário redigitar nada.
 
+## Observabilidade
+
+Cada turno da conversa produz **logs estruturados em JSON** (uma linha por
+evento) em `logs/itinerai.log`, correlacionados por um **`run_id`** gerado por
+turno. Os decorators de nó (`nodes.py`) registram entrada/saída de cada nó, a
+decisão de roteamento, a execução de cada tool (nome, argumentos resumidos,
+status), os bloqueios da validação (com o motivo) e as falhas.
+
+O módulo `itinerai_agent/utils/logging_config.py` faz o bootstrap com um
+formatter JSON escrito à mão (**só stdlib**, sem dependência nova). O terminal do
+usuário permanece limpo — a saída vai só para o arquivo (`LOG_TO_STDERR=1`
+espelha no stderr para depuração). Segredos (`GROQ_API_KEY`) e o conteúdo das
+mensagens **nunca** são registrados. O nível é configurável por `LOG_LEVEL`
+(padrão `INFO`).
+
 ## Como executar
 
 ### Pré-requisitos
@@ -255,13 +272,14 @@ para o agente refazer a busca e o roteiro sem o usuário redigitar nada.
    GROQ_MODEL=openai/gpt-oss-120b   # modelo do agente e da extração
    GROQ_TEMPERATURE=0.7             # temperatura do agente (0 = determinístico)
    WIKIPEDIA_TIMEOUT=10             # timeout (s) das requisições à Wikipédia
+   LOG_LEVEL=INFO                   # nível dos logs estruturados em logs/
    ```
 
    > O `.env` está no `.gitignore` e **nunca** deve ser versionado. O
    > `.env.example` traz apenas os nomes das variáveis, sem valores sensíveis.
-   > Só a `GROQ_API_KEY` é obrigatória; `GROQ_MODEL`, `GROQ_TEMPERATURE` e
-   > `WIKIPEDIA_TIMEOUT` são lidos em `itinerai_agent/utils/config.py` e caem
-   > nos padrões acima quando ausentes.
+   > Só a `GROQ_API_KEY` é obrigatória; `GROQ_MODEL`, `GROQ_TEMPERATURE`,
+   > `WIKIPEDIA_TIMEOUT` e `LOG_LEVEL` são lidos em
+   > `itinerai_agent/utils/config.py` e caem nos padrões acima quando ausentes.
 
 5. **Rode o agente:**
 
@@ -340,6 +358,9 @@ viajar) que eu pesquiso as informações para você.
   configurável (`WIKIPEDIA_TIMEOUT`), retry limitado com backoff e um fallback
   amigável quando a Wikipédia está indisponível — sem derrubar o processo. A
   viagem também é persistida *antes* das buscas, como rede de segurança extra.
+- **Observabilidade sem poluir o terminal.** Logs estruturados em JSON em
+  `logs/`, correlacionados por um `run_id` por turno, só stdlib. Segredos e
+  conteúdo de mensagens nunca são registrados.
 - **Saída em arquivo `.md`, não no terminal.** O roteiro fica em um artefato
   reutilizável; o terminal só informa o nome do arquivo.
 - **Wikipédia como única fonte de dados.** Fonte pública e gratuita, alinhada ao
@@ -372,12 +393,14 @@ mini-projeto-ItinerAI/
 │   │   ├── tools.py        # ferramentas: busca de atrações, geração do .md
 │   │   ├── validation.py   # validação de entrada (anti-injeção, idioma, URLs)
 │   │   ├── memory.py       # memória persistente da última viagem (SQLite)
+│   │   ├── logging_config.py  # logging estruturado em JSON + run_id (T04/#15)
 │   │   ├── prompts.py      # prompts do agente e das extrações
 │   │   ├── nodes.py        # nós do grafo (validação, memória, LLM, tools)
 │   │   └── state.py        # estado do grafo (modelos pydantic)
 │   └── agent.py            # construção/compilação do StateGraph
 ├── docs/                   # requisitos, prompts e apresentação
 ├── output/                 # itinerários .md gerados (não versionado)
+├── logs/                   # logs estruturados em JSON (não versionado)
 ├── main.py                 # ponto de entrada: loop de chat no terminal
 ├── .env.example            # modelo das variáveis de ambiente (sem valores)
 ├── requirements.txt        # dependências do projeto

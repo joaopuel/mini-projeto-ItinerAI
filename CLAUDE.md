@@ -243,12 +243,59 @@ Política explícita e determinística de falhas nas integrações externas (T02
   específicas; estreitar exigiria um import de `groq.*` frágil), mas agora
   **registra** cada fallback via `logging` em vez de mascarar.
 - **Logging**: `logging.getLogger(__name__)` em `tools.py`; cada tentativa, erro
-  e fallback vira `logger.warning`/`logger.info`. `itinerai_agent/__init__.py`
-  põe um `NullHandler` no logger do pacote → terminal 100% limpo até a **T04**
-  (#15) plugar o handler JSON + arquivo + `run_id`.
-- **Fora de escopo desta task**: logs estruturados em JSON/arquivo e o `run_id`
-  (T04), a trilha de auditoria (T05) e os testes unitários da política
-  (T07/#18). Retry de 5xx também não entra (Wikipédia raramente devolve 5xx).
+  e fallback vira `logger.warning`/`logger.info`. Desde a **T04/#15**, esses
+  registros fluem pelo handler JSON + arquivo (`logs/itinerai.log`) plugado por
+  `logging_config.py` e ganham o `run_id` do turno — ver "Observabilidade /
+  logging" abaixo. `itinerai_agent/__init__.py` mantém só o `NullHandler` (a
+  aplicação é quem configura o logging).
+- **Fora de escopo desta task**: a trilha de auditoria em SQLite com latência
+  por passo (T05) e os testes unitários da política (T07/#18). Retry de 5xx
+  também não entra (Wikipédia raramente devolve 5xx).
+
+## Observabilidade / logging (`logging_config.py`)
+
+Logs estruturados em JSON, um evento por linha, para arquivo em `logs/`, com um
+`run_id` por turno da conversa correlacionando todos os eventos daquele turno
+(T04/#15, §4.6 — primeiro dos dois sinais do épico E02; a trilha de auditoria em
+SQLite com latência é a T05). Regras de design (não alterar sem alinhar):
+
+- **Somente stdlib** — nenhuma dependência nova no `requirements.txt`. O
+  `JsonFormatter` é escrito à mão (mesmo espírito da validação por regex e da
+  memória por `sqlite3`): determinístico, barato, previsível.
+- **A aplicação configura, a biblioteca não.** `main.py` chama
+  `configure_logging()` logo após `load_dotenv()` e **antes** de importar o
+  grafo. `itinerai_agent/__init__.py` continua só com o `NullHandler` — quando o
+  agente roda pela LangGraph platform (que não passa por `main.py`), os logs são
+  absorvidos e o terminal fica limpo (o `run_id` fica `""`).
+- **Só arquivo por padrão** (`logs/itinerai.log`, via `RotatingFileHandler`, 1 MB
+  × 3 backups). `LOG_TO_STDERR=1` espelha os eventos no stderr para depuração; o
+  padrão desligado mantém o terminal do usuário 100% limpo. `configure_logging()`
+  é idempotente e põe `propagate = False` no logger do pacote.
+- **`run_id` por turno**, gerado em `main.py` (`_run_turn`) a cada `graph.invoke`
+  e propagado de duas formas: no `AgentState.run_id` (lido pelos decorators de
+  nó) e num `contextvars.ContextVar` publicado por `_run_turn` e re-setado pelos
+  decorators — assim o `copy_context()` do fan-out da busca já o carrega e até as
+  chamadas profundas em `tools.py` (retries da Wikipédia, extração) saem com o
+  `run_id` correto. O filtro que injeta o `run_id` fica nos **handlers**, não no
+  logger (um filtro de logger não roda para records propagados dos loggers
+  filhos).
+- **Instrumentação** em `nodes.py`: os decorators `_logged_node` (nos 8 nós) e
+  `_logged_router` (nos 2 roteadores) emitem `node_start`/`node_end`/`node_error`
+  e `routing_decision`. Eventos semânticos pontuais: `validation_blocked` (com o
+  motivo: `prompt_injection` / `non_latin_script` / `url`, mapeado da mensagem de
+  recusa sem tocar em `validation.py`), `memory_persisted`, `llm_decision`,
+  `llm_exception_fallback`, `leaked_tool_calls_recovered`/`_unrecoverable`,
+  `tool_executed` (nome, args resumidos, status), `search_dispatched`,
+  `page_fetched`, `search_merged`. `main.py` emite `run_start`/`run_end`/
+  `run_error`.
+- **Nada de segredos nem conteúdo de mensagens.** Os nós logam só metadados
+  (contagens, nomes de tools, decisões, booleanos, o destino) — nunca o texto do
+  usuário, a resposta do LLM, a lista de atrações ou o itinerário. Como defesa em
+  profundidade, o `JsonFormatter` ainda redige o valor de `GROQ_API_KEY` da
+  string final e trunca valores string longos (500 chars).
+- **Nível** configurável por `LOG_LEVEL` (padrão `INFO`; valor inválido cai para
+  `INFO`). Timestamps em **UTC** ISO-8601 (a `memory.py` e a futura auditoria da
+  T05 usam hora local — padronizar fica para a T05/T06).
 
 ## Robustez em tool-calling
 
@@ -302,10 +349,11 @@ mini-projeto-ItinerAI/
 ├── itinerai_agent/         # todo o código do agente
 │   ├── utils/
 │   │   ├── __init__.py
-│   │   ├── config.py       # variáveis de ambiente (GROQ_MODEL, GROQ_TEMPERATURE, WIKIPEDIA_TIMEOUT)
+│   │   ├── config.py       # variáveis de ambiente (GROQ_MODEL, GROQ_TEMPERATURE, WIKIPEDIA_TIMEOUT, LOG_LEVEL)
 │   │   ├── tools.py        # tools: busca de pontos turísticos, geração do .md
 │   │   ├── validation.py   # validação de entrada do usuário (anti prompt injection, idioma, URLs)
 │   │   ├── memory.py       # memória persistente da última viagem em SQLite (retomada)
+│   │   ├── logging_config.py  # bootstrap do logging estruturado em JSON + run_id (T04/#15)
 │   │   ├── prompts.py      # prompts do agente e das extrações
 │   │   ├── nodes.py        # funções de nó do grafo (validação, persistência, LLM, tools, fan-out da busca)
 │   │   └── state.py        # definição do estado do grafo (modelos pydantic)
@@ -314,6 +362,7 @@ mini-projeto-ItinerAI/
 ├── docs/
 │   └── application-structure.md
 ├── output/                 # itinerários .md gerados pelo agente (não versionado)
+├── logs/                   # logs estruturados em JSON (itinerai.log; não versionado)
 ├── main.py                 # ponto de entrada: loop de chat via terminal
 ├── .env                    # variáveis de ambiente locais (não versionado)
 ├── itinerai_memory.db      # memória persistente SQLite da última viagem (não versionado)
@@ -324,8 +373,10 @@ mini-projeto-ItinerAI/
 - Todo o código do agente fica dentro de `itinerai_agent/`, seguindo o padrão
   `my_agent` da documentação do LangGraph.
 - `state.py` define o estado do grafo (`AgentState`) com `pydantic.BaseModel`:
-  `messages`, `destination`, `num_days`, `tourist_attractions`, `itinerary`,
-  `pending_search` e `page_results`. A duração (`num_days`) fica no estado —
+  `messages`, `run_id`, `destination`, `num_days`, `tourist_attractions`,
+  `itinerary`, `pending_search` e `page_results`. O `run_id` (T04/#15) é gerado
+  por turno em `main.py` e propagado para correlacionar os logs estruturados —
+  ver "Observabilidade / logging". A duração (`num_days`) fica no estado —
   além de ser passada a `build_itinerary` — para poder ser persistida pela
   memória e permitir a retomada da conversa (populada em `call_tools` a partir
   de `build_itinerary`). `pending_search` (modelo `PendingSearch`) e
@@ -342,8 +393,11 @@ mini-projeto-ItinerAI/
 - `validation.py` concentra a validação de entrada do usuário (funções puras de
   regex + mensagens de recusa) — ver "Validação de entrada" acima.
 - `config.py` concentra a leitura das variáveis de ambiente (constantes
-  `GROQ_MODEL`, `GROQ_TEMPERATURE`, `WIKIPEDIA_TIMEOUT` lidas no import) — ver
-  "Configuração de ambiente" abaixo.
+  `GROQ_MODEL`, `GROQ_TEMPERATURE`, `WIKIPEDIA_TIMEOUT`, `LOG_LEVEL`,
+  `LOG_TO_STDERR` lidas no import) — ver "Configuração de ambiente" abaixo.
+- `logging_config.py` concentra o bootstrap do logging estruturado em JSON
+  (formatter, `ContextVar` do `run_id`, `configure_logging()` idempotente) — ver
+  "Observabilidade / logging" acima.
 - `memory.py` concentra a memória persistente em SQLite (funções puras
   `init_db`/`save_trip_memory`/`load_trip_memory` + o modelo `TripMemory`) —
   ver "Memória persistente" acima.
@@ -356,7 +410,8 @@ mini-projeto-ItinerAI/
   import, após `load_dotenv()` do `main.py`), com padrões que preservam o
   comportamento anterior — rodar só com `GROQ_API_KEY` não muda nada.
 - Variável obrigatória: `GROQ_API_KEY` (nunca commitada; consumida direto pela
-  `langchain-groq`, não passa por `config.py`).
+  `langchain-groq`, não passa por `config.py`; `logging_config.py` a lê só para
+  redigir seu valor dos logs, como defesa em profundidade).
 - Variáveis opcionais:
   - `GROQ_MODEL` (padrão `openai/gpt-oss-120b`) — modelo do agente **e** da
     extração. T03/#14.
@@ -364,9 +419,14 @@ mini-projeto-ItinerAI/
     a extração (`_extraction_llm`) usa `temperature=0` fixo, à parte.
   - `WIKIPEDIA_TIMEOUT` (segundos; padrão `10`) — timeout das requisições HTTP à
     Wikipédia. Ver "Resiliência das integrações".
-- `.env`, `output/` e o banco `itinerai_memory.db` devem estar no `.gitignore`.
-- A memória persistente usa `sqlite3` da stdlib — nenhuma dependência extra no
-  `requirements.txt`.
+  - `LOG_LEVEL` (padrão `INFO`) — nível dos logs estruturados; valor inválido
+    cai para `INFO`. Ver "Observabilidade / logging". T04/#15.
+  - `LOG_TO_STDERR` (padrão desligado) — quando ligado (`1`/`true`/`yes`/`on`),
+    espelha os logs no stderr além do arquivo, para depuração.
+- `.env`, `output/`, `logs/` e o banco `itinerai_memory.db` devem estar no
+  `.gitignore`.
+- A memória persistente usa `sqlite3` da stdlib e o logging estruturado usa só
+  stdlib — nenhuma dependência extra no `requirements.txt`.
 
 ## Convenções de código
 
