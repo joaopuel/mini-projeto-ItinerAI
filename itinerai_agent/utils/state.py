@@ -4,6 +4,8 @@ from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
+from itinerai_agent.utils.notifications import NotificationResult
+
 
 class TouristAttraction(BaseModel):
     name: str
@@ -84,3 +86,12 @@ class AgentState(BaseModel):
     page_results: Annotated[
         dict[str, WikipediaPageResult], _merge_page_results
     ] = Field(default_factory=dict)
+    # --- Envio do roteiro por e-mail via n8n (T14/#25) ---
+    # Preenchido por `main.py` DEPOIS da aprovação explícita do usuário e da
+    # validação do formato; é o que faz `route_entry` desviar o START para
+    # `notify_recipient`. O nó o zera após o envio, para não repetir a chamada.
+    recipient_email: str | None = None
+    # Desfecho da oferta de envio (enviado, recusado, e-mail inválido, sem
+    # configuração ou falha). Enquanto for `None` e houver itinerário, `main.py`
+    # oferece o envio ao fim do turno; `call_tools` o zera a cada novo roteiro.
+    notification: NotificationResult | None = None

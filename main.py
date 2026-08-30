@@ -20,7 +20,9 @@ from langchain_core.messages import HumanMessage
 from itinerai_agent.agent import graph
 from itinerai_agent.utils import audit
 from itinerai_agent.utils.memory import TripMemory, load_trip_memory, save_trip_memory
+from itinerai_agent.utils.notifications import NotificationResult
 from itinerai_agent.utils.state import AgentState
+from itinerai_agent.utils.validation import INVALID_EMAIL_MESSAGE, is_valid_email
 
 logger = logging.getLogger("itinerai_agent.cli")
 
@@ -71,6 +73,19 @@ def _prompt_yes_no(question: str) -> bool:
     except (KeyboardInterrupt, EOFError):
         return False
     return answer in {"s", "sim", "y", "yes"}
+
+
+def _prompt_text(question: str) -> str | None:
+    """Faz uma pergunta aberta determinística no terminal (sem passar pelo LLM).
+
+    Devolve `None` quando o usuário interrompe (Ctrl+C / EOF), para o chamador
+    distinguir **cancelamento** de resposta malformada — nunca de
+    consentimento."""
+    print(f"ItinerAI: {question}")
+    try:
+        return input("Você: ").strip()
+    except (KeyboardInterrupt, EOFError):
+        return None
 
 
 def _startup(memory: TripMemory | None) -> AgentState | None:
@@ -146,13 +161,64 @@ def _run_turn(state: AgentState) -> AgentState:
         run_id_var.reset(token)
 
 
+def _record_offer_outcome(state: AgentState, status: str) -> AgentState:
+    """Grava no estado um desfecho da oferta de envio que **não passa pelo
+    grafo** (`declined`, `cancelled`, `invalid_email`) e emite os dois sinais de
+    observabilidade que o nó `notify_recipient` emitiria se tivesse rodado.
+
+    O `run_id` é o do turno anterior — o que gerou o itinerário —, que é
+    exatamente o que correlaciona a oferta com o roteiro que a motivou."""
+    state.notification = NotificationResult(status=status)
+    logger.info(f"notification_{status}", extra={"run_id": state.run_id})
+    audit.try_record(state.run_id, f"notification_{status}", "turn", "ok")
+    return state
+
+
+def _offer_email(state: AgentState) -> AgentState:
+    """Oferece o envio do roteiro por e-mail ao fim do turno em que ele ficou
+    pronto (T14/#25).
+
+    O envio para um serviço externo é uma ação irreversível, então o §4.5 exige
+    **aprovação humana explícita**: nada sai daqui sem um "s" e um endereço
+    bem-formado. A pergunta e a validação são determinísticas, sem passar pelo
+    LLM — no mesmo espírito de `validation.py`.
+
+    Só age quando existe um itinerário e a oferta ainda não teve desfecho neste
+    roteiro (`state.notification is None`; `call_tools` zera o campo a cada novo
+    roteiro). Quando o usuário aprova, grava o e-mail no estado e roda mais um
+    turno: `route_entry` desvia o START direto para o nó `notify_recipient`.
+
+    Os desfechos que NÃO chegam ao grafo (recusa, cancelamento, e-mail inválido)
+    são registrados aqui no log e na trilha de auditoria. Sem isso, a ausência de
+    registro seria indistinguível de "o agente nunca perguntou" — e é justamente
+    a recusa que evidencia o limite de autonomia do §4.5."""
+    if state.itinerary is None or state.notification is not None:
+        return state
+
+    if not _prompt_yes_no("Deseja receber o roteiro por e-mail? (s/n)"):
+        # Recusa: nenhuma chamada externa acontece.
+        return _record_offer_outcome(state, "declined")
+
+    email = _prompt_text("Para qual e-mail devo enviar?")
+    if email is None:
+        # Ctrl+C / EOF durante a coleta: cancelamento, não endereço malformado.
+        return _record_offer_outcome(state, "cancelled")
+    if not is_valid_email(email):
+        # Formato inválido: recusa o envio sem acionar o webhook.
+        print(f"ItinerAI: {INVALID_EMAIL_MESSAGE}")
+        return _record_offer_outcome(state, "invalid_email")
+
+    state.recipient_email = email
+    return _run_turn(state)
+
+
 def main() -> None:
     print("ItinerAI: Sou ItinerAi, o seu melhor companheiro de viagem.")
     print("(digite 'sair' para encerrar)")
 
     resumed = _startup(load_trip_memory())
     if resumed is not None:
-        state = _run_turn(resumed)
+        state = _offer_email(_run_turn(resumed))
     else:
         print("ItinerAI: Qual o seu próximo destino?")
         state = AgentState()
@@ -169,7 +235,7 @@ def main() -> None:
             continue
 
         state.messages.append(HumanMessage(content=user_input))
-        state = _run_turn(state)
+        state = _offer_email(_run_turn(state))
 
 
 if __name__ == "__main__":

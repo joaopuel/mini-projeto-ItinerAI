@@ -7,9 +7,11 @@ from itinerai_agent.utils.nodes import (
     fetch_destination_page,
     fetch_tourism_page,
     merge_pages,
+    notify_recipient,
     persist_memory,
     route_after_llm,
     route_after_validation,
+    route_entry,
     validate_input,
 )
 from itinerai_agent.utils.state import AgentState
@@ -25,8 +27,17 @@ def build_graph():
     builder.add_node("fetch_tourism_page", fetch_tourism_page)
     builder.add_node("fetch_destination_page", fetch_destination_page)
     builder.add_node("merge_pages", merge_pages)
+    builder.add_node("notify_recipient", notify_recipient)
 
-    builder.add_edge(START, "validate_input")
+    # Entrada condicional (T14/#25): o caminho normal é `validate_input`. Quando
+    # `main.py` já colheu a aprovação do usuário e o e-mail, `route_entry` desvia
+    # direto para o envio, sem passar pelo LLM.
+    builder.add_conditional_edges(
+        START,
+        route_entry,
+        {"notify_recipient": "notify_recipient", "validate_input": "validate_input"},
+    )
+    builder.add_edge("notify_recipient", END)
     builder.add_conditional_edges(
         "validate_input", route_after_validation, {"persist_memory": "persist_memory", END: END}
     )
