@@ -44,8 +44,8 @@ uma issue própria no GitHub, e as tarefas do bloco devem ser vinculadas a ela
 | T10 | #21 | Pipeline de CI com lint, testes e cobertura mínima de 70% | E04 (#9) | TECH | 13 | `feature/devops-pipeline-ci` |
 | T11 | #22 | Análise de logs de CI com IA, anomalia e estimativa de risco | E04 (#9) | DOCS | 13 | `docs/devops-anomalias` |
 | T12 | #23 | Receber o itinerário por e-mail ao final do processo | E05 (#10) | STORY | 14, 10 | `feature/low-code-n8n` |
-| T13 | #24 | Webhook de integração com o n8n | E05 (#10) | TECH | 14, 8 | `feature/low-code-n8n` |
-| T14 | #25 | Documentar o fluxo n8n e as instruções de reprodução | E05 (#10) | DOCS | 14, 5 | `docs/low-code-n8n` |
+| T13 | #24 | Criar o workflow do webhook no n8n | E05 (#10) | TECH | 14 | `feature/low-code-n8n` |
+| T14 | #25 | Integrar a aplicação ao webhook do n8n | E05 (#10) | TECH | 14, 10, 8, 5 | `feature/low-code-n8n` |
 | T15 | #26 | Reescrever o README.md conforme o item 5.2 | E06 (#11) | DOCS | 5 | `docs/readme-video` |
 | T16 | #27 | Organizar `/docs` e registrar o ciclo de refinamento | E06 (#11) | DOCS | 15 | `docs/evidencias` |
 | T17 | #28 | Gravar e publicar o vídeo de demonstração | E06 (#11) | DOCS | 1 | `docs/readme-video` |
@@ -593,16 +593,17 @@ conforme exige o §4.9.
 
 **Escopo do Epic**
 
+- Montar o fluxo no n8n com gatilho de webhook e saída observável (o e-mail com
+  o roteiro), **versionado como JSON no repositório** (T13).
 - Implementar a pergunta determinística de aprovação e a coleta validada do
   e-mail do destinatário, sem passar pelo LLM.
-- Implementar o cliente do webhook do n8n, com payload tipado em pydantic,
-  autenticação por token vindo do ambiente, timeout, retry limitado e fallback.
-- Montar o fluxo no n8n com gatilho de webhook e saída observável (o e-mail com
-  o roteiro).
+- Implementar o **nó de notificação no grafo** e o cliente do webhook do n8n,
+  com payload tipado em pydantic, autenticação por token vindo do ambiente,
+  timeout, retry limitado e fallback.
 - Garantir degradação silenciosa quando a integração não estiver configurada e
   mascaramento do e-mail nos logs e na auditoria.
-- Exportar o workflow, documentar as instruções de reprodução no `README.md` e
-  registrar as evidências de execução.
+- Documentar o fluxo e as instruções de reprodução no `README.md` e registrar as
+  evidências de execução.
 
 ---
 
@@ -665,13 +666,11 @@ E o processo não deve ser encerrado com erro
 
 **Escopo**
 
-- `main.py` — pergunta determinística de aprovação (s/n) e coleta do e-mail ao
-  final do turno em que o itinerário foi concluído
-- Novo módulo de integração com o webhook do n8n (ver T13)
-- `itinerai_agent/utils/validation.py` — validação do formato do e-mail por
-  regex, no mesmo padrão determinístico já adotado
-- `AgentState` — campo para o e-mail do destinatário, quando informado
-- Fluxo n8n externo (gatilho webhook → nó de envio de e-mail)
+- Implementação: **T13** (workflow do n8n) e **T14** (integração da aplicação —
+  nó do grafo, cliente do webhook, aprovação, validação do e-mail,
+  observabilidade e testes)
+- Esta issue é a user story: define o comportamento esperado e os critérios de
+  aceitação; não tem escopo técnico próprio
 
 **Resultado esperado**
 
@@ -685,63 +684,96 @@ E o processo não deve ser encerrado com erro
 
 ---
 
-### T13 — [TECH] Webhook de integração com o n8n
+### T13 — [TECH] Criar o workflow do webhook no n8n
 
-- **Critério atendido:** 14 (integração), 8 (validação e tratamento de falhas) — §4.9, §4.3
+- **Critério atendido:** 14 (low-code) — §4.9
 - **Branch sugerida:** `feature/low-code-n8n`
 
 **Descrição**
 
-Implementar o lado da aplicação da automação low-code: um cliente HTTP que envia
-o payload do itinerário para um webhook do n8n, mantendo **toda a lógica
-principal na aplicação** (o n8n atua apenas como orquestrador do envio do
-e-mail, conforme o §4.9). A URL do webhook e eventuais credenciais devem vir de
-variáveis de ambiente, nunca do código.
+Construir a camada low-code da solução: o workflow do n8n que recebe o itinerário
+por webhook e dispara o e-mail. O workflow é criado e versionado como JSON no
+repositório (`docs/low-code/n8n-workflow.json`) e importado no n8n a partir desse
+arquivo — sem credenciais no JSON. Esta issue **não altera nenhum código do
+agente**; a integração do lado da aplicação é a T14.
 
 **Checklist técnico**
 
-- [ ] Criar `itinerai_agent/utils/notifications.py` com a função de envio ao
-      webhook, tipada e testável
-- [ ] Definir o payload como modelo pydantic (`destino`, `num_days`,
-      `destinatário`, `markdown` do roteiro, `run_id`)
-- [ ] Ler `N8N_WEBHOOK_URL` e `N8N_WEBHOOK_TOKEN` do ambiente e documentá-las no
-      `.env.example` sem valores reais
-- [ ] Autenticar a chamada por header/token e nunca versionar o segredo
-- [ ] Aplicar timeout, retry limitado e fallback, no mesmo padrão de T02
-- [ ] Registrar o envio na trilha de auditoria e nos logs estruturados,
-      mascarando o e-mail do destinatário
-- [ ] Não executar nenhuma chamada quando a variável de ambiente não estiver
-      configurada (degradação silenciosa e documentada)
-- [ ] Cobrir com testes unitários: payload válido, ausência de configuração,
-      timeout e resposta de erro do webhook
+- [ ] Criar `docs/low-code/n8n-workflow.json` com o workflow completo, pronto
+      para importar no n8n
+- [ ] Nó de gatilho: Webhook (POST), autenticado por header token (o mesmo
+      `N8N_WEBHOOK_TOKEN` consumido pela aplicação na T14)
+- [ ] Nó de envio de e-mail, com o destinatário e o markdown do roteiro vindos do
+      payload
+- [ ] Contrato do payload alinhado com o modelo pydantic da T14 (`destination`,
+      `num_days`, `recipient`, `markdown`, `run_id`)
+- [ ] Resposta do webhook distinguindo sucesso de erro, para a aplicação
+      interpretar
+- [ ] Nenhuma credencial, URL de produção ou dado pessoal versionado no JSON
+      (credencial de e-mail configurada apenas dentro do n8n)
+- [ ] Importar o JSON no n8n e validar o fluxo ponta a ponta com uma chamada
+      manual (ex.: `curl`), confirmando o recebimento do e-mail
 
 ---
 
-### T14 — [DOCS] Documentar o fluxo n8n e as instruções de reprodução
+### T14 — [TECH] Integrar a aplicação ao webhook do n8n
 
-- **Critério atendido:** 14 (instruções de reprodução no README), 5 — §4.9, §5.2
-- **Branch sugerida:** `docs/low-code-n8n`
+- **Critério atendido:** 14 (integração + instruções de reprodução no README),
+  10 (aprovação humana), 8 (validação e tratamento de falhas), 5 — §4.9, §4.5,
+  §4.3, §5.2
+- **Branch sugerida:** `feature/low-code-n8n`
 
 **Descrição**
 
-O §4.9 exige que o fluxo low-code possua instruções resumidas de reprodução no
-`README.md`. Documentar o fluxo do n8n (gatilho, nós, saída), exportar o JSON do
-workflow para o repositório e registrar as evidências de execução, de forma que
-o avaliador consiga reproduzir a automação sem acesso à conta do estudante.
+Implementar o lado da aplicação da automação low-code — é esta issue que entrega
+a user story T12. Toda a **lógica principal permanece no agente**; o n8n (T13)
+atua apenas como camada de integração para o envio do e-mail, conforme o §4.9.
+Inclui o novo nó do grafo, o cliente do webhook, a aprovação humana
+determinística, a validação do e-mail, os sinais de observabilidade, os testes e
+a documentação do fluxo e das instruções de reprodução.
 
-**Conteúdo mínimo**
+**Checklist técnico**
 
-- [ ] Exportação do workflow do n8n em `docs/low-code/n8n-workflow.json`, sem
-      credenciais
+Aplicação:
+
+- [ ] Criar `itinerai_agent/utils/notifications.py` com a função de envio ao
+      webhook, tipada e testável
+- [ ] Definir o payload como modelo pydantic (`destination`, `num_days`,
+      `recipient`, `markdown` do roteiro, `run_id`), no contrato aceito pelo
+      workflow da T13
+- [ ] Acrescentar o **nó de notificação** ao grafo (`nodes.py` + `agent.py`),
+      acionado somente após o itinerário gerado e a aprovação concedida
+- [ ] `AgentState` — campo para o e-mail do destinatário e para o resultado do
+      envio
+- [ ] `itinerai_agent/utils/validation.py` — validação do formato do e-mail por
+      regex, no mesmo padrão determinístico já adotado (sem LLM)
+- [ ] `main.py` — pergunta determinística de aprovação (s/n) e coleta do e-mail
+      ao final do turno em que o itinerário foi concluído; nenhuma chamada
+      externa sem "s" explícito
+- [ ] Ler `N8N_WEBHOOK_URL` e `N8N_WEBHOOK_TOKEN` em `config.py` e documentá-las
+      no `.env.example` sem valores reais
+- [ ] Autenticar a chamada por header/token e nunca versionar o segredo
+- [ ] Aplicar timeout, retry limitado e fallback, no mesmo padrão de T02
+- [ ] Não executar nenhuma chamada quando a variável de ambiente não estiver
+      configurada (degradação silenciosa e documentada)
+- [ ] Registrar o envio na trilha de auditoria (T05) e nos logs estruturados
+      (T04), mascarando o e-mail do destinatário
+- [ ] Cobrir com testes unitários: payload válido, aprovação recusada, e-mail
+      inválido, ausência de configuração, timeout e resposta de erro do webhook
+
+Documentação:
+
 - [ ] Descrição do gatilho (webhook), dos nós do fluxo e da saída produzida
       (e-mail)
 - [ ] Diagrama ou captura de tela do fluxo montado no n8n
-- [ ] Instruções resumidas de reprodução no `README.md`: importar o workflow,
-      configurar a credencial de e-mail e apontar a `N8N_WEBHOOK_URL`
+- [ ] Instruções resumidas de reprodução no `README.md`: importar
+      `docs/low-code/n8n-workflow.json`, configurar a credencial de e-mail e
+      apontar a `N8N_WEBHOOK_URL`
 - [ ] Evidência de execução: captura do log do n8n e do e-mail recebido, com
       dados pessoais omitidos
 - [ ] Explicação de por que a lógica principal permanece na aplicação e o n8n
       atua apenas como camada de integração
+- [ ] Registrar a integração no `CLAUDE.md`, no padrão das demais tarefas
 
 ---
 

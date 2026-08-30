@@ -827,3 +827,78 @@ modificações, abra o PR e mova a task para review.
 ```
 Inicie o planagemento da issue https://github.com/joaopuel/mini-projeto-ItinerAI/issues/18. A modificação no hook pode manter junto as modificações dessa nova issue.
 ```
+
+---
+
+## Redistribuição do escopo do epic E05 entre as tarefas T13 e T14
+
+* Data: 2026-08-30 12:53
+* Autor: joaopuel
+* Tipo: Planejamento / Documentação
+
+### Prompt original
+```
+Leia o epic [EPIC] Low-code e limites de autonomia no docs/tasks.md. E altere a
+issue [TECH] Webhook de integração com o n8n para apenas criar o webhook no n8n.
+Todas as modificações no agente, como adicionar o novo nó, mova para a tarefa
+[DOCS] Documentar o fluxo n8n e as instruções de reprodução. Altere também essa
+tarefa para ser uma tarefa técnica. Depois de atualizar o arquivo, use o GitHub
+CLI para atualizar as issues no quadro, respectivamente as issues 24 e 25 no
+quadro https://github.com/joaopuel/mini-projeto-ItinerAI
+```
+
+---
+
+## Atualização da issue T12 (#23) no GitHub
+
+* Data: 2026-08-30 13:10
+* Autor: joaopuel
+* Tipo: Automação / GitHub
+
+### Prompt original
+```
+Atualize a issue T12 no github também
+```
+
+---
+
+## Planejamento da T13 — criação do workflow do webhook no n8n
+
+* Data: 2026-08-30 13:20
+* Autor: joaopuel
+* Tipo: Planejamento
+
+### Prompt original
+```
+Ótimo. Agora crie um plano para implementar a T13.
+```
+
+---
+
+## Correção das conexões perdidas no import do workflow do n8n
+
+* Data: 2026-08-30 14:40
+* Autor: joaopuel
+* Tipo: Correção de bug
+
+### Prompt original
+```
+Os nós no n8n não estão conectados.
+```
+
+---
+
+## Registro dos prompts, commit e PR do workflow do n8n (T13/#24)
+
+* Data: 2026-08-30 15:35
+* Autor: joaopuel
+* Tipo: Documentação / Versionamento
+
+### Prompt original
+```
+Agora. Atualize o /docs/prompts.md com os prompts mais recentes e importantes,
+ou seja, prompts sem perguntas e que solicitem uma implementação. Faça também o
+commit das modificações em uma nova branch e crie o PR. No PR é obrigatório
+incluir "Closes #<número-da-issue>". Traduza também os prompts para português
+brasileiro, se necessário.
+```

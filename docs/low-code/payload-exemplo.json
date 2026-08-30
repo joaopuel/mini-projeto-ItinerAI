@@ -1,0 +1,7 @@
+{
+  "destination": "Lisboa",
+  "num_days": 3,
+  "recipient": "destinatario@example.com",
+  "markdown": "# Roteiro de viagem — Lisboa\n\n**Duração:** 3 dias\n\n## Dia 1 — Centro Histórico\n\n- Castelo de São Jorge\n- Sé de Lisboa\n- Miradouro das Portas do Sol\n\n## Dia 2 — Belém\n\n- Mosteiro dos Jerónimos\n- Torre de Belém\n- Padrão dos Descobrimentos\n\n## Dia 3 — Baixa\n\n- Praça do Comércio\n- Elevador de Santa Justa\n- Praça do Rossio\n",
+  "run_id": "00000000-0000-4000-8000-000000000000"
+}
