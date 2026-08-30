@@ -108,6 +108,28 @@ URL_MESSAGE = (
     "diga apenas o nome do destino (e por quantos dias você pretende viajar) que eu "
     "pesquiso as informações para você."
 )
+INVALID_EMAIL_MESSAGE = (
+    "O endereço de e-mail informado não parece válido, então não vou enviar nada. "
+    "O roteiro continua disponível no arquivo criado em output/."
+)
+
+
+# --- E-mail do destinatário (T14/#25) --------------------------------------
+
+# Validação de FORMATO, não de existência: um endereço bem-formado é o suficiente
+# para decidir se vale acionar o webhook do n8n. Mesmo regex do nó `Validar
+# payload` do workflow (`docs/low-code/n8n-workflow.json`), para os dois lados
+# recusarem exatamente as mesmas entradas.
+_EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$")
+
+
+def is_valid_email(text: str) -> bool:
+    """Indica se o texto é um endereço de e-mail bem-formado.
+
+    Determinístico e sem rede, no mesmo espírito das demais regras deste módulo:
+    não verifica se a caixa existe, apenas se o formato justifica a chamada
+    externa."""
+    return bool(_EMAIL_PATTERN.match(text.strip()))
 
 
 def contains_url(text: str) -> bool:

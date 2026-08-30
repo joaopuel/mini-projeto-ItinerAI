@@ -19,12 +19,19 @@ from itinerai_agent.utils import audit
 from itinerai_agent.utils.config import GROQ_MODEL, GROQ_TEMPERATURE
 from itinerai_agent.utils.logging_config import run_id_var
 from itinerai_agent.utils.memory import TripMemory, save_trip_memory
+from itinerai_agent.utils.notifications import (
+    ItineraryNotification,
+    NotificationResult,
+    mask_email,
+    send_itinerary,
+)
 from itinerai_agent.utils.prompts import AGENT_SYSTEM_PROMPT
 from itinerai_agent.utils.state import AgentState, PendingSearch, WikipediaPageResult
 from itinerai_agent.utils.tools import (
     TouristAttractionSearchResult,
     build_itinerary,
     fetch_page_attractions,
+    render_itinerary_markdown,
     search_tourist_attractions,
 )
 from itinerai_agent.utils.validation import (
@@ -224,6 +231,18 @@ def _repair_leaked_response(response: AIMessage) -> AIMessage:
     return AIMessage(content="", tool_calls=kept)
 
 
+@_logged_router
+def route_entry(state: AgentState) -> str:
+    # Porta de entrada do grafo (T14/#25). O caminho normal é `validate_input`;
+    # o desvio para `notify_recipient` só acontece quando `main.py` já obteve a
+    # aprovação explícita do usuário e validou o e-mail, gravando-o no estado.
+    # Como o envio não depende do LLM, esse turno pula o loop de tool-calling
+    # inteiro.
+    if state.recipient_email and state.itinerary is not None and state.notification is None:
+        return "notify_recipient"
+    return "validate_input"
+
+
 @_logged_node
 def validate_input(state: AgentState) -> dict:
     # Porta de entrada do grafo: valida a última mensagem do usuário antes de
@@ -413,6 +432,10 @@ def call_tools(state: AgentState) -> dict:
         if call["name"] == "build_itinerary":
             update["itinerary"] = result.itinerary
             update["num_days"] = result.num_days
+            # Roteiro novo reabre a oferta de envio por e-mail (T14/#25): sem
+            # este reset, um desfecho anterior (recusa, envio, falha) faria
+            # `main.py` nunca mais perguntar nesta conversa.
+            update["notification"] = None
             # Só o aviso volta para o LLM: o itinerário completo fica no arquivo
             # e não deve ser listado no terminal.
             tool_content = result.message
@@ -532,4 +555,62 @@ def merge_pages(state: AgentState) -> dict:
         "messages": [
             ToolMessage(content=result.model_dump_json(), tool_call_id=pending.tool_call_id)
         ],
+    }
+
+
+# Resposta ao usuário para cada desfecho do envio. `declined` e `invalid_email`
+# não aparecem aqui: são decididos em `main.py` antes de o nó rodar.
+_NOTIFICATION_MESSAGES = {
+    "sent": "Pronto! Enviei o roteiro para o e-mail informado.",
+    "not_configured": (
+        "O envio por e-mail não está configurado nesta instalação, então não enviei nada. "
+        "O roteiro continua disponível no arquivo criado em output/."
+    ),
+    "failed": (
+        "Tive um problema técnico ao enviar o e-mail e não consegui concluir o envio. "
+        "O roteiro continua disponível no arquivo criado em output/."
+    ),
+}
+
+
+@_logged_node
+def notify_recipient(state: AgentState) -> dict:
+    # Envia o roteiro por e-mail via webhook do n8n (T14/#25). Só é alcançado
+    # pelo desvio de `route_entry`, isto é, depois da aprovação explícita do
+    # usuário — o §4.5 exige aprovação humana para uma ação externa e
+    # irreversível. Nenhuma chamada ao LLM acontece neste turno.
+    itinerary = state.itinerary
+    if itinerary is None or not state.recipient_email:
+        # Defensivo: `route_entry` já garante ambos. Se algo mudar, o turno
+        # termina com uma resposta amigável em vez de estourar — e o estado é
+        # fechado igual ao caminho normal, para não reoferecer em loop.
+        return {
+            "notification": NotificationResult(status="failed", detail="estado incompleto"),
+            "recipient_email": None,
+            "messages": [AIMessage(content=_NOTIFICATION_MESSAGES["failed"])],
+        }
+
+    result = send_itinerary(
+        ItineraryNotification(
+            destination=itinerary.destination,
+            num_days=itinerary.num_days,
+            recipient=state.recipient_email,
+            markdown=render_itinerary_markdown(itinerary),
+            run_id=state.run_id,
+        )
+    )
+    logger.info(
+        "notification_dispatched",
+        extra={
+            "node": "notify_recipient",
+            "recipient": mask_email(state.recipient_email),
+            "status": result.status,
+        },
+    )
+    reply = _NOTIFICATION_MESSAGES.get(result.status, _NOTIFICATION_MESSAGES["failed"])
+    return {
+        "notification": result,
+        # Zera o destinatário para o nó não rodar de novo no próximo turno.
+        "recipient_email": None,
+        "messages": [AIMessage(content=reply)],
     }
