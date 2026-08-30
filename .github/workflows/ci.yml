@@ -57,6 +57,9 @@ jobs:
         # A base de código nunca passou por um formatador; enquanto isso não for
         # normalizado num commit próprio, este passo só reporta o diff. Trocar
         # para bloqueante é uma linha (remover o continue-on-error).
+        # `if: always()` garante que o diff apareça mesmo quando o `ruff check`
+        # acima falha (etapa distinta para a análise de logs da T11/#22).
+        if: always()
         continue-on-error: true
         run: ruff format --check --diff .
 

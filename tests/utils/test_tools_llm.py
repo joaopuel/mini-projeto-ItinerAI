@@ -3,8 +3,6 @@
 
 import types
 
-import pytest
-
 from itinerai_agent.utils import tools as T
 from itinerai_agent.utils.state import TouristAttraction
 
