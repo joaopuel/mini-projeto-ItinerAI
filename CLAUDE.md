@@ -407,6 +407,9 @@ mini-projeto-ItinerAI/
 │   │   └── state.py        # definição do estado do grafo (modelos pydantic)
 │   ├── __init__.py
 │   └── agent.py            # construção/compilação do StateGraph
+├── tests/                  # suíte de testes unitários (pytest) — T07/#18
+│   ├── conftest.py         # GROQ_API_KEY fake + isolamento de disco
+│   └── utils/              # espelha itinerai_agent/utils/
 ├── docs/
 │   └── application-structure.md
 ├── output/                 # itinerários .md gerados pelo agente (não versionado)
@@ -416,7 +419,9 @@ mini-projeto-ItinerAI/
 ├── .env                    # variáveis de ambiente locais (não versionado)
 ├── itinerai_memory.db      # memória persistente SQLite da última viagem (não versionado)
 ├── itinerai_audit.db       # trilha de auditoria SQLite (não versionado)
+├── pyproject.toml          # config de pytest + cobertura (T07/#18)
 ├── requirements.txt        # dependências do projeto
+├── requirements-dev.txt    # dependências de teste (pytest, pytest-cov)
 └── langgraph.json          # arquivo de configuração do LangGraph
 ```
 
@@ -482,7 +487,42 @@ mini-projeto-ItinerAI/
   `itinerai_audit.db` devem estar no `.gitignore`.
 - A memória persistente, a trilha de auditoria e o logging estruturado usam só a
   stdlib (`sqlite3`, `logging`) — nenhuma dependência extra no
-  `requirements.txt`. Os testes (`pytest`) entram na T07/#18.
+  `requirements.txt`. As dependências de teste (`pytest`, `pytest-cov`) ficam em
+  `requirements-dev.txt` — ver "Testes".
+
+## Testes (`tests/`, T07/#18)
+
+Suíte de testes **unitários** com `pytest` + `pytest-cov`; **gate de cobertura em
+70%** (`--cov-fail-under=70`; cobertura real estimada ~90%). Regras de design
+(não alterar sem alinhar):
+
+- **Deps de teste isoladas** em `requirements-dev.txt` (`-r requirements.txt` +
+  `pytest` + `pytest-cov` + `coverage[toml]`, todos pinados). O
+  `requirements.txt` de produção continua só com as libs do agente.
+- **Configuração** em `pyproject.toml` — o primeiro do projeto, contém só
+  `[tool.pytest.ini_options]` e `[tool.coverage.*]` (sem `[build-system]`: o
+  ItinerAI não é pacote instalável). `addopts = --cov=itinerai_agent
+  --cov-report=term-missing --cov-fail-under=70`.
+- **Nenhum teste acessa a rede ou exige a `GROQ_API_KEY` real.**
+  `tests/conftest.py` injeta `GROQ_API_KEY=test-key` em nível de módulo, **antes**
+  de qualquer import de `itinerai_agent` — necessário porque `tools.py`/`nodes.py`
+  constroem `ChatGroq` no import (e o validator do `ChatGroq` instancia
+  `groq.Groq`, que exige a chave; `groq.Groq(api_key="test-key")` não valida nada
+  nem faz rede).
+- **Efeitos em disco isolados** por uma fixture `autouse` que redireciona
+  `memory.MEMORY_DB_PATH`, `audit.AUDIT_DB_PATH` e `tools.OUTPUT_DIR` para um
+  `tmp_path` por teste (todos resolvidos em tempo de chamada).
+- **HTTP e LLM sempre simulados**: mock de `tools.requests.get` /
+  `tools.time.sleep` para a resiliência (T02) e de `tools._extraction_llm` /
+  `_invoke_structured` para a extração estruturada; `_llm_with_tools` para o
+  `call_llm`.
+- **Cobertos**: `validation.py` e `memory.py` (~100%), `audit.py` (T05, ~95%),
+  funções puras + resiliência + extração de `tools.py`,
+  `state._merge_page_results`, helpers e nós determinísticos de `nodes.py`,
+  `logging_config.py`, `agent.build_graph()`. **Fora de escopo** (T08): o grafo
+  compilado ponta a ponta.
+- **Rodar**: `pip install -r requirements-dev.txt && pytest`. O `pytest` sai com
+  erro se a cobertura ficar abaixo de 70% (mesmo com todos os testes verdes).
 
 ## Convenções de código
 

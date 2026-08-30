@@ -151,8 +151,8 @@ logs estruturados (T04).
       explícito no `_extraction_llm` (retry do SDK da Groq) + logging do fallback
 - [x] Registrar tentativa, erro e fallback via `logging` (`NullHandler` no
       pacote; os handlers JSON/arquivo/`run_id` foram plugados na T04/#15)
-- [ ] Cobrir a política com testes unitários que simulem timeout e erro HTTP
-      — **adiado para a T07/#18** (bootstrap da suíte de testes)
+- [x] Cobrir a política com testes unitários que simulem timeout e erro HTTP
+      — **T07/#18** (`tests/utils/test_tools_resilience.py`)
 
 ---
 
@@ -296,9 +296,8 @@ latência medida. O `run_id` de T04 é a chave de correlação entre os dois sin
       (mesmo `run_id_var` / `state.run_id` da T04; `created_at` em UTC como os logs)
 - [x] Criar um comando ou script simples que exiba a trilha de um `run_id`
       (`python show_audit.py <run_id>` → `audit.format_audit_trail`)
-- [ ] Cobrir as funções de auditoria com testes unitários
-      — **adiado para a T07/#18** (bootstrap da suíte de testes; `audit.py` já
-      nasce com funções puras e `db_path` injetável para isso)
+- [x] Cobrir as funções de auditoria com testes unitários
+      — **T07/#18** (`tests/utils/test_audit.py`)
 
 > **Notas de escopo:** (1) a trilha usa **banco próprio** `itinerai_audit.db`
 > (append-only, cresce a cada turno), separado do `itinerai_memory.db` de
@@ -384,21 +383,30 @@ de cobertura é de no mínimo **70%**, verificada automaticamente no CI (T10).
 
 **Checklist técnico**
 
-- [ ] Adicionar `pytest` e `pytest-cov` ao `requirements.txt` (ou a um
-      `requirements-dev.txt`)
-- [ ] Criar a pasta `tests/` espelhando a estrutura de `itinerai_agent/`
-- [ ] Configurar `pytest.ini` (ou `pyproject.toml`) com `--cov=itinerai_agent`
-      e `--cov-fail-under=70`
-- [ ] Testar `validation.py`: injeção nos 6 idiomas, scripts não-latinos, URLs,
+- [x] Adicionar `pytest` e `pytest-cov` ao `requirements.txt` (ou a um
+      `requirements-dev.txt`) — feito em `requirements-dev.txt` (`-r
+      requirements.txt` + `pytest` + `pytest-cov` + `coverage[toml]`)
+- [x] Criar a pasta `tests/` espelhando a estrutura de `itinerai_agent/`
+      (`tests/utils/`; `conftest.py` com o shim de `GROQ_API_KEY` e a fixture
+      `autouse` que isola disco)
+- [x] Configurar `pytest.ini` (ou `pyproject.toml`) com `--cov=itinerai_agent`
+      e `--cov-fail-under=70` — `pyproject.toml` (primeiro do projeto)
+- [x] Testar `validation.py`: injeção nos 6 idiomas, scripts não-latinos, URLs,
       ordem de precedência das regras e entradas benignas (sem falso positivo)
-- [ ] Testar `memory.py` com banco temporário: `init_db`, upsert de registro
+- [x] Testar `memory.py` com banco temporário: `init_db`, upsert de registro
       único, `load_trip_memory` sem registro e restrição `CHECK (id = 1)`
-- [ ] Testar as funções puras de `tools.py`: agrupamento por proximidade,
+- [x] Testar as funções puras de `tools.py`: agrupamento por proximidade,
       máximo de 3 atrações por dia, poucas atrações para muitos dias
       (observação e revisitas), slug e sufixo sequencial de arquivo
-- [ ] Usar mocks/fixtures para as chamadas HTTP e ao LLM (nenhum teste pode
+- [x] Usar mocks/fixtures para as chamadas HTTP e ao LLM (nenhum teste pode
       depender de rede ou de `GROQ_API_KEY`)
-- [ ] Atingir e comprovar cobertura ≥ 70%
+- [x] Atingir e comprovar cobertura ≥ 70% *(≈90% estimada; `pyproject.toml`
+      falha o build abaixo de 70%)*
+
+> **Extra (necessário para o gate de 70%):** também cobertos `audit.py` (T05),
+> `state._merge_page_results`, os helpers puros e nós determinísticos de
+> `nodes.py`, `logging_config.py` e `agent.build_graph()`. O grafo compilado
+> ponta a ponta continua sendo a **T08**.
 
 ---
 
