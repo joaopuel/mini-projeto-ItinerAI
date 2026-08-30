@@ -22,6 +22,24 @@ uma execução **real** e **reprovada** do CI.
 `gh run download -n coverage-report` e `gh run list --workflow CI`. Nenhum dado
 simulado.
 
+### Arquivos de evidência
+
+Os logs brutos e o relatório de cobertura do diff estão versionados, para que a
+análise possa ser conferida linha a linha sem depender da retenção de 90 dias do
+GitHub:
+
+| Arquivo | Conteúdo |
+| --- | --- |
+| [`evidences/ci-run-33333506048-lint.log`](evidences/ci-run-33333506048-lint.log) | Log completo do job *Lint (Ruff)* (etapa A) |
+| [`evidences/ci-run-33333506048-test.log`](evidences/ci-run-33333506048-test.log) | Log completo do job *Testes + cobertura* (etapa B) |
+| [`evidences/ci-run-33333506048-diff-cover.md`](evidences/ci-run-33333506048-diff-cover.md) | Relatório do `diff-cover`, do artefato `coverage-report`, com as linhas novas descobertas |
+
+Os logs estão no formato bruto do `gh run view --log`
+(`job⇥etapa⇥timestamp mensagem`), preservando os carimbos de tempo originais. O
+`htmlcov/` e o `coverage.xml` do mesmo artefato não foram versionados: são,
+respectivamente, relatório gerado e dado de máquina, ambos reproduzíveis a partir
+do `coverage.xml` do artefato enquanto ele existir.
+
 ---
 
 ## 1. Etapa A — `ruff format --check` (job *Lint (Ruff)*)

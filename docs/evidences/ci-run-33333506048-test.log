@@ -1,0 +1,551 @@
+Testes + cobertura	Set up job	﻿2026-08-30T20:23:26.7881803Z Current runner version: '2.336.0'
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7907926Z ##[group]Runner Image Provisioner
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7908848Z Hosted Compute Agent
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7909448Z Version: 20260819.586
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7910094Z Commit: 3cc4a88dfa507ef76119ad1bb3eccc6378bb2b76
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7910905Z Build Date: 2026-08-18T23:20:18Z
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7911692Z Worker ID: {e967d06f-47fd-49d5-85da-22006b3bbb72}
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7912466Z Azure Region: westcentralus
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7913090Z ##[endgroup]
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7914836Z ##[group]Operating System
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7915571Z Ubuntu
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7916408Z 24.04.4
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7916916Z LTS
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7917510Z ##[endgroup]
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7918059Z ##[group]Runner Image
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7918741Z Image: ubuntu-24.04
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7919342Z Version: 20260823.283.1
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7920395Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260823.283/images/ubuntu/Ubuntu2404-Readme.md
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7922165Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260823.283
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7923191Z ##[endgroup]
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7924318Z ##[group]GITHUB_TOKEN Permissions
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7926728Z Contents: read
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7927357Z Metadata: read
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7927896Z ##[endgroup]
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7930069Z Secret source: Actions
+Testes + cobertura	Set up job	2026-08-30T20:23:26.7931495Z Prepare workflow directory
+Testes + cobertura	Set up job	2026-08-30T20:23:26.8332052Z Prepare all required actions
+Testes + cobertura	Set up job	2026-08-30T20:23:26.8379500Z Getting action download info
+Testes + cobertura	Set up job	2026-08-30T20:23:27.1261447Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+Testes + cobertura	Set up job	2026-08-30T20:23:27.2949417Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+Testes + cobertura	Set up job	2026-08-30T20:23:27.3868239Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+Testes + cobertura	Set up job	2026-08-30T20:23:27.9508407Z Complete job name: Testes + cobertura
+Testes + cobertura	Run actions/checkout@v4	﻿2026-08-30T20:23:28.0513418Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0525141Z ##[group]Run actions/checkout@v4
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0526690Z with:
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0527541Z   fetch-depth: 0
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0528543Z   repository: joaopuel/mini-projeto-ItinerAI
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0538487Z   token: ***
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0539380Z   ssh-strict: true
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0540283Z   ssh-user: git
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0541187Z   persist-credentials: true
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0542169Z   clean: true
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0543076Z   sparse-checkout-cone-mode: true
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0544148Z   fetch-tags: false
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0545056Z   show-progress: true
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0546532Z   lfs: false
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0547474Z   submodules: false
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0548439Z   set-safe-directory: true
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0549480Z   allow-unsafe-pr-checkout: false
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0551522Z env:
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0552920Z   PYTHON_VERSION: 3.12.9
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.0554394Z ##[endgroup]
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.2091606Z Syncing repository: joaopuel/mini-projeto-ItinerAI
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.2094609Z ##[group]Getting Git version info
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.2096532Z Working directory is '/home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI'
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.2098919Z [command]/usr/bin/git version
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6358716Z git version 2.55.0
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6415742Z ##[endgroup]
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6433847Z Temporarily overriding HOME='/home/runner/work/_temp/32758d00-8f28-4a13-84b7-a26169cc17ee' before making global git config changes
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6439145Z Adding repository directory to the temporary git global config as a safe directory
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6443685Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6501065Z Deleting the contents of '/home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI'
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6505256Z ##[group]Initializing the repository
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6509899Z [command]/usr/bin/git init /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6628602Z hint: Using 'master' as the name for the initial branch. This default branch name
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6631309Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6634752Z hint: to use in all of your new repositories, which will suppress this warning,
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6637711Z hint: call:
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6639159Z hint:
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6640848Z hint: 	git config --global init.defaultBranch <name>
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6643091Z hint:
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6644780Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6647117Z hint: 'development'. The just-created branch can be renamed via this command:
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6648698Z hint:
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6649550Z hint: 	git branch -m <name>
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6650907Z hint:
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6653090Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6655539Z Initialized empty Git repository in /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/.git/
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6659543Z [command]/usr/bin/git remote add origin https://github.com/joaopuel/mini-projeto-ItinerAI
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6699158Z ##[endgroup]
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6701348Z ##[group]Disabling automatic garbage collection
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6703552Z [command]/usr/bin/git config --local gc.auto 0
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6735245Z ##[endgroup]
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6737298Z ##[group]Setting up auth
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6740953Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.6776729Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.7175124Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.7212208Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.7434331Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.7470796Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.7711793Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.7750203Z ##[endgroup]
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.7751791Z ##[group]Fetching the repository
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:28.7762274Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/* +fa0658a688dd8cf7793048a4be6dba6bb1126c07:refs/remotes/pull/40/merge
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8618825Z From https://github.com/joaopuel/mini-projeto-ItinerAI
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8621757Z  * [new branch]      develop                                  -> origin/develop
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8623515Z  * [new branch]      docs/planejamento-m2-2                   -> origin/docs/planejamento-m2-2
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8625397Z  * [new branch]      feature/config-modelo-env                -> origin/feature/config-modelo-env
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8627418Z  * [new branch]      feature/configuracao-inicial             -> origin/feature/configuracao-inicial
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8629347Z  * [new branch]      feature/configuracoes-iniciais           -> origin/feature/configuracoes-iniciais
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8631194Z  * [new branch]      feature/criacao-agente                   -> origin/feature/criacao-agente
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8633491Z  * [new branch]      feature/devops-pipeline-ci               -> origin/feature/devops-pipeline-ci
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8635356Z  * [new branch]      feature/langgraph-paralelizacao          -> origin/feature/langgraph-paralelizacao
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8637628Z  * [new branch]      feature/low-code-n8n                     -> origin/feature/low-code-n8n
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8639373Z  * [new branch]      feature/low-code-n8n-app                 -> origin/feature/low-code-n8n-app
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8641080Z  * [new branch]      feature/observabilidade                  -> origin/feature/observabilidade
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8642288Z  * [new branch]      feature/observabilidade-auditoria        -> origin/feature/observabilidade-auditoria
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8643354Z  * [new branch]      feature/qa-testes-unitarios              -> origin/feature/qa-testes-unitarios
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8644469Z  * [new branch]      feature/resiliencia-integracoes          -> origin/feature/resiliencia-integracoes
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8645645Z  * [new branch]      main                                     -> origin/main
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8647420Z  * [new ref]         fa0658a688dd8cf7793048a4be6dba6bb1126c07 -> pull/40/merge
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8650494Z ##[endgroup]
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8651194Z ##[group]Determining the checkout info
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8651731Z ##[endgroup]
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8652055Z [command]/usr/bin/git sparse-checkout disable
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8701347Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8734181Z ##[group]Checking out the ref
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8738808Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/40/merge
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8854610Z Note: switching to 'refs/remotes/pull/40/merge'.
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8855129Z 
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8855438Z You are in 'detached HEAD' state. You can look around, make experimental
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8856539Z changes and commit them, and you can discard any commits you make in this
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8858022Z state without impacting any branches by switching back to a branch.
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8858628Z 
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8859062Z If you want to create a new branch to retain commits you create, you may
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8860043Z do so (now or later) by using -c with the switch command. Example:
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8860676Z 
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8934366Z   git switch -c <new-branch-name>
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8934839Z 
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8935082Z Or undo this operation with:
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8935540Z 
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8935769Z   git switch -
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8936346Z 
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8936892Z Turn off this advice by setting config variable advice.detachedHead to false
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8937601Z 
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8938314Z HEAD is now at fa0658a Merge 183464fed8e6ee37e90a8cc19b576bfa2240834a into 49f0fde040a3cdf12a1843059bdfcb64a3c6cdd0
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8940502Z ##[endgroup]
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8941796Z [command]/usr/bin/git log -1 --format=%H
+Testes + cobertura	Run actions/checkout@v4	2026-08-30T20:23:29.8942521Z fa0658a688dd8cf7793048a4be6dba6bb1126c07
+Testes + cobertura	Run actions/setup-python@v5	﻿2026-08-30T20:23:29.9218001Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9220471Z ##[group]Run actions/setup-python@v5
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9220843Z with:
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9221119Z   python-version: 3.12.9
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9221424Z   cache: pip
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9221821Z   cache-dependency-path: requirements.txt
+Testes + cobertura	Run actions/setup-python@v5	requirements-dev.txt
+Testes + cobertura	Run actions/setup-python@v5	
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9222298Z   check-latest: false
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9225204Z   token: ***
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9225511Z   update-environment: true
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9225850Z   allow-prereleases: false
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9226466Z   freethreaded: false
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9226965Z env:
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9227234Z   PYTHON_VERSION: 3.12.9
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:29.9227529Z ##[endgroup]
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:30.0530781Z ##[group]Installed versions
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:30.0551351Z Version 3.12.9 was not found in the local cache
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:30.0696234Z (node:2170) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:30.0697871Z (Use `node --trace-deprecation ...` to show where the warning was created)
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:31.0525892Z Version 3.12.9 is available for downloading
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:31.0527941Z Download from "https://github.com/actions/python-versions/releases/download/3.12.9-13149478207/python-3.12.9-linux-24.04-x64.tar.gz"
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:32.0498346Z Extract downloaded archive
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:32.0641714Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/806fdaf5-7d77-45c0-9c67-24b8a9dd767d -f /home/runner/work/_temp/9c4cf6c7-58dd-490a-a291-079b7c2845b3
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:34.1211197Z Execute installation script
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:34.1312499Z Check if Python hostedtoolcache folder exist...
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:34.1313380Z Create Python 3.12.9 folder
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:34.1326683Z Copy Python binaries to hostedtoolcache folder
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:34.5981128Z Create additional symlinks (Required for the UsePythonVersion Azure Pipelines task and the setup-python GitHub Action)
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:34.6021875Z Upgrading pip...
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:36.6989302Z Looking in links: /tmp/tmpor0i70u4
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:36.6993855Z Requirement already satisfied: pip in /opt/hostedtoolcache/Python/3.12.9/x64/lib/python3.12/site-packages (24.3.1)
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:37.7984025Z Collecting pip
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:37.8766411Z Downloading pip-26.2.1-py3-none-any.whl.metadata (4.6 kB)
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:37.8999713Z Downloading pip-26.2.1-py3-none-any.whl (1.8 MB)
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:38.0407134Z ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 17.9 MB/s eta 0:00:00
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:38.0407736Z 
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:38.0606338Z Installing collected packages: pip
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:38.0608645Z Attempting uninstall: pip
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:38.0630249Z Found existing installation: pip 24.3.1
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:38.0991868Z Uninstalling pip-24.3.1:
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:38.1047920Z Successfully uninstalled pip-24.3.1
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:38.9940875Z Successfully installed pip-26.2.1
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:39.0389327Z Create complete file
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:39.0429898Z Successfully set up CPython (3.12.9)
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:39.0431453Z ##[endgroup]
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:39.0676896Z [command]/opt/hostedtoolcache/Python/3.12.9/x64/bin/pip cache dir
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:39.2280416Z /home/runner/.cache/pip
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:39.4431697Z Cache hit for: setup-python-Linux-x64-24.04-Ubuntu-python-3.12.9-pip-000d0ac7ae12b9a4d7f51a8dd41125b7c72962afd6ff0057640d5f4af1df7ff2
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:39.4541906Z (node:2170) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:40.7217857Z Received 35513594 of 35513594 (100.0%), 34.1 MBs/sec
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:40.7219554Z Cache Size: ~34 MB (35513594 B)
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:40.7261903Z [command]/usr/bin/tar -xf /home/runner/work/_temp/3d411826-6809-4f38-8011-266069ec1f57/cache.tzst -P -C /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI --use-compress-program unzstd
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:40.8183922Z Cache restored successfully
+Testes + cobertura	Run actions/setup-python@v5	2026-08-30T20:23:40.8208656Z Cache restored from key: setup-python-Linux-x64-24.04-Ubuntu-python-3.12.9-pip-000d0ac7ae12b9a4d7f51a8dd41125b7c72962afd6ff0057640d5f4af1df7ff2
+Testes + cobertura	Instalar dependências de dev	﻿2026-08-30T20:23:40.8391576Z ##[group]Run pip install -r requirements-dev.txt
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:40.8392056Z ^[[36;1mpip install -r requirements-dev.txt^[[0m
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:40.8435309Z shell: /usr/bin/bash -e {0}
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:40.8435575Z env:
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:40.8435781Z   PYTHON_VERSION: 3.12.9
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:40.8436480Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:40.8437156Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.9/x64/lib/pkgconfig
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:40.8437625Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:40.8438008Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:40.8438385Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:40.8438765Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.9/x64/lib
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:40.8439093Z ##[endgroup]
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.2976428Z Collecting langgraph==1.2.9 (from -r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.2990863Z   Using cached langgraph-1.2.9-py3-none-any.whl.metadata (4.9 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.3273669Z Collecting langchain-groq==1.1.3 (from -r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 2))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.3285506Z   Using cached langchain_groq-1.1.3-py3-none-any.whl.metadata (2.9 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.4465557Z Collecting pydantic==2.13.4 (from -r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 3))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.4478052Z   Using cached pydantic-2.13.4-py3-none-any.whl.metadata (109 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.4884738Z Collecting python-dotenv==1.2.2 (from -r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 4))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.4895794Z   Using cached python_dotenv-1.2.2-py3-none-any.whl.metadata (27 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.5229822Z Collecting requests==2.34.2 (from -r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 5))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.5241364Z   Using cached requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.5572816Z Collecting beautifulsoup4==4.15.0 (from -r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 6))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.5590784Z   Using cached beautifulsoup4-4.15.0-py3-none-any.whl.metadata (3.8 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.5962085Z Collecting pytest==8.3.4 (from -r requirements-dev.txt (line 5))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.5973966Z   Using cached pytest-8.3.4-py3-none-any.whl.metadata (7.5 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.6242462Z Collecting pytest-cov==6.0.0 (from -r requirements-dev.txt (line 6))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.6255634Z   Using cached pytest_cov-6.0.0-py3-none-any.whl.metadata (27 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.9982348Z Collecting coverage==7.6.10 (from coverage[toml]==7.6.10->-r requirements-dev.txt (line 7))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:41.9996150Z   Using cached coverage-7.6.10-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (8.2 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.3268643Z Collecting ruff==0.16.5 (from -r requirements-dev.txt (line 10))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.3283192Z   Using cached ruff-0.16.5-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (26 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.3646732Z Collecting diff-cover==10.5.1 (from -r requirements-dev.txt (line 11))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.3659051Z   Using cached diff_cover-10.5.1-py3-none-any.whl.metadata (22 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.4160022Z Collecting langchain-core<2,>=1.4.7 (from langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.4172544Z   Using cached langchain_core-1.6.1-py3-none-any.whl.metadata (4.8 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.4455958Z Collecting langgraph-checkpoint<5.0.0,>=4.1.0 (from langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.4468211Z   Using cached langgraph_checkpoint-4.2.0-py3-none-any.whl.metadata (6.7 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.4848617Z Collecting langgraph-prebuilt<1.2.0,>=1.1.0 (from langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.4860040Z   Using cached langgraph_prebuilt-1.1.0-py3-none-any.whl.metadata (5.2 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.5183798Z Collecting langgraph-sdk<0.5.0,>=0.4.2 (from langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.5194982Z   Using cached langgraph_sdk-0.4.4-py3-none-any.whl.metadata (5.1 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.6543018Z Collecting xxhash>=3.5.0 (from langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.6556599Z   Using cached xxhash-4.0.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (17 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.6850360Z Collecting groq<1.0.0,>=0.30.0 (from langchain-groq==1.1.3->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 2))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.6862046Z   Using cached groq-0.37.1-py3-none-any.whl.metadata (16 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.7138284Z Collecting annotated-types>=0.6.0 (from pydantic==2.13.4->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 3))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:42.7149454Z   Using cached annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.3426763Z Collecting pydantic-core==2.46.4 (from pydantic==2.13.4->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 3))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.3440601Z   Using cached pydantic_core-2.46.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.6 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.3721333Z Collecting typing-extensions>=4.14.1 (from pydantic==2.13.4->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 3))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.3732969Z   Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.3968628Z Collecting typing-inspection>=0.4.2 (from pydantic==2.13.4->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 3))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.3980166Z   Using cached typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.5168927Z Collecting charset_normalizer<4,>=2 (from requests==2.34.2->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 5))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.5181730Z   Using cached charset_normalizer-3.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (45 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.5480711Z Collecting idna<4,>=2.5 (from requests==2.34.2->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 5))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.5492555Z   Using cached idna-3.19-py3-none-any.whl.metadata (9.2 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.5823732Z Collecting urllib3<3,>=1.26 (from requests==2.34.2->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 5))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.5835678Z   Using cached urllib3-2.7.0-py3-none-any.whl.metadata (6.9 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.6141382Z Collecting certifi>=2023.5.7 (from requests==2.34.2->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 5))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.6153776Z   Using cached certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.6443699Z Collecting soupsieve>=1.6.1 (from beautifulsoup4==4.15.0->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 6))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.6455411Z   Using cached soupsieve-2.9.2-py3-none-any.whl.metadata (4.6 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.6704824Z Collecting iniconfig (from pytest==8.3.4->-r requirements-dev.txt (line 5))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.6716958Z   Using cached iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.7003712Z Collecting packaging (from pytest==8.3.4->-r requirements-dev.txt (line 5))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.7015660Z   Using cached packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.7265824Z Collecting pluggy<2,>=1.5 (from pytest==8.3.4->-r requirements-dev.txt (line 5))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.7278178Z   Using cached pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.7600296Z Collecting Jinja2>=2.7.1 (from diff-cover==10.5.1->-r requirements-dev.txt (line 11))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.7612771Z   Using cached jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.7911727Z Collecting Pygments<3.0.0,>=2.19.1 (from diff-cover==10.5.1->-r requirements-dev.txt (line 11))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.7924215Z   Using cached pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.8565879Z Collecting chardet>=3.0.0 (from diff-cover==10.5.1->-r requirements-dev.txt (line 11))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.8579189Z   Using cached chardet-7.6.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (9.6 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.9015197Z Collecting anyio<5,>=3.5.0 (from groq<1.0.0,>=0.30.0->langchain-groq==1.1.3->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 2))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:43.9030653Z   Using cached anyio-4.14.2-py3-none-any.whl.metadata (4.6 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.1903740Z Collecting distro<2,>=1.7.0 (from groq<1.0.0,>=0.30.0->langchain-groq==1.1.3->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 2))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.1918062Z   Using cached distro-1.9.0-py3-none-any.whl.metadata (6.8 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.6867445Z Collecting httpx<1,>=0.23.0 (from groq<1.0.0,>=0.30.0->langchain-groq==1.1.3->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 2))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.6881246Z   Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.7362167Z Collecting sniffio (from groq<1.0.0,>=0.30.0->langchain-groq==1.1.3->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 2))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.7379778Z   Using cached sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.7978011Z Collecting httpcore==1.* (from httpx<1,>=0.23.0->groq<1.0.0,>=0.30.0->langchain-groq==1.1.3->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 2))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.7990948Z   Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.8899689Z Collecting h11>=0.16 (from httpcore==1.*->httpx<1,>=0.23.0->groq<1.0.0,>=0.30.0->langchain-groq==1.1.3->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 2))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.8911208Z   Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.9869709Z Collecting jsonpatch<2.0.0,>=1.33.0 (from langchain-core<2,>=1.4.7->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:44.9881729Z   Using cached jsonpatch-1.33-py2.py3-none-any.whl.metadata (3.0 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.0958764Z Collecting langchain-protocol>=0.0.17 (from langchain-core<2,>=1.4.7->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.0972834Z   Using cached langchain_protocol-0.0.19-py3-none-any.whl.metadata (2.4 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.1702219Z Collecting langsmith<1.0.0,>=0.3.45 (from langchain-core<2,>=1.4.7->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.1713731Z   Using cached langsmith-0.11.2-py3-none-any.whl.metadata (22 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.2484621Z Collecting pyyaml<7.0.0,>=5.3.0 (from langchain-core<2,>=1.4.7->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.2496598Z   Using cached pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.2775570Z Collecting tenacity!=8.4.0,<10.0.0,>=8.1.0 (from langchain-core<2,>=1.4.7->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.2786750Z   Using cached tenacity-9.1.4-py3-none-any.whl.metadata (1.2 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.3864477Z Collecting uuid-utils<1.0,>=0.12.0 (from langchain-core<2,>=1.4.7->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.3877505Z   Using cached uuid_utils-0.17.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.4 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.4135970Z Collecting jsonpointer>=1.9 (from jsonpatch<2.0.0,>=1.33.0->langchain-core<2,>=1.4.7->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.4147416Z   Using cached jsonpointer-3.1.1-py3-none-any.whl.metadata (2.4 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.4747359Z Collecting ormsgpack>=1.12.0 (from langgraph-checkpoint<5.0.0,>=4.1.0->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.4759463Z   Using cached ormsgpack-1.12.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.2 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.7098210Z Collecting orjson>=3.11.5 (from langgraph-sdk<0.5.0,>=0.4.2->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.7113063Z   Using cached orjson-3.12.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (41 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.8240276Z Collecting websockets<17,>=14 (from langgraph-sdk<0.5.0,>=0.4.2->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.8254354Z   Using cached websockets-16.1.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.8 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.8540006Z Collecting requests-toolbelt>=1.0.0 (from langsmith<1.0.0,>=0.3.45->langchain-core<2,>=1.4.7->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.8553562Z   Using cached requests_toolbelt-1.0.0-py2.py3-none-any.whl.metadata (14 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.9318850Z Collecting zstandard>=0.23.0 (from langsmith<1.0.0,>=0.3.45->langchain-core<2,>=1.4.7->langgraph==1.2.9->-r /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI/requirements.txt (line 1))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.9331970Z   Using cached zstandard-0.25.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.3 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:45.9986920Z Collecting MarkupSafe>=2.0 (from Jinja2>=2.7.1->diff-cover==10.5.1->-r requirements-dev.txt (line 11))
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0000227Z   Using cached markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0126922Z Using cached langgraph-1.2.9-py3-none-any.whl (247 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0140278Z Using cached langchain_groq-1.1.3-py3-none-any.whl (20 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0152347Z Using cached pydantic-2.13.4-py3-none-any.whl (472 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0165903Z Using cached python_dotenv-1.2.2-py3-none-any.whl (22 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0177853Z Using cached requests-2.34.2-py3-none-any.whl (73 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0189954Z Using cached beautifulsoup4-4.15.0-py3-none-any.whl (109 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0202043Z Using cached pytest-8.3.4-py3-none-any.whl (343 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0214965Z Using cached pytest_cov-6.0.0-py3-none-any.whl (22 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0227490Z Using cached coverage-7.6.10-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (240 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0240281Z Using cached ruff-0.16.5-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (10.3 MB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0291002Z Using cached diff_cover-10.5.1-py3-none-any.whl (62 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0303470Z Using cached pydantic_core-2.46.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0323441Z Using cached charset_normalizer-3.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (248 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0335733Z Using cached groq-0.37.1-py3-none-any.whl (137 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0348061Z Using cached anyio-4.14.2-py3-none-any.whl (125 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0360281Z Using cached distro-1.9.0-py3-none-any.whl (20 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0372001Z Using cached httpx-0.28.1-py3-none-any.whl (73 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0384051Z Using cached httpcore-1.0.9-py3-none-any.whl (78 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0395982Z Using cached idna-3.19-py3-none-any.whl (68 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0408289Z Using cached langchain_core-1.6.1-py3-none-any.whl (571 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0422051Z Using cached jsonpatch-1.33-py2.py3-none-any.whl (12 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0433852Z Using cached langgraph_checkpoint-4.2.0-py3-none-any.whl (56 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0445647Z Using cached langgraph_prebuilt-1.1.0-py3-none-any.whl (41 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0457724Z Using cached langgraph_sdk-0.4.4-py3-none-any.whl (162 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0469910Z Using cached langsmith-0.11.2-py3-none-any.whl (753 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0484236Z Using cached pluggy-1.6.0-py3-none-any.whl (20 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0495987Z Using cached pygments-2.21.0-py3-none-any.whl (1.3 MB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0513039Z Using cached pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0527451Z Using cached tenacity-9.1.4-py3-none-any.whl (28 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0539336Z Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0551200Z Using cached urllib3-2.7.0-py3-none-any.whl (131 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0563646Z Using cached uuid_utils-0.17.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (320 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0577240Z Using cached websockets-16.1.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (187 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0590112Z Using cached annotated_types-0.8.0-py3-none-any.whl (13 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0602388Z Using cached certifi-2026.7.22-py3-none-any.whl (136 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0615116Z Using cached chardet-7.6.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.5 MB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0632324Z Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0644679Z Using cached jinja2-3.1.6-py3-none-any.whl (134 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0656840Z Using cached jsonpointer-3.1.1-py3-none-any.whl (7.7 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0668608Z Using cached langchain_protocol-0.0.19-py3-none-any.whl (7.3 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0680799Z Using cached markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0692776Z Using cached orjson-3.12.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (131 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0705194Z Using cached ormsgpack-1.12.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (212 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0717663Z Using cached packaging-26.3-py3-none-any.whl (129 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0730140Z Using cached requests_toolbelt-1.0.0-py2.py3-none-any.whl (54 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0742003Z Using cached sniffio-1.3.1-py3-none-any.whl (10 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0753743Z Using cached soupsieve-2.9.2-py3-none-any.whl (37 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0765630Z Using cached typing_inspection-0.4.4-py3-none-any.whl (14 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0778134Z Using cached xxhash-4.0.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (261 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0790824Z Using cached zstandard-0.25.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (5.5 MB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.0822034Z Using cached iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:46.3207603Z Installing collected packages: zstandard, xxhash, websockets, uuid-utils, urllib3, typing-extensions, tenacity, soupsieve, sniffio, ruff, pyyaml, python-dotenv, Pygments, pluggy, packaging, ormsgpack, orjson, MarkupSafe, jsonpointer, iniconfig, idna, h11, distro, coverage, charset_normalizer, chardet, certifi, annotated-types, typing-inspection, requests, pytest, pydantic-core, langchain-protocol, jsonpatch, Jinja2, httpcore, beautifulsoup4, anyio, requests-toolbelt, pytest-cov, pydantic, httpx, diff-cover, langsmith, groq, langchain-core, langgraph-sdk, langgraph-checkpoint, langchain-groq, langgraph-prebuilt, langgraph
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:50.6974255Z 
+Testes + cobertura	Instalar dependências de dev	2026-08-30T20:23:50.7023409Z Successfully installed Jinja2-3.1.6 MarkupSafe-3.0.3 Pygments-2.21.0 annotated-types-0.8.0 anyio-4.14.2 beautifulsoup4-4.15.0 certifi-2026.7.22 chardet-7.6.0 charset_normalizer-3.5.1 coverage-7.6.10 diff-cover-10.5.1 distro-1.9.0 groq-0.37.1 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 idna-3.19 iniconfig-2.3.0 jsonpatch-1.33 jsonpointer-3.1.1 langchain-core-1.6.1 langchain-groq-1.1.3 langchain-protocol-0.0.19 langgraph-1.2.9 langgraph-checkpoint-4.2.0 langgraph-prebuilt-1.1.0 langgraph-sdk-0.4.4 langsmith-0.11.2 orjson-3.12.0 ormsgpack-1.12.2 packaging-26.3 pluggy-1.6.0 pydantic-2.13.4 pydantic-core-2.46.4 pytest-8.3.4 pytest-cov-6.0.0 python-dotenv-1.2.2 pyyaml-6.0.3 requests-2.34.2 requests-toolbelt-1.0.0 ruff-0.16.5 sniffio-1.3.1 soupsieve-2.9.2 tenacity-9.1.4 typing-extensions-4.16.0 typing-inspection-0.4.4 urllib3-2.7.0 uuid-utils-0.17.0 websockets-16.1.1 xxhash-4.0.1 zstandard-0.25.0
+Testes + cobertura	Executar testes (pytest)	﻿2026-08-30T20:23:50.8578708Z ##[group]Run pytest --cov-report=xml --cov-report=html --cov-report=term-missing --cov-fail-under=0
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:50.8579476Z ^[[36;1mpytest --cov-report=xml --cov-report=html --cov-report=term-missing --cov-fail-under=0^[[0m
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:50.8617640Z shell: /usr/bin/bash -e {0}
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:50.8617901Z env:
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:50.8618100Z   PYTHON_VERSION: 3.12.9
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:50.8618407Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:50.8618847Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.9/x64/lib/pkgconfig
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:50.8619273Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:50.8619657Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:50.8620034Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:50.8620410Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.9/x64/lib
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:50.8620735Z ##[endgroup]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:53.8515035Z ============================= test session starts ==============================
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:53.8516577Z platform linux -- Python 3.12.9, pytest-8.3.4, pluggy-1.6.0
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:53.8517367Z rootdir: /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:53.8517871Z configfile: pyproject.toml
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:53.8518183Z testpaths: tests
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:53.8518492Z plugins: anyio-4.14.2, langsmith-0.11.2, cov-6.0.0
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:53.8518868Z collected 200 items
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:53.8519032Z 
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:53.9210902Z tests/test_agent.py ..                                                   [  1%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:54.0042635Z tests/utils/test_audit.py .............                                  [  7%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:54.0270890Z tests/utils/test_logging_config.py ..........                            [ 12%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:54.0727013Z tests/utils/test_memory.py .........                                     [ 17%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:54.2185916Z tests/utils/test_nodes.py .............................                  [ 31%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:54.2753694Z tests/utils/test_nodes_helpers.py ....................                   [ 41%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:54.2862834Z tests/utils/test_state.py .....                                          [ 44%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:54.3448922Z tests/utils/test_tools_llm.py ........                                   [ 48%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:54.4355878Z tests/utils/test_tools_pure.py ........................................  [ 68%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:54.5282574Z tests/utils/test_tools_resilience.py ................                    [ 76%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:54.6253929Z tests/utils/test_validation.py ......................................... [ 96%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0085261Z .......                                                                  [100%]
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0085795Z 
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0086397Z ---------- coverage: platform linux, python 3.12.9-final-0 -----------
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0087172Z Name                                     Stmts   Miss  Cover   Missing
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0088217Z ----------------------------------------------------------------------
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0088951Z itinerai_agent/__init__.py                   2      0   100%
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0089660Z itinerai_agent/agent.py                     26      0   100%
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0090319Z itinerai_agent/utils/__init__.py             0      0   100%
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0090976Z itinerai_agent/utils/audit.py               80      0   100%
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0091584Z itinerai_agent/utils/config.py               9      0   100%
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0092184Z itinerai_agent/utils/logging_config.py      64      0   100%
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0092760Z itinerai_agent/utils/memory.py              40      0   100%
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0093405Z itinerai_agent/utils/nodes.py              243     10    96%   241-243, 582-611
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0094225Z itinerai_agent/utils/notifications.py       68     38    44%   89-94, 105-134, 143-184
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0094932Z itinerai_agent/utils/prompts.py              3      0   100%
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0095828Z itinerai_agent/utils/state.py               41      0   100%
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0096763Z itinerai_agent/utils/tools.py              275      4    99%   91-92, 438-439
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0097469Z itinerai_agent/utils/validation.py          26      1    96%   132
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0098107Z ----------------------------------------------------------------------
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0098639Z TOTAL                                      877     53    94%
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0099096Z Coverage HTML written to dir htmlcov
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0099518Z Coverage XML written to file coverage.xml
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0099811Z 
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0099820Z 
+Testes + cobertura	Executar testes (pytest)	2026-08-30T20:23:55.0100039Z ============================= 200 passed in 1.77s ==============================
+Testes + cobertura	Gate de cobertura global (>= 70%)	﻿2026-08-30T20:23:55.1783170Z ##[group]Run coverage report --fail-under=70
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.1783583Z ^[[36;1mcoverage report --fail-under=70^[[0m
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.1821205Z shell: /usr/bin/bash -e {0}
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.1821505Z env:
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.1821727Z   PYTHON_VERSION: 3.12.9
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.1822022Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.1822447Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.9/x64/lib/pkgconfig
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.1822880Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.1823249Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.1823625Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.1824014Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.9/x64/lib
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.1824332Z ##[endgroup]
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3386300Z Name                                     Stmts   Miss  Cover   Missing
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3387318Z ----------------------------------------------------------------------
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3388313Z itinerai_agent/__init__.py                   2      0   100%
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3389197Z itinerai_agent/agent.py                     26      0   100%
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3390092Z itinerai_agent/utils/__init__.py             0      0   100%
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3390953Z itinerai_agent/utils/audit.py               80      0   100%
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3391590Z itinerai_agent/utils/config.py               9      0   100%
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3392042Z itinerai_agent/utils/logging_config.py      64      0   100%
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3392503Z itinerai_agent/utils/memory.py              40      0   100%
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3393014Z itinerai_agent/utils/nodes.py              243     10    96%   241-243, 582-611
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3393632Z itinerai_agent/utils/notifications.py       68     38    44%   89-94, 105-134, 143-184
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3394195Z itinerai_agent/utils/prompts.py              3      0   100%
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3394650Z itinerai_agent/utils/state.py               41      0   100%
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3395155Z itinerai_agent/utils/tools.py              275      4    99%   91-92, 438-439
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3396006Z itinerai_agent/utils/validation.py          26      1    96%   132
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3396644Z ----------------------------------------------------------------------
+Testes + cobertura	Gate de cobertura global (>= 70%)	2026-08-30T20:23:55.3397079Z TOTAL                                      877     53    94%
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	﻿2026-08-30T20:23:55.3608588Z ##[group]Run git fetch --no-tags origin "develop"
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3609027Z ^[[36;1mgit fetch --no-tags origin "develop"^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3609348Z ^[[36;1mdiff-cover coverage.xml \^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3609647Z ^[[36;1m  --compare-branch="origin/develop" \^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3609962Z ^[[36;1m  --fail-under=70 \^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3610235Z ^[[36;1m  --html-report diff-cover.html \^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3610543Z ^[[36;1m  --markdown-report diff-cover.md \^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3610837Z ^[[36;1m  || DIFF_COVER_EXIT=$?^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3611111Z ^[[36;1mif [ -f diff-cover.md ]; then^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3611369Z ^[[36;1m  {^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3611635Z ^[[36;1m    echo '## Cobertura do código novo (diff-cover)'^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3611984Z ^[[36;1m    cat diff-cover.md^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3612250Z ^[[36;1m  } >> "$GITHUB_STEP_SUMMARY"^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3612504Z ^[[36;1mfi^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3612712Z ^[[36;1mexit "${DIFF_COVER_EXIT:-0}"^[[0m
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3650181Z shell: /usr/bin/bash -e {0}
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3650468Z env:
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3650662Z   PYTHON_VERSION: 3.12.9
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3650960Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3651398Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.9/x64/lib/pkgconfig
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3651825Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3652207Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3652577Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3652954Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.9/x64/lib
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.3653270Z ##[endgroup]
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.7040935Z From https://github.com/joaopuel/mini-projeto-ItinerAI
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.7041469Z  * branch            develop    -> FETCH_HEAD
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.8279803Z /opt/hostedtoolcache/Python/3.12.9/x64/lib/python3.12/site-packages/diff_cover/diff_cover_tool.py:374: UserWarning: The --html-report option is deprecated. Use --format html:diff-cover.html instead.
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.8280928Z   warnings.warn(
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.8281943Z /opt/hostedtoolcache/Python/3.12.9/x64/lib/python3.12/site-packages/diff_cover/diff_cover_tool.py:394: UserWarning: The --markdown-report option is deprecated. Use --format markdown:diff-cover.md instead.
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:55.8283001Z   warnings.warn(
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1892524Z Failure. Coverage is below 70%.
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1893136Z -------------
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1893564Z Diff Coverage
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1894113Z Diff: origin/develop...HEAD, staged and unstaged changes
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1894571Z -------------
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1894874Z itinerai_agent/agent.py (100%)
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1895280Z itinerai_agent/utils/config.py (100%)
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1895857Z itinerai_agent/utils/nodes.py (41.2%): Missing lines 241-243,582-583,587,593,602,610-611
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1897128Z itinerai_agent/utils/notifications.py (44.1%): Missing lines 89-94,105-107,109-111,117-119,123-125,131,134,143,145,148-149,154-161,169,172,174-175,183-184
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1897893Z itinerai_agent/utils/state.py (100%)
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1898286Z itinerai_agent/utils/validation.py (75.0%): Missing lines 132
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1898658Z -------------
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1898875Z Total:   98 lines
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1899096Z Missing: 49 lines
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1899318Z Coverage: 50%
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1899523Z -------------
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.1899641Z 
+Testes + cobertura	Gate de cobertura do código novo (diff-cover >= 70%)	2026-08-30T20:23:56.2292186Z ##[error]Process completed with exit code 1.
+Testes + cobertura	Publicar relatório de cobertura (artefato)	﻿2026-08-30T20:23:56.2393969Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2395444Z ##[group]Run actions/upload-artifact@v4
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2395720Z with:
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2395919Z   name: coverage-report
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2396578Z   path: coverage.xml
+Testes + cobertura	Publicar relatório de cobertura (artefato)	htmlcov/
+Testes + cobertura	Publicar relatório de cobertura (artefato)	diff-cover.html
+Testes + cobertura	Publicar relatório de cobertura (artefato)	diff-cover.md
+Testes + cobertura	Publicar relatório de cobertura (artefato)	
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2396958Z   if-no-files-found: ignore
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2397202Z   compression-level: 6
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2397426Z   overwrite: false
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2397643Z   include-hidden-files: false
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2397889Z env:
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2398090Z   PYTHON_VERSION: 3.12.9
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2398378Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2398799Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.9/x64/lib/pkgconfig
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2399259Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2399637Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2400020Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.9/x64
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2400397Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.9/x64/lib
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.2400718Z ##[endgroup]
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.4082803Z (node:2322) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.4083794Z (Use `node --trace-deprecation ...` to show where the warning was created)
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.4204320Z Multiple search paths detected. Calculating the least common ancestor of all paths
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.4207777Z The least common ancestor is /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI. This will be the root directory of the artifact
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.4208992Z With the provided path, there will be 24 files uploaded
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.4214229Z Artifact name is valid!
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.4214714Z Root directory input is valid!
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.7390873Z Beginning upload of artifact content to blob storage
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:56.7957241Z (node:2322) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:57.1414912Z Uploaded bytes 133500
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:57.2026717Z Finished uploading artifact content to blob storage!
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:57.2028043Z SHA256 digest of uploaded artifact zip is 795d5c1cbc2bf8579df462cd43f84547c2e5be8422ebae74428615f1bc91985f
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:57.2030953Z Finalizing artifact upload
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:57.4454177Z Artifact coverage-report.zip successfully finalized. Artifact ID 9738330036
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:57.4455448Z Artifact coverage-report has been successfully uploaded! Final size is 133500 bytes. Artifact ID is 9738330036
+Testes + cobertura	Publicar relatório de cobertura (artefato)	2026-08-30T20:23:57.4461915Z Artifact download URL: https://github.com/joaopuel/mini-projeto-ItinerAI/actions/runs/33333506048/artifacts/9738330036
+Testes + cobertura	Post Run actions/checkout@v4	﻿2026-08-30T20:23:57.4649177Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.4650443Z Post job cleanup.
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.5486703Z [command]/usr/bin/git version
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.5529120Z git version 2.55.0
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.5567133Z Temporarily overriding HOME='/home/runner/work/_temp/15a753e8-3bbd-46da-b580-f3a8de33627f' before making global git config changes
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.5568469Z Adding repository directory to the temporary git global config as a safe directory
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.5573941Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/mini-projeto-ItinerAI/mini-projeto-ItinerAI
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.5613635Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.5647967Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.5892969Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.5931982Z http.https://github.com/.extraheader
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.5949738Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.5986747Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.6257315Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Testes + cobertura	Post Run actions/checkout@v4	2026-08-30T20:23:57.6302794Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Testes + cobertura	Complete job	﻿2026-08-30T20:23:57.6744089Z Cleaning up orphan processes
+Testes + cobertura	Complete job	2026-08-30T20:23:57.7047627Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
