@@ -277,15 +277,34 @@ latência medida. O `run_id` de T04 é a chave de correlação entre os dois sin
 
 **Checklist técnico**
 
-- [ ] Criar a tabela `execution_audit` com `run_id`, `step`, `step_type`
+- [x] Criar a tabela `execution_audit` com `run_id`, `step`, `step_type`
       (nó ou tool), `status`, `duration_ms`, `error` e `created_at`
-- [ ] Criar funções puras de escrita e leitura da auditoria, no mesmo padrão
-      testável de `memory.py`
-- [ ] Medir a latência de cada nó do grafo e de cada chamada de tool
-- [ ] Registrar falhas, retries e fallbacks de T02 na auditoria
-- [ ] Garantir que o `run_id` seja idêntico ao dos logs estruturados
-- [ ] Criar um comando ou script simples que exiba a trilha de um `run_id`
+      (+ `id` rowid p/ ordenação e índice em `run_id`; `step_type` também aceita
+      `turn`; `status` ∈ `ok`/`error`/`retry`/`fallback`)
+- [x] Criar funções puras de escrita e leitura da auditoria, no mesmo padrão
+      testável de `memory.py` (`itinerai_agent/utils/audit.py`: `init_db`,
+      `record_audit_step`, `load_audit_trail`, `format_audit_trail`, `db_path`
+      injetável; + `try_record` best-effort para a instrumentação)
+- [x] Medir a latência de cada nó do grafo e de cada chamada de tool
+      (`perf_counter` no decorator `_logged_node`; `build_itinerary` em
+      `call_tools`; `wikipedia_fetch` e `llm_extraction` em `tools.py`; a linha
+      `turn` do `graph_invoke` em `main._run_turn`)
+- [x] Registrar falhas, retries e fallbacks de T02 na auditoria
+      (`retry` em `_get_wikipedia`, `error` em `fetch_page_attractions`,
+      `fallback` em `_invoke_structured` e no `llm_exception_fallback`)
+- [x] Garantir que o `run_id` seja idêntico ao dos logs estruturados
+      (mesmo `run_id_var` / `state.run_id` da T04; `created_at` em UTC como os logs)
+- [x] Criar um comando ou script simples que exiba a trilha de um `run_id`
+      (`python show_audit.py <run_id>` → `audit.format_audit_trail`)
 - [ ] Cobrir as funções de auditoria com testes unitários
+      — **adiado para a T07/#18** (bootstrap da suíte de testes; `audit.py` já
+      nasce com funções puras e `db_path` injetável para isso)
+
+> **Notas de escopo:** (1) a trilha usa **banco próprio** `itinerai_audit.db`
+> (append-only, cresce a cada turno), separado do `itinerai_memory.db` de
+> registro único — `.gitignore` ajustado (o checklist não mencionava). (2) a
+> auditoria é **best-effort**: `try_record` engole erros de I/O — auditar nunca
+> derruba um turno.
 
 ---
 

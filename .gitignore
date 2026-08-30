@@ -23,6 +23,11 @@ itinerai_memory.db
 itinerai_memory.db-journal
 itinerai_memory.db-wal
 
+# Trilha de auditoria (SQLite) — T05/#16
+itinerai_audit.db
+itinerai_audit.db-journal
+itinerai_audit.db-wal
+
 # LangGraph local artifacts
 .langgraph_api/
 .langgraph/

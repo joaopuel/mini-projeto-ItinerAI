@@ -1,5 +1,6 @@
 import logging
 import sys
+import time
 
 sys.stdout.reconfigure(encoding="utf-8")  # evita mojibake de acentos no console do Windows
 
@@ -17,6 +18,7 @@ configure_logging()  # pluga o handler JSON + arquivo antes de importar o grafo
 from langchain_core.messages import HumanMessage
 
 from itinerai_agent.agent import graph
+from itinerai_agent.utils import audit
 from itinerai_agent.utils.memory import TripMemory, load_trip_memory, save_trip_memory
 from itinerai_agent.utils.state import AgentState
 
@@ -108,6 +110,7 @@ def _run_turn(state: AgentState) -> AgentState:
     """
     state.run_id = new_run_id()
     token = run_id_var.set(state.run_id)
+    start = time.perf_counter()
     try:
         logger.info(
             "run_start",
@@ -117,6 +120,7 @@ def _run_turn(state: AgentState) -> AgentState:
             },
         )
         result = graph.invoke(state, {"recursion_limit": 50})
+        turn_ms = (time.perf_counter() - start) * 1000  # só o graph.invoke
         state = AgentState.model_validate(result)
         _save_state(state)
         last_message = state.messages[-1]
@@ -125,12 +129,18 @@ def _run_turn(state: AgentState) -> AgentState:
             extra={
                 "last_message_type": type(last_message).__name__,
                 "itinerary_ready": state.itinerary is not None,
+                "duration_ms": round(turn_ms, 1),
             },
         )
+        audit.try_record(state.run_id, "graph_invoke", "turn", "ok", turn_ms)
         print(f"ItinerAI: {last_message.content}")
         return state
-    except Exception:
-        logger.exception("run_error")
+    except Exception as exc:
+        turn_ms = (time.perf_counter() - start) * 1000
+        audit.try_record(
+            state.run_id, "graph_invoke", "turn", "error", turn_ms, type(exc).__name__
+        )
+        logger.exception("run_error", extra={"duration_ms": round(turn_ms, 1)})
         raise
     finally:
         run_id_var.reset(token)
