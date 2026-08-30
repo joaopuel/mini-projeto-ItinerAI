@@ -35,6 +35,11 @@ itinerai_audit.db-wal
 htmlcov/
 coverage.xml
 
+# Lint / cobertura do código novo — T10/#21
+.ruff_cache/
+diff-cover.html
+diff-cover.md
+
 # LangGraph local artifacts
 .langgraph_api/
 .langgraph/
