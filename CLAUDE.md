@@ -25,6 +25,11 @@ Funcionalidades do agente:
   em SQLite, salva logo após a validação. Numa nova execução, o agente
   **mostra** a última viagem salva e oferece **retomá-la** (se ficou incompleta,
   ex.: após uma falha na busca/geração) ou **refazê-la** (se já concluída).
+- Oferecer, ao fim do turno em que o roteiro ficou pronto, o **envio do
+  itinerário por e-mail** através de um fluxo no n8n acionado por webhook. Por
+  ser uma ação externa e irreversível, só acontece mediante **aprovação humana
+  explícita** (pergunta s/n + e-mail validado por regex, sem passar pelo LLM).
+  Ver "Integração low-code (n8n)" abaixo.
 
 Não introduza funcionalidades, integrações ou tecnologias além das descritas
 neste documento sem alinhar antes com o usuário.
@@ -51,11 +56,16 @@ neste documento sem alinhar antes com o usuário.
 O agente segue um loop de tool-calling estilo ReAct, não um pipeline fixo de
 nós por etapa:
 
-- `validate_input` é o nó de entrada do grafo (`START → validate_input`):
-  valida a última mensagem do usuário e, via aresta condicional
-  (`route_after_validation`), segue para `persist_memory` quando a entrada é
-  válida ou vai direto para `END` (com a mensagem de recusa já inserida) quando
-  viola uma regra. Ver "Validação de entrada" abaixo.
+- **`route_entry` é a aresta condicional do `START`** (T14/#25): manda para
+  `notify_recipient` quando o usuário já aprovou o envio por e-mail e o
+  endereço validado está em `AgentState.recipient_email`; caso contrário, segue
+  o caminho normal para `validate_input`. É o único desvio do fluxo padrão e
+  **não passa pelo LLM**. Ver "Integração low-code (n8n)" abaixo.
+- `validate_input` é o nó de entrada do turno normal: valida a última mensagem
+  do usuário e, via aresta condicional (`route_after_validation`), segue para
+  `persist_memory` quando a entrada é válida ou vai direto para `END` (com a
+  mensagem de recusa já inserida) quando viola uma regra. Ver "Validação de
+  entrada" abaixo.
 - `persist_memory` roda logo após a validação (só no caminho válido) e salva os
   dados da viagem coletados até aqui na memória persistente, antes das buscas
   que podem falhar; em seguida segue para `call_llm`. Ver "Memória persistente"
@@ -344,6 +354,57 @@ investigar um erro. Regras de design (não alterar sem alinhar):
   **T07/#18** (bootstrap do `pytest`); o documento de evidências cruzando os
   dois sinais → **T06/#17**; poda/retenção do `itinerai_audit.db`.
 
+## Integração low-code (n8n) (`notifications.py`)
+
+A automação low-code do §4.9: ao fim do turno em que o roteiro fica pronto, o
+agente oferece enviá-lo por e-mail; aprovado, faz um POST para um webhook do n8n
+que dispara o e-mail. A T13/#24 entregou o workflow
+(`docs/low-code/n8n-workflow.json`); a T14/#25, o lado da aplicação. Regras de
+design (não alterar sem alinhar):
+
+- **A lógica principal permanece na aplicação.** O n8n só recebe um payload
+  pronto e despacha o e-mail — não monta roteiro, não decide nada, não conhece a
+  Wikipédia. Se o fluxo sumir, o agente continua inteiro; só deixa de oferecer o
+  envio.
+- **Aprovação humana explícita (§4.5).** A pergunta s/n e a coleta do e-mail
+  acontecem em `main.py` (`_offer_email`), **entre turnos** e sem passar pelo
+  LLM. Nenhuma chamada externa ocorre sem um "s" e um endereço bem-formado. A
+  validação de formato é `is_valid_email` em `validation.py` — regex
+  determinístico, no mesmo espírito do resto do módulo, com o **mesmo padrão**
+  usado pelo nó `Validar payload` do workflow, para os dois lados recusarem as
+  mesmas entradas.
+- **Por que a aprovação não mora num nó:** ela é `input()` de terminal, e um nó
+  que bloqueia em I/O interativo deixaria de ser puro e testável. Daí o desenho:
+  `main.py` grava `recipient_email` no estado e reinvoca o grafo; `route_entry`
+  desvia o `START` direto para `notify_recipient`. Alternativa descartada:
+  `interrupt()` + checkpointer do LangGraph — mais idiomático, mas exigiria
+  `MemorySaver` e `thread_id` no projeto inteiro.
+- **`notify_recipient`** (em `nodes.py`) monta o payload com
+  `render_itinerary_markdown(state.itinerary)` (reaproveita a função que gera o
+  `.md`, sem reler o arquivo), chama `send_itinerary` e devolve a confirmação
+  como `AIMessage` — que o `print` já existente em `_run_turn` exibe. Zera o
+  `recipient_email` para não reenviar no turno seguinte.
+- **`AgentState.notification`** guarda o desfecho (`sent`, `declined`,
+  `invalid_email`, `not_configured`, `failed`) e é o que impede a pergunta de se
+  repetir a cada turno. `call_tools` o zera a cada novo `build_itinerary`, para
+  um roteiro novo reabrir a oferta.
+- **Resiliência no mesmo padrão da Wikipédia** (T02/#13): timeout configurável
+  (`N8N_TIMEOUT`), retry limitado (máx. 2 tentativas adicionais) com backoff
+  exponencial (0,5s → 1,0s), repetindo **só** em `Timeout`/`ConnectionError`.
+  Erro de status HTTP e esgotamento das tentativas viram
+  `NotificationResult(status="failed")` — **`send_itinerary` nunca levanta**, o
+  turno não cai e o `.md` segue em `output/`.
+- **Degradação silenciosa:** sem `N8N_WEBHOOK_URL`, nenhuma chamada é feita e o
+  resultado é `not_configured`, com mensagem amigável ao usuário.
+- **O e-mail do destinatário nunca sai em texto puro.** Logs e trilha de
+  auditoria recebem só `mask_email(...)` (`j***@exemplo.com`). O passo auditado
+  é `n8n_webhook` (tipo `tool`), com linhas `retry` a cada nova tentativa.
+- **Segredos só no ambiente:** `N8N_WEBHOOK_URL` e `N8N_WEBHOOK_TOKEN` vêm de
+  `config.py`; o JSON do workflow versionado não carrega credencial alguma (elas
+  entram por referência de *nome* dentro do n8n).
+- Instruções de reprodução no `README.md` da raiz (exigência literal do §4.9); o
+  detalhe do fluxo e as evidências ficam em `docs/low-code/README.md`.
+
 ## Robustez em tool-calling
 
 Estas regras nasceram com o `llama-3.1-8b-instant` (modelo pequeno e frágil,
@@ -404,8 +465,9 @@ mini-projeto-ItinerAI/
 │   │   ├── memory.py       # memória persistente da última viagem em SQLite (retomada)
 │   │   ├── logging_config.py  # bootstrap do logging estruturado em JSON + run_id (T04/#15)
 │   │   ├── audit.py        # trilha de auditoria + latência por passo em SQLite (T05/#16)
+│   │   ├── notifications.py   # cliente do webhook do n8n: roteiro por e-mail (T14/#25)
 │   │   ├── prompts.py      # prompts do agente e das extrações
-│   │   ├── nodes.py        # funções de nó do grafo (validação, persistência, LLM, tools, fan-out da busca)
+│   │   ├── nodes.py        # funções de nó do grafo (validação, persistência, LLM, tools, fan-out da busca, notificação)
 │   │   └── state.py        # definição do estado do grafo (modelos pydantic)
 │   ├── __init__.py
 │   └── agent.py            # construção/compilação do StateGraph
@@ -413,7 +475,8 @@ mini-projeto-ItinerAI/
 │   ├── conftest.py         # GROQ_API_KEY fake + isolamento de disco
 │   └── utils/              # espelha itinerai_agent/utils/
 ├── docs/
-│   └── application-structure.md
+│   ├── application-structure.md
+│   └── low-code/           # workflow do n8n + payload de exemplo + evidências (T13/#24, T14/#25)
 ├── output/                 # itinerários .md gerados pelo agente (não versionado)
 ├── logs/                   # logs estruturados em JSON (itinerai.log; não versionado)
 ├── main.py                 # ponto de entrada: loop de chat via terminal
@@ -431,7 +494,9 @@ mini-projeto-ItinerAI/
   `my_agent` da documentação do LangGraph.
 - `state.py` define o estado do grafo (`AgentState`) com `pydantic.BaseModel`:
   `messages`, `run_id`, `destination`, `num_days`, `tourist_attractions`,
-  `itinerary`, `pending_search` e `page_results`. O `run_id` (T04/#15) é gerado
+  `itinerary`, `pending_search`, `page_results`, `recipient_email` e
+  `notification` (estes dois últimos da T14/#25 — ver "Integração low-code
+  (n8n)"). O `run_id` (T04/#15) é gerado
   por turno em `main.py` e propagado para correlacionar os logs estruturados e a
   trilha de auditoria — ver "Observabilidade / logging" e "Trilha de auditoria".
   A duração (`num_days`) fica no estado —
@@ -459,6 +524,10 @@ mini-projeto-ItinerAI/
 - `memory.py` concentra a memória persistente em SQLite (funções puras
   `init_db`/`save_trip_memory`/`load_trip_memory` + o modelo `TripMemory`) —
   ver "Memória persistente" acima.
+- `notifications.py` concentra o cliente do webhook do n8n (o payload
+  `ItineraryNotification`, o desfecho `NotificationResult`, `mask_email` e
+  `send_itinerary`, com timeout/retry/fallback próprios) — ver "Integração
+  low-code (n8n)" acima. `docs/low-code/` guarda o workflow e as evidências.
 - `audit.py` concentra a trilha de auditoria em SQLite (funções puras
   `init_db`/`record_audit_step`/`load_audit_trail`/`format_audit_trail` + o
   wrapper best-effort `try_record` + o modelo `AuditStep`) — ver "Trilha de
@@ -488,6 +557,12 @@ mini-projeto-ItinerAI/
     cai para `INFO`. Ver "Observabilidade / logging". T04/#15.
   - `LOG_TO_STDERR` (padrão desligado) — quando ligado (`1`/`true`/`yes`/`on`),
     espelha os logs no stderr além do arquivo, para depuração.
+  - `N8N_WEBHOOK_URL` (padrão vazio) — URL de produção do webhook do n8n que
+    envia o roteiro por e-mail. **Vazia desliga a integração** (degradação
+    silenciosa, sem nenhuma chamada externa). T14/#25.
+  - `N8N_WEBHOOK_TOKEN` (padrão vazio) — valor do header `X-ItinerAI-Token`,
+    igual ao da credencial *Header Auth* criada no n8n. Nunca versionado.
+  - `N8N_TIMEOUT` (segundos; padrão `10`) — timeout da chamada ao webhook.
 - `.env`, `output/`, `logs/`, `.ruff_cache/` e os bancos `itinerai_memory.db` /
   `itinerai_audit.db` devem estar no `.gitignore`.
 - A memória persistente, a trilha de auditoria e o logging estruturado usam só a

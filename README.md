@@ -22,6 +22,7 @@ gera um arquivo `.md` pronto para você levar na mala.
 - [Observabilidade](#observabilidade)
 - [Como executar](#como-executar)
 - [Testes](#testes)
+- [Automação low-code (n8n)](#automação-low-code-n8n)
 - [Exemplo de entrada e saída](#exemplo-de-entrada-e-saída)
 - [Principais decisões tomadas](#principais-decisões-tomadas)
 - [Limitações da solução](#limitações-da-solução)
@@ -85,10 +86,14 @@ ferramentas até formular a resposta final, e a busca da Wikipédia roda como um
 ```
                      START
                        │
-                       ▼
-               ┌─────────────────┐
-               │  validate_input │  regex: anti-injeção, idioma, URL (sem LLM)
-               └─────────────────┘
+                  route_entry
+                 ┌─────┴──────────────────┐
+        (envio aprovado)              (turno normal)
+                 ▼                          ▼
+      ┌────────────────────┐        ┌─────────────────┐
+      │  notify_recipient  │        │  validate_input │  regex: anti-injeção,
+      │  POST no n8n → END │        └─────────────────┘  idioma, URL (sem LLM)
+      └────────────────────┘
                        │
               route_after_validation
                  ┌─────┴─────┐
@@ -136,7 +141,11 @@ por turno e correlaciona os logs estruturados **e** a trilha de auditoria (ver
 
 Os nós ficam em `itinerai_agent/utils/nodes.py`:
 
-- **`validate_input`** — nó de entrada; valida a última mensagem do usuário.
+- **`route_entry`** — aresta condicional na entrada: manda para
+  `notify_recipient` quando o usuário já aprovou o envio por e-mail e informou o
+  endereço; caso contrário, segue o caminho normal por `validate_input`.
+- **`validate_input`** — porta de entrada do turno normal; valida a última
+  mensagem do usuário.
 - **`persist_memory`** — salva o que já se sabe da viagem, antes das buscas.
 - **`call_llm`** — chama o LLM com as ferramentas vinculadas; também recupera
   chamadas de ferramenta que o modelo eventualmente "vaza" como texto.
@@ -152,6 +161,9 @@ Os nós ficam em `itinerai_agent/utils/nodes.py`:
 - **`merge_pages`** — fan-in determinístico (sem LLM): escolhe a página que
   rendeu atrações, priorizando `Tourism in <destino>`, e devolve o resultado
   da busca ao LLM.
+- **`notify_recipient`** — envia o roteiro ao webhook do n8n (sem LLM) e encerra
+  o turno com a confirmação. Só é alcançado após a aprovação explícita do
+  usuário — ver [Automação low-code (n8n)](#automação-low-code-n8n).
 
 ## Ferramentas do agente
 
@@ -292,13 +304,20 @@ turno. Auditar é best-effort: uma falha ao gravar nunca derruba um turno.
    GROQ_TEMPERATURE=0.7             # temperatura do agente (0 = determinístico)
    WIKIPEDIA_TIMEOUT=10             # timeout (s) das requisições à Wikipédia
    LOG_LEVEL=INFO                   # nível dos logs estruturados em logs/
+
+   # Envio do roteiro por e-mail via n8n — ver "Automação low-code (n8n)".
+   # Sem N8N_WEBHOOK_URL, nenhuma chamada externa é feita.
+   N8N_WEBHOOK_URL=                 # URL de produção do webhook do n8n
+   N8N_WEBHOOK_TOKEN=               # valor do header X-ItinerAI-Token
+   N8N_TIMEOUT=10                   # timeout (s) da chamada ao webhook
    ```
 
    > O `.env` está no `.gitignore` e **nunca** deve ser versionado. O
    > `.env.example` traz apenas os nomes das variáveis, sem valores sensíveis.
    > Só a `GROQ_API_KEY` é obrigatória; `GROQ_MODEL`, `GROQ_TEMPERATURE`,
-   > `WIKIPEDIA_TIMEOUT` e `LOG_LEVEL` são lidos em
-   > `itinerai_agent/utils/config.py` e caem nos padrões acima quando ausentes.
+   > `WIKIPEDIA_TIMEOUT`, `LOG_LEVEL`, `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_TOKEN` e
+   > `N8N_TIMEOUT` são lidos em `itinerai_agent/utils/config.py` e caem nos
+   > padrões acima quando ausentes.
 
 5. **Rode o agente:**
 
@@ -337,6 +356,47 @@ jobs paralelos:
 
 O relatório de cobertura (`coverage.xml` + HTML) é publicado como artefato do
 workflow. O pipeline roda sem `GROQ_API_KEY` real e sem acesso à rede.
+
+## Automação low-code (n8n)
+
+Depois de gerar o roteiro, o ItinerAI pergunta se você quer recebê-lo por
+e-mail. O envio é feito por um fluxo no **n8n**, acionado por webhook — a
+automação low-code exigida pelo §4.9.
+
+**Nada é enviado sem aprovação explícita.** A pergunta (s/n) e a validação do
+endereço são determinísticas, feitas no terminal e sem passar pelo LLM: um envio
+para um serviço externo é irreversível, então exige um "sim" do usuário. Sem
+`N8N_WEBHOOK_URL` configurada, nenhuma chamada externa acontece e o roteiro
+continua disponível em `output/`.
+
+**A lógica principal fica na aplicação.** O n8n não monta roteiro, não decide
+nada e não conhece a Wikipédia: ele recebe um payload pronto e despacha o
+e-mail. Busca, agrupamento por proximidade, montagem do `.md`, aprovação,
+validação, retry, logs e auditoria são todos do agente.
+
+### Reproduzir o fluxo
+
+1. **Importe o workflow** [`docs/low-code/n8n-workflow.json`](docs/low-code/n8n-workflow.json)
+   no seu n8n (*Workflows → ⋯ → Import from File*). O arquivo não contém
+   credenciais.
+2. **Crie as duas credenciais** com exatamente estes nomes, para o workflow
+   importado casar com elas sozinho:
+   - *Header Auth* → **`ItinerAI Webhook Token`** — Name: `X-ItinerAI-Token`,
+     Value: um token aleatório à sua escolha.
+   - *SMTP* → **`ItinerAI SMTP`** — host, porta, usuário e senha do seu provedor
+     (no Gmail: `smtp.gmail.com`, porta 465, SSL ligado e uma **senha de app**).
+3. **Ajuste o remetente:** no nó `Enviar email`, troque o `fromEmail`
+   (`itinerai@example.com`) pelo endereço autenticado na credencial SMTP.
+4. **Ative o workflow** e copie a *Production URL* do nó `Webhook`.
+5. **Aponte a aplicação para ele** no `.env`:
+
+   ```dotenv
+   N8N_WEBHOOK_URL=https://<sua-instancia>/webhook/itinerai-email
+   N8N_WEBHOOK_TOKEN=<o mesmo token da credencial Header Auth>
+   ```
+
+Detalhes do fluxo, dos nós e as evidências de execução estão em
+[`docs/low-code/README.md`](docs/low-code/README.md).
 
 ## Exemplo de entrada e saída
 
@@ -446,12 +506,14 @@ mini-projeto-ItinerAI/
 │   │   ├── memory.py       # memória persistente da última viagem (SQLite)
 │   │   ├── logging_config.py  # logging estruturado em JSON + run_id (T04/#15)
 │   │   ├── audit.py        # trilha de auditoria + latência por passo (SQLite, T05/#16)
+│   │   ├── notifications.py   # cliente do webhook do n8n: roteiro por e-mail (T14/#25)
 │   │   ├── prompts.py      # prompts do agente e das extrações
-│   │   ├── nodes.py        # nós do grafo (validação, memória, LLM, tools)
+│   │   ├── nodes.py        # nós do grafo (validação, memória, LLM, tools, notificação)
 │   │   └── state.py        # estado do grafo (modelos pydantic)
 │   └── agent.py            # construção/compilação do StateGraph
 ├── tests/                  # suíte de testes unitários (pytest) — T07/#18
 ├── docs/                   # requisitos, prompts e apresentação
+│   └── low-code/           # workflow do n8n + evidências (T13/#24, T14/#25)
 ├── output/                 # itinerários .md gerados (não versionado)
 ├── logs/                   # logs estruturados em JSON (não versionado)
 ├── main.py                 # ponto de entrada: loop de chat no terminal
