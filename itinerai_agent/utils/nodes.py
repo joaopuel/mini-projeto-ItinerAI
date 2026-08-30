@@ -12,6 +12,7 @@ from langchain_core.messages import (
 from langchain_groq import ChatGroq
 from langgraph.graph import END
 
+from itinerai_agent.utils.config import GROQ_MODEL, GROQ_TEMPERATURE
 from itinerai_agent.utils.memory import TripMemory, save_trip_memory
 from itinerai_agent.utils.prompts import AGENT_SYSTEM_PROMPT
 from itinerai_agent.utils.state import AgentState, PendingSearch
@@ -29,7 +30,7 @@ _TOOLS = [
 ]
 _TOOLS_BY_NAME = {tool.__name__: tool for tool in _TOOLS}
 
-_llm = ChatGroq(model="openai/gpt-oss-120b")
+_llm = ChatGroq(model=GROQ_MODEL, temperature=GROQ_TEMPERATURE)
 _llm_with_tools = _llm.bind_tools(_TOOLS)
 
 # Modelos menores às vezes "vazam" as tool calls no formato nativo do Llama

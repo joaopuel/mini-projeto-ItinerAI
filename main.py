@@ -5,7 +5,8 @@ sys.stdout.reconfigure(encoding="utf-8")  # evita mojibake de acentos no console
 from dotenv import load_dotenv
 
 load_dotenv()  # precisa rodar antes de importar itinerai_agent.agent, pois
-# nodes.py instancia ChatGroq() no import e precisa da env var já carregada
+# utils/config.py e nodes.py/tools.py leem GROQ_API_KEY / GROQ_MODEL /
+# GROQ_TEMPERATURE / WIKIPEDIA_TIMEOUT no import
 
 from langchain_core.messages import HumanMessage
 

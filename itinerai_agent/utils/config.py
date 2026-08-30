@@ -1,0 +1,22 @@
+"""Configuração do ItinerAI lida de variáveis de ambiente.
+
+Lida no import — depende de `load_dotenv()` (`main.py`), ou do `"env"` do
+`langgraph.json`, ter populado o ambiente antes. Os valores padrão preservam o
+comportamento anterior à externalização, então rodar sem `.env` (além da
+`GROQ_API_KEY`) não muda nada.
+"""
+
+import os
+
+# --- LLM (Groq) — T03/#14 ---
+# Nome do modelo, usado tanto pelo agente (`_llm` em nodes.py) quanto pela
+# extração (`_extraction_llm` em tools.py).
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+# Temperatura do LLM do agente. 0.7 é o default da langchain-groq (valor efetivo
+# antes da externalização); use 0 para respostas mais determinísticas. O LLM de
+# extração usa `temperature=0` fixo, à parte desta variável.
+GROQ_TEMPERATURE = float(os.getenv("GROQ_TEMPERATURE", "0.7"))
+
+# --- Integrações externas (Wikipédia) — T02/#13 ---
+# Timeout (em segundos) das requisições HTTP à Wikipédia.
+WIKIPEDIA_TIMEOUT = float(os.getenv("WIKIPEDIA_TIMEOUT", "10"))

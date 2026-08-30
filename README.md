@@ -64,7 +64,7 @@ resultados — mantendo o contexto da conversa em um estado compartilhado.
 | **Python 3.12.9** | Linguagem base |
 | **LangGraph** | Orquestração do agente como grafo de estados (`StateGraph`) |
 | **pydantic** | Estado do grafo e todos os modelos de dados |
-| **Groq** — `openai/gpt-oss-120b` | LLM do agente e da extração (via `langchain-groq`) |
+| **Groq** — `openai/gpt-oss-120b` | LLM do agente e da extração (via `langchain-groq`; modelo configurável por `GROQ_MODEL`) |
 | **requests + beautifulsoup4** | Busca e parsing das páginas da Wikipédia |
 | **sqlite3** (stdlib) | Memória persistente da última viagem |
 
@@ -251,13 +251,17 @@ para o agente refazer a busca e o roteiro sem o usuário redigitar nada.
    ```dotenv
    GROQ_API_KEY=coloque_sua_chave_aqui
 
-   # Opcional — timeout (s) das requisições à Wikipédia. Padrão: 10
-   WIKIPEDIA_TIMEOUT=10
+   # Opcionais — sem eles, os padrões abaixo são usados:
+   GROQ_MODEL=openai/gpt-oss-120b   # modelo do agente e da extração
+   GROQ_TEMPERATURE=0.7             # temperatura do agente (0 = determinístico)
+   WIKIPEDIA_TIMEOUT=10             # timeout (s) das requisições à Wikipédia
    ```
 
    > O `.env` está no `.gitignore` e **nunca** deve ser versionado. O
    > `.env.example` traz apenas os nomes das variáveis, sem valores sensíveis.
-   > `WIKIPEDIA_TIMEOUT` é opcional; sem ele o padrão de 10s é usado.
+   > Só a `GROQ_API_KEY` é obrigatória; `GROQ_MODEL`, `GROQ_TEMPERATURE` e
+   > `WIKIPEDIA_TIMEOUT` são lidos em `itinerai_agent/utils/config.py` e caem
+   > nos padrões acima quando ausentes.
 
 5. **Rode o agente:**
 
