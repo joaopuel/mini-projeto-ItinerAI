@@ -19,6 +19,7 @@ gera um arquivo `.md` pronto para você levar na mala.
 - [Memória persistente](#memória-persistente)
 - [Observabilidade](#observabilidade)
 - [Como executar](#como-executar)
+- [Testes](#testes)
 - [Exemplo de entrada e saída](#exemplo-de-entrada-e-saída)
 - [Principais decisões tomadas](#principais-decisões-tomadas)
 - [Limitações da solução](#limitações-da-solução)
@@ -270,6 +271,9 @@ turno. Auditar é best-effort: uma falha ao gravar nunca derruba um turno.
    pip install -r requirements.txt
    ```
 
+   Para rodar os testes, instale também `pip install -r requirements-dev.txt`
+   (ver [Testes](#testes)).
+
 4. **Configure a chave da Groq.** Copie o arquivo de exemplo e preencha o valor:
 
    ```bash
@@ -302,6 +306,20 @@ turno. Auditar é best-effort: uma falha ao gravar nunca derruba um turno.
 
    Converse pelo terminal e digite `sair` para encerrar. Os itinerários gerados
    ficam na pasta `output/`.
+
+### Testes
+
+O projeto tem uma suíte de testes unitários com `pytest` e **cobertura mínima de
+70%** verificada automaticamente. Nenhum teste acessa a rede ou exige a
+`GROQ_API_KEY`.
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+O relatório de cobertura (`term-missing`) é impresso ao final; o `pytest` sai com
+erro se a cobertura ficar abaixo de 70%.
 
 ## Exemplo de entrada e saída
 
@@ -413,13 +431,16 @@ mini-projeto-ItinerAI/
 │   │   ├── nodes.py        # nós do grafo (validação, memória, LLM, tools)
 │   │   └── state.py        # estado do grafo (modelos pydantic)
 │   └── agent.py            # construção/compilação do StateGraph
+├── tests/                  # suíte de testes unitários (pytest) — T07/#18
 ├── docs/                   # requisitos, prompts e apresentação
 ├── output/                 # itinerários .md gerados (não versionado)
 ├── logs/                   # logs estruturados em JSON (não versionado)
 ├── main.py                 # ponto de entrada: loop de chat no terminal
 ├── show_audit.py           # exibe a trilha de auditoria de um run_id
 ├── .env.example            # modelo das variáveis de ambiente (sem valores)
+├── pyproject.toml          # config de pytest + cobertura
 ├── requirements.txt        # dependências do projeto
+├── requirements-dev.txt    # dependências de teste
 └── langgraph.json          # configuração do LangGraph
 ```
 

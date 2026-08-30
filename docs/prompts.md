@@ -814,3 +814,16 @@ Adicione apenas prompts relevantes, ou seja, que não contenham perguntas e que
 sejam solicitações de implementação/modificação. Faça commit de todas as
 modificações, abra o PR e mova a task para review.
 ```
+
+---
+
+## Planejamento e implementação da suíte de testes unitários (issue #18)
+
+* Data: 2026-08-30 01:30
+* Autor: joaopuel
+* Tipo: Instrução direta
+
+### Prompt original
+```
+Inicie o planagemento da issue https://github.com/joaopuel/mini-projeto-ItinerAI/issues/18. A modificação no hook pode manter junto as modificações dessa nova issue.
+```
