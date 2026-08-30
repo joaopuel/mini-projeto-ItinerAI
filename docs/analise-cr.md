@@ -394,19 +394,26 @@ Atualizado em 2026-08-30, após os commits `86f2ece` (correções), `4563ec3`
 [run 33338449639](https://github.com/joaopuel/mini-projeto-ItinerAI/actions/runs/33338449639)
 do CI **verde nos três jobs** e a credencial do n8n rotacionada.
 
-| ID | Sev. | Situação | Commit |
-| --- | --- | --- | --- |
-| **C1** | 🔴 | **Fechado.** `config.py` voltou a ler do ambiente **e a credencial foi rotacionada no n8n** — o valor que ficou no histórico é hoje um token morto. | `86f2ece` + rotação |
-| **A1** | 🟠 | **Fora do escopo da entrega final.** Mapeado para uma versão futura da aplicação — o CI não será mais alterado. | — |
-| **A2** | 🟠 | **Fechado e verificado no CI.** 238 testes passando; `notifications.py` saiu de 44% para **100%**. | `4563ec3` |
-| **M1** | 🟡 | Corrigido — POST com tentativa única; regressão travada por `test_timeout_does_not_retry`. | `86f2ece` |
-| **M2** | 🟡 | Corrigido — docstring ajustado ao comportamento real **e** captura ampla na fronteira de `notify_recipient`. | `86f2ece` |
-| **M3** | 🟡 | Corrigido — `_record_offer_outcome` emite log e auditoria para `declined`, `cancelled` e `invalid_email`. | `86f2ece` |
-| **M4** | 🟡 | Corrigido — o comentário registra que a aplicação é a mais estrita das duas pontas. | `86f2ece` |
-| **B1** | 🔵 | Resolvido — pasta renomeada para `docs/evidencias/`, com a exceção registrada no `CLAUDE.md`. | `3f39737` |
-| **B2** | 🔵 | Corrigido — desfecho `cancelled` distinto de `invalid_email`. | `86f2ece` |
-| **B3** | 🔵 | Não corrigido, por decisão registrada (custo supera o benefício). | — |
-| **B4** | 🔵 | Não corrigido, por decisão registrada (custo supera o benefício). | — |
+### Decisão por achado
+
+**Aceito** = corrigido nesta entrega · **Recusado** = não será corrigido, com o
+motivo registrado · **Adiado** = achado válido, endereçado numa versão futura.
+
+| ID | Sev. | Decisão | Justificativa e situação | Commit |
+| --- | --- | --- | --- | --- |
+| **C1** | 🔴 | **Aceito** | Exposição de credencial real em repositório público — não havia alternativa a corrigir. Fechado por duas frentes: `config.py` voltou a ler do ambiente **e** a credencial foi rotacionada no n8n. O valor que restou no histórico é hoje um token morto. | `86f2ece` + rotação |
+| **A1** | 🟠 | **Adiado** | Achado válido e causa-raiz do C1, mas o CI não será mais alterado: a entrega final fica restrita ao backlog. Mapeado para uma versão futura, com o risco residual assumido por escrito abaixo. | — |
+| **A2** | 🟠 | **Aceito** | Era o único módulo do projeto com chamada de rede autenticada e sem nenhum teste. Suíte escrita e **verificada no CI**: 238 testes, `notifications.py` de 44% para 100%. | `4563ec3` |
+| **M1** | 🟡 | **Aceito** | O retry sobre um POST não idempotente podia entregar até três cópias do mesmo e-mail. Corrigido para tentativa única, com a regressão travada por `test_timeout_does_not_retry`. | `86f2ece` |
+| **M2** | 🟡 | **Aceito** | O docstring prometia mais do que o `except` entregava, contrariando o critério de aceitação da #23. Corrigido nas duas pontas: docstring ajustado ao real e captura ampla na fronteira do nó. | `86f2ece` |
+| **M3** | 🟡 | **Aceito** | A recusa do usuário é a evidência do limite de autonomia do §4.5 e não deixava rastro algum. Correção pequena, valor probatório alto. | `86f2ece` |
+| **M4** | 🟡 | **Aceito** | A afirmação de paridade entre os dois regex foi verificada e é falsa. Corrigida a documentação; os padrões **não** foram igualados, para não exigir reimportação do workflow na conta do autor. | `86f2ece` |
+| **B1** | 🔵 | **Aceito** | Divergência real de nomenclatura. Resolvido **ao contrário do que a revisão sugeria**: prevaleceu o nome do backlog (`docs/evidencias/`), que é o que o avaliador procura, com a exceção registrada no `CLAUDE.md`. | `3f39737` |
+| **B2** | 🔵 | **Aceito** | Ctrl+C na coleta do e-mail era registrado como "endereço malformado". Passa a ter o desfecho `cancelled`, distinto. | `86f2ece` |
+| **B3** | 🔵 | **Recusado** | Corrigir as duas `AIMessage` consecutivas exigiria injetar uma mensagem sintética no histórico — que suja mais a conversa do que a sequência que pretende arrumar. Nenhum sintoma observado, e a API tolera. | — |
+| **B4** | 🔵 | **Recusado** | Não decorar `route_entry` quebraria a consistência com `route_after_validation` e `route_after_llm`, criando uma exceção que alguém teria de explicar depois. O custo supera o de uma linha de log por turno. | — |
+
+**Placar: 8 aceitos · 2 recusados · 1 adiado**, sobre os 11 achados da revisão.
 
 ---
 
@@ -477,9 +484,10 @@ gatilho para o A1 sair da versão futura e virar prioridade.
 
 ### Veredito
 
-**Liberado para merge.** Nove dos onze achados corrigidos; um fora do escopo por
-decisão registrada, com o risco residual assumido acima (A1); dois não corrigidos
-por custo superior ao benefício (B3, B4), com o raciocínio neste documento.
+**Liberado para merge.** Dos onze achados: **oito aceitos e corrigidos**, **um
+adiado** para uma versão futura com o risco residual assumido acima (A1) e **dois
+recusados** por custo superior ao benefício (B3, B4), com o raciocínio registrado
+na tabela de decisões.
 
 ---
 
