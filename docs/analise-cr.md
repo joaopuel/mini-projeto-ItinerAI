@@ -24,25 +24,46 @@ variáveis de ambiente, documentação e a análise de logs do CI.
 
 ---
 
-## Resumo dos achados
+## Critério de severidade
 
-| ID | Severidade | Achado | Decisão |
-| --- | --- | --- | --- |
-| **C1** | 🔴 Crítico | Token do webhook hardcoded em `config.py` | Aceito — correção pendente |
-| **A1** | 🟠 Alto | Pipeline não tem varredura de segredos | Aceito, adiado |
-| **A2** | 🟠 Alto | Módulo de integração externa sem nenhum teste | Adiado (deliberado) |
-| **M1** | 🟡 Médio | Retry sobre POST não-idempotente pode duplicar e-mail | Aceito, adiado |
-| **M2** | 🟡 Médio | Contrato "nunca levanta" mais estreito que o documentado | Aceito |
-| **M3** | 🟡 Médio | Recusa e e-mail inválido não deixam rastro na auditoria | Aceito |
-| **M4** | 🟡 Médio | Documentação afirma paridade de regex que não existe | Aceito |
-| **B1** | 🔵 Baixo | `docs/evidences` diverge do `docs/evidencias` do backlog | Aceito |
-| **B2** | 🔵 Baixo | Ctrl+C na coleta do e-mail é registrado como `invalid_email` | Adiado |
-| **B3** | 🔵 Baixo | Duas `AIMessage` consecutivas no histórico | **Recusado** |
-| **B4** | 🔵 Baixo | `route_entry` emite log de roteamento em todo turno | **Recusado** |
+| Severidade | Significado | Efeito sobre a entrega |
+| --- | --- | --- |
+| 🔴 **Crítico** | Exposição de credencial, perda de dado ou falha de segurança explorável | **Bloqueante** |
+| 🟠 Alto | Defeito provável ou lacuna estrutural de garantia | Exige tarefa registrada antes da entrega final |
+| 🟡 Médio | Defeito latente, contradição entre código e documentação, ou lacuna de rastreabilidade | Entra no backlog com prazo |
+| 🔵 Baixo | Cosmético, organizacional ou sem impacto observável | Oportunístico |
+
+**Achados críticos são bloqueantes: o PR não deve ser mesclado enquanto houver um
+🔴 em aberto.** O regime é o mesmo dos gates do CI — assim como o job `test`
+reprova quando a cobertura do código novo cai abaixo de 70%, um achado crítico
+reprova a revisão. A diferença é que o gate do CI é automático e este é humano, o
+que torna o bloqueio uma decisão explícita em vez de um efeito colateral.
+
+Vale registrar que, nesta revisão, **o achado bloqueante não foi detectado por
+nenhum gate automático** (ver A1): `lint` e `build` ficaram verdes. O bloqueio
+depende inteiramente da revisão humana.
 
 ---
 
-## 🔴 C1 — Token do webhook hardcoded em `config.py`
+## Resumo dos achados
+
+| ID | Severidade | Achado |
+| --- | --- | --- |
+| **C1** | 🔴 Crítico | Token do webhook hardcoded em `config.py` |
+| **A1** | 🟠 Alto | Pipeline não tem varredura de segredos |
+| **A2** | 🟠 Alto | Módulo de integração externa sem nenhum teste |
+| **M1** | 🟡 Médio | Retry sobre POST não-idempotente pode duplicar e-mail |
+| **M2** | 🟡 Médio | Contrato "nunca levanta" mais estreito que o documentado |
+| **M3** | 🟡 Médio | Recusa e e-mail inválido não deixam rastro na auditoria |
+| **M4** | 🟡 Médio | Documentação afirma paridade de regex que não existe |
+| **B1** | 🔵 Baixo | Nome da pasta de evidências divergia do backlog |
+| **B2** | 🔵 Baixo | Ctrl+C na coleta do e-mail é registrado como `invalid_email` |
+| **B3** | 🔵 Baixo | Duas `AIMessage` consecutivas no histórico |
+| **B4** | 🔵 Baixo | `route_entry` emite log de roteamento em todo turno |
+
+---
+
+## 🔴 C1 — Token do webhook hardcoded em `config.py` · **BLOQUEANTE**
 
 **Arquivo:** `itinerai_agent/utils/config.py:31` · **Commits:** `025c998`, `53c706a`
 
@@ -84,18 +105,13 @@ CR"* — a falha foi **plantada deliberadamente** para este exercício. Isso exp
 a origem, mas **não neutraliza a exposição**: o token é real e o histórico é
 público.
 
-### Decisão: aceito — correção pendente de confirmação
-
-A correção é reverter a linha para `os.getenv`. Não a apliquei
-unilateralmente porque a introdução foi deliberada e cabe ao autor decidir quando
-o artefato do exercício deixa de ser necessário.
+### Correção
 
 ```python
-# Correção proposta
 N8N_WEBHOOK_TOKEN = os.getenv("N8N_WEBHOOK_TOKEN", "").strip()
 ```
 
-### ⚠️ Ação urgente, independente da correção
+### ⚠️ Ação urgente, independente da correção do código
 
 **Rotacionar o token na credencial `ItinerAI Webhook Token` do n8n.** Remover a
 linha num commit futuro **não apaga o valor do histórico do git** — ele
@@ -129,10 +145,10 @@ O projeto inteiro se apoia na premissa "segredo só no ambiente" — `GROQ_API_K
 `N8N_WEBHOOK_TOKEN`, credencial SMTP. Sem gate automatizado, essa premissa é
 sustentada apenas por disciplina, e o C1 é a prova de que a disciplina falha.
 
-### Decisão: aceito, adiado
+### Correção
 
-Proposta: um passo `gitleaks` no job `lint`, bloqueante. Entrega própria, fora do
-escopo desta PR.
+Um passo `gitleaks` no job `lint`, bloqueante. É a causa-raiz do C1: sem ele,
+nada impede a próxima credencial de entrar pelo mesmo caminho.
 
 ---
 
@@ -143,7 +159,7 @@ escopo desta PR.
 Todo o caminho de erro está descoberto: o laço de retry, o backoff, o fallback
 para `status="failed"`, a degradação por ausência de configuração e o
 mascaramento do e-mail. Evidência em
-[`evidences/ci-run-33333506048-diff-cover.md`](evidences/ci-run-33333506048-diff-cover.md).
+[`evidencias/ci-run-33333506048-diff-cover.md`](evidencias/ci-run-33333506048-diff-cover.md).
 
 ### Impacto no domínio
 
@@ -151,11 +167,12 @@ mascaramento do e-mail. Evidência em
 dado pessoal do usuário. É, por definição, o trecho onde um teste vale mais — e é
 o único módulo sem nenhum.
 
-### Decisão: adiado, deliberadamente
+### Contexto
 
-A reprovação do gate de cobertura é a evidência que sustenta
-[`analise-ci.md`](analise-ci.md). Escrever os testes agora destruiria esse
-artefato. Merece tarefa própria assim que a evidência estiver consolidada.
+A ausência de testes foi imposta como restrição da T14, para que a reprovação do
+gate de cobertura servisse de evidência em [`analise-ci.md`](analise-ci.md).
+Escrever os testes agora destruiria esse artefato. A lacuna, porém, é real e
+permanece.
 
 ---
 
@@ -180,13 +197,15 @@ automaticamente até três vezes.
 O `run_id` já viaja no payload e serviria de chave de idempotência, mas o
 workflow do n8n não o utiliza para deduplicar.
 
-### Decisão: aceito, adiado
+### Correção
 
-Duas correções possíveis, ambas fora do escopo desta PR:
-1. Nó de deduplicação por `run_id` no workflow do n8n (preserva o retry);
-2. Não repetir em POST — uma única tentativa, e falha vira `status="failed"`.
+Duas opções:
 
-A opção 1 é preferível: mantém a resiliência a falha real de rede.
+1. **Nó de deduplicação por `run_id` no workflow do n8n** — preserva a
+   resiliência a falha real de rede. Preferível.
+2. **Não repetir em POST** — uma única tentativa, e a falha vira
+   `status="failed"`. Mais simples, mas perde a tolerância a instabilidade
+   transitória.
 
 ---
 
@@ -207,17 +226,17 @@ integração não derruba a aplicação"*.
 **impacto alto** (crash do processo, com o roteiro já gerado em `output/` mas a
 sessão perdida).
 
-### Decisão: aceito
+### Correção
 
-Recomendação **não** é trocar por `except Exception` — isso violaria a regra do
-`CLAUDE.md` ("Exceções específicas, não `except Exception`; falha alto em bug,
-degrada em rede"). Duas alternativas compatíveis com essa regra:
+Trocar por `except Exception` **não** serve: violaria a regra do `CLAUDE.md`
+("Exceções específicas, não `except Exception`; falha alto em bug, degrada em
+rede"). Duas alternativas compatíveis com essa regra:
 
-1. Estreitar a docstring para "nunca levanta **em falha de rede ou de
-   configuração**" — documenta o comportamento real, mantendo bug como bug;
-2. Se a garantia de não-crash for requisito firme, capturar de forma ampla apenas
-   na fronteira do nó (`notify_recipient`), onde a decisão é de produto e não de
-   biblioteca.
+1. **Estreitar a docstring** para "nunca levanta em falha de rede ou de
+   configuração" — documenta o comportamento real e mantém bug como bug;
+2. **Capturar de forma ampla apenas na fronteira do nó** (`notify_recipient`), se
+   a garantia de não-crash for requisito firme — ali a decisão é de produto, não
+   de biblioteca.
 
 ---
 
@@ -237,9 +256,9 @@ evento que se quer auditável: é a prova de que o agente perguntou, o humano di
 não e nada foi enviado. Hoje a trilha registra apenas os envios; a ausência de
 registro é indistinguível de "nunca perguntou".
 
-### Decisão: aceito
+### Correção
 
-Proposta: emitir em `_offer_email` um `logger.info("notification_declined")` /
+Emitir em `_offer_email` um `logger.info("notification_declined")` /
 `("notification_invalid_email")` e a linha de auditoria correspondente, com o
 `run_id` do turno anterior. Correção pequena e de alto valor probatório.
 
@@ -281,7 +300,7 @@ inalcançável pelo fluxo normal.
 mexer num lado supondo que o outro acompanha. Se um dia o webhook passar a ser
 chamado por outro cliente, a diferença deixa de ser teórica.
 
-### Decisão: aceito
+### Correção
 
 Corrigir a afirmação — a aplicação é *mais estrita* que o workflow, e é isso que
 garante a segurança do fluxo — ou igualar literalmente os dois padrões.
@@ -290,31 +309,43 @@ garante a segurança do fluxo — ou igualar literalmente os dois padrões.
 
 ## 🔵 Achados de baixa severidade
 
-### B1 — `docs/evidences` diverge do `docs/evidencias` do backlog — **aceito**
+### B1 — nome da pasta de evidências divergia do backlog
 
-O `tasks.md` planeja `docs/evidencias/` na T11 e na T16; foi criada
-`docs/evidences/`. A pasta em inglês é a que segue o `CLAUDE.md` ("nomes de
-pastas em inglês") — o desatualizado é o backlog. Risco real: as duas coexistirem
-e a evidência ficar espalhada. Alinhar o `tasks.md`.
+O `tasks.md` planeja `docs/evidencias/` na T11 e na T16, mas a pasta foi criada
+como `docs/evidences/`. Risco real: as duas coexistirem e a evidência ficar
+espalhada.
 
-### B2 — Ctrl+C na coleta do e-mail vira `invalid_email` — **adiado**
+**Correção:** a pasta foi renomeada para **`docs/evidencias/`**, o nome original
+da demanda, e os links das duas análises acompanharam. Prevaleceu o backlog —
+que é o documento que o avaliador segue — sobre a convenção de "pastas em inglês"
+do `CLAUDE.md`, que vale para o código-fonte. Vale registrar a exceção no
+`CLAUDE.md` para ninguém "corrigir" de volta.
+
+### B2 — Ctrl+C na coleta do e-mail vira `invalid_email`
 
 `_prompt_text` devolve `""` em `KeyboardInterrupt`, que reprova na validação e é
 registrado como `invalid_email`. Semanticamente é cancelamento, não endereço
 malformado. Polui levemente o desfecho auditado; sem impacto funcional.
 
-### B3 — Duas `AIMessage` consecutivas no histórico — **recusado**
+**Correção:** um desfecho `cancelled` distinto, ou tratar a interrupção antes da
+validação.
+
+### B3 — Duas `AIMessage` consecutivas no histórico
 
 O turno de notificação acrescenta uma `AIMessage` sem `HumanMessage` anterior. A
-API tolera, nenhum comportamento anômalo foi observado, e corrigir exigiria
-injetar uma mensagem sintética — que suja mais o histórico do que a sequência que
-pretende arrumar.
+API tolera e nenhum comportamento anômalo foi observado.
 
-### B4 — `route_entry` emite `routing_decision` em todo turno — **recusado**
+**Custo da correção:** exigiria injetar uma mensagem sintética no histórico — o
+que suja mais a conversa do que a sequência que pretende arrumar. O custo supera
+o benefício enquanto não houver sintoma observado.
 
-Uma linha de log a mais por turno, quase sempre com a mesma decisão. A
-alternativa seria não decorar o roteador, quebrando a consistência com
-`route_after_validation` e `route_after_llm` e criando uma exceção que alguém
+### B4 — `route_entry` emite `routing_decision` em todo turno
+
+Uma linha de log a mais por turno, quase sempre com a mesma decisão
+(`validate_input`).
+
+**Custo da correção:** não decorar o roteador quebraria a consistência com
+`route_after_validation` e `route_after_llm`, criando uma exceção que alguém
 teria de explicar depois. O custo de uma linha de log é menor que o da exceção.
 
 ---
@@ -326,7 +357,7 @@ domínio da aplicação**.
 
 | ID | Probabilidade | Impacto | Prioridade | Justificativa no domínio |
 | --- | --- | --- | --- | --- |
-| **C1** | **Certa** — já ocorreu | **Crítico** | **P0 — agora** | Credencial real exposta em repositório público. Permite relay de e-mail pela conta do autor. |
+| **C1** | **Certa** — já ocorreu | **Crítico** | **P0 — bloqueante** | Credencial real exposta em repositório público. Permite relay de e-mail pela conta do autor. |
 | **A1** | Alta | Alto | **P1** | Sem este gate, o C1 se repete. É a causa-raiz, não o sintoma. |
 | **M3** | Certa — ocorre em toda recusa | Médio | **P1** | Compromete a evidência do §4.5, que vale nota na avaliação. Correção pequena. |
 | **M1** | Média — depende de timeout real | Alto | **P2** | E-mail duplicado é visível ao usuário final e contradiz o desenho de "ação irreversível com aprovação". |
@@ -338,9 +369,13 @@ domínio da aplicação**.
 
 **Ordem de ataque recomendada:** C1 (com rotação do token) → A1 → M3 → M1 → A2.
 
-Observação sobre a ordem: **C1 e A1 andam juntos**. Corrigir apenas o C1 remove o
-sintoma e deixa a causa — nada impede a próxima credencial de entrar pelo mesmo
-caminho. A varredura de segredos é o que transforma a regra em garantia.
+Duas observações sobre a ordem:
+
+- **C1 é bloqueante** — enquanto estiver em aberto, os demais itens são
+  irrelevantes para a decisão de mesclar. Nenhum outro achado tem esse peso.
+- **C1 e A1 andam juntos.** Corrigir apenas o C1 remove o sintoma e deixa a
+  causa: nada impede a próxima credencial de entrar pelo mesmo caminho. A
+  varredura de segredos é o que transforma a regra em garantia.
 
 ---
 

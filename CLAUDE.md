@@ -370,9 +370,11 @@ design (não alterar sem alinhar):
   acontecem em `main.py` (`_offer_email`), **entre turnos** e sem passar pelo
   LLM. Nenhuma chamada externa ocorre sem um "s" e um endereço bem-formado. A
   validação de formato é `is_valid_email` em `validation.py` — regex
-  determinístico, no mesmo espírito do resto do módulo, com o **mesmo padrão**
-  usado pelo nó `Validar payload` do workflow, para os dois lados recusarem as
-  mesmas entradas.
+  determinístico, no mesmo espírito do resto do módulo. Ele é
+  **deliberadamente mais estrito** que o do nó `Validar payload` do workflow
+  (que aceita `a@b..c` e `a@b.c.`); como a aplicação valida **antes** e é o lado
+  restritivo, o n8n nunca recebe algo que ela recusaria. Os dois padrões **não
+  são idênticos** — ao mexer em um, não presuma que o outro acompanha.
 - **Por que a aprovação não mora num nó:** ela é `input()` de terminal, e um nó
   que bloqueia em I/O interativo deixaria de ser puro e testável. Daí o desenho:
   `main.py` grava `recipient_email` no estado e reinvoca o grafo; `route_entry`
@@ -385,20 +387,35 @@ design (não alterar sem alinhar):
   como `AIMessage` — que o `print` já existente em `_run_turn` exibe. Zera o
   `recipient_email` para não reenviar no turno seguinte.
 - **`AgentState.notification`** guarda o desfecho (`sent`, `declined`,
-  `invalid_email`, `not_configured`, `failed`) e é o que impede a pergunta de se
-  repetir a cada turno. `call_tools` o zera a cada novo `build_itinerary`, para
-  um roteiro novo reabrir a oferta.
-- **Resiliência no mesmo padrão da Wikipédia** (T02/#13): timeout configurável
-  (`N8N_TIMEOUT`), retry limitado (máx. 2 tentativas adicionais) com backoff
-  exponencial (0,5s → 1,0s), repetindo **só** em `Timeout`/`ConnectionError`.
-  Erro de status HTTP e esgotamento das tentativas viram
-  `NotificationResult(status="failed")` — **`send_itinerary` nunca levanta**, o
-  turno não cai e o `.md` segue em `output/`.
+  `cancelled`, `invalid_email`, `not_configured`, `failed`) e é o que impede a
+  pergunta de se repetir a cada turno. `call_tools` o zera a cada novo
+  `build_itinerary`, para um roteiro novo reabrir a oferta.
+- **Os desfechos que não passam pelo grafo também são auditados.** `declined`,
+  `cancelled` e `invalid_email` são decididos em `main.py`, fora do nó
+  instrumentado; `_record_offer_outcome` emite para cada um o log
+  `notification_<status>` e a linha de auditoria homônima (tipo `turn`), com o
+  `run_id` do turno que gerou o roteiro. Sem isso, "o usuário recusou" seria
+  indistinguível de "o agente nunca perguntou" — e é a recusa que evidencia o
+  limite de autonomia do §4.5.
+- **Timeout configurável (`N8N_TIMEOUT`), mas SEM retry.** Divergência
+  deliberada em relação a `_get_wikipedia` (T02/#13), que repete com backoff: um
+  GET da Wikipédia é idempotente, um POST que dispara e-mail **não é**. Um
+  `Timeout` do cliente não prova que o n8n deixou de processar — repetir mandaria
+  uma segunda cópia do roteiro. E repetir automaticamente uma ação que o §4.5
+  classifica como irreversível contradiz a própria exigência de aprovação humana.
+- **Onde cada camada degrada:** `send_itinerary` **não levanta em falha de rede,
+  status HTTP de erro ou ausência de configuração** (viram
+  `NotificationResult(status="failed")`), mas **propaga o resto** — vale a regra
+  geral do projeto, falhar alto em bug. A garantia de que *nenhuma* exceção
+  derruba o turno é do nó `notify_recipient`, que tem um `except Exception`
+  **deliberado na fronteira** (com `logger.exception` + linha de auditoria
+  `notification_unexpected`): ali "não derrubar a sessão" é decisão de produto —
+  critério de aceitação da #23 —, não de biblioteca.
 - **Degradação silenciosa:** sem `N8N_WEBHOOK_URL`, nenhuma chamada é feita e o
   resultado é `not_configured`, com mensagem amigável ao usuário.
 - **O e-mail do destinatário nunca sai em texto puro.** Logs e trilha de
   auditoria recebem só `mask_email(...)` (`j***@exemplo.com`). O passo auditado
-  é `n8n_webhook` (tipo `tool`), com linhas `retry` a cada nova tentativa.
+  do envio é `n8n_webhook` (tipo `tool`), com `ok`/`error` e `duration_ms`.
 - **Segredos só no ambiente:** `N8N_WEBHOOK_URL` e `N8N_WEBHOOK_TOKEN` vêm de
   `config.py`; o JSON do workflow versionado não carrega credencial alguma (elas
   entram por referência de *nome* dentro do n8n).
@@ -656,8 +673,11 @@ exigida pela T11/#22. Regras de design (não alterar sem alinhar):
   orquestração do grafo dentro delas).
 - Nomes de arquivos-fonte, pastas, funções e variáveis em inglês; mensagens
   voltadas ao usuário final (saída no terminal, conteúdo do `.md` gerado)
-  em português. Exceção: os `.md` gerados em `output/` são artefatos do
-  usuário e seguem o esquema `itinerario-<destino>-<n>-dias.md`.
+  em português. Duas exceções: os `.md` gerados em `output/`, que são artefatos
+  do usuário e seguem o esquema `itinerario-<destino>-<n>-dias.md`; e as
+  **subpastas de `docs/`**, que seguem os nomes definidos no backlog
+  (`docs/tasks.md`) por serem os que o avaliador procura — daí
+  `docs/evidencias/`, e não `evidences`. Não "corrigir" para inglês.
 
 ## Regras obrigatórias
 
