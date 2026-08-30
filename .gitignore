@@ -15,6 +15,9 @@ env/
 # Project output
 output/
 
+# Logs estruturados (T04/#15)
+logs/
+
 # Memória persistente (SQLite)
 itinerai_memory.db
 itinerai_memory.db-journal

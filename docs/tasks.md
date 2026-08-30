@@ -150,7 +150,7 @@ logs estruturados (T04).
 - [x] Aplicar o mesmo tratamento a `_invoke_structured` — `max_retries=2`
       explícito no `_extraction_llm` (retry do SDK da Groq) + logging do fallback
 - [x] Registrar tentativa, erro e fallback via `logging` (`NullHandler` no
-      pacote; os handlers JSON/arquivo/`run_id` vêm com a T04/#15)
+      pacote; os handlers JSON/arquivo/`run_id` foram plugados na T04/#15)
 - [ ] Cobrir a política com testes unitários que simulem timeout e erro HTTP
       — **adiado para a T07/#18** (bootstrap da suíte de testes)
 
@@ -234,17 +234,31 @@ como a `GROQ_API_KEY`.
 
 **Checklist técnico**
 
-- [ ] Criar `itinerai_agent/utils/logging_config.py` com formatter JSON próprio
+- [x] Criar `itinerai_agent/utils/logging_config.py` com formatter JSON próprio
       (sem novas dependências) e nível configurável por `LOG_LEVEL`
-- [ ] Gerar um `run_id` (UUID) por execução e propagá-lo no `AgentState`
-- [ ] Instrumentar a entrada e a saída de cada nó do grafo (`validate_input`,
-      `persist_memory`, `call_llm`, `call_tools`) com evento, `run_id`,
-      timestamp e resultado da decisão de roteamento
-- [ ] Instrumentar cada tool com nome, argumentos resumidos e status
-- [ ] Registrar bloqueios da validação com o motivo (injeção, idioma ou URL)
-- [ ] Direcionar os logs para arquivo em `logs/` e adicionar `logs/` ao
-      `.gitignore`
-- [ ] Garantir que segredos e o conteúdo integral das mensagens não sejam logados
+- [x] Gerar um `run_id` (UUID) por execução e propagá-lo no `AgentState`
+      (gerado por turno em `main._run_turn`; também publicado num `ContextVar`
+      para as chamadas profundas de `tools.py` o herdarem)
+- [x] Instrumentar a entrada e a saída de cada nó do grafo (`validate_input`,
+      `persist_memory`, `call_llm`, `call_tools` e os nós do fan-out) com evento,
+      `run_id`, timestamp e resultado da decisão de roteamento (decorators
+      `_logged_node` / `_logged_router` em `nodes.py`)
+- [x] Instrumentar cada tool com nome, argumentos resumidos e status
+      (evento `tool_executed` em `call_tools`; `search_dispatched` / `page_fetched`
+      / `search_merged` para a busca; os 6 logs de `tools.py` da T02 seguem)
+- [x] Registrar bloqueios da validação com o motivo (injeção, idioma ou URL)
+      (evento `validation_blocked`, motivo mapeado da mensagem de recusa sem
+      alterar `validation.py`)
+- [x] Direcionar os logs para arquivo em `logs/` e adicionar `logs/` ao
+      `.gitignore` (`RotatingFileHandler`, `logs/itinerai.log`)
+- [x] Garantir que segredos e o conteúdo integral das mensagens não sejam logados
+      (só metadados nos eventos; `JsonFormatter` ainda redige `GROQ_API_KEY` e
+      trunca strings longas, como defesa em profundidade)
+
+> **Decisão de escopo:** a descrição cita saída "para `stderr` e para arquivo",
+> mas o checklist e o requisito de "terminal limpo" priorizam o arquivo — a
+> implementação grava **só em `logs/` por padrão** e expõe `LOG_TO_STDERR=1`
+> (padrão desligado) para espelhar no stderr durante depuração.
 
 ---
 

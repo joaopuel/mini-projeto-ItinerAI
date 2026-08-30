@@ -65,6 +65,10 @@ def _merge_page_results(
 
 class AgentState(BaseModel):
     messages: Annotated[list[BaseMessage], add_messages] = Field(default_factory=list)
+    # Correlação dos logs estruturados (T04/#15): UUID gerado por TURNO (uma
+    # chamada `graph.invoke`) em `main.py` e propagado pelo estado. Nenhum nó o
+    # escreve, então permanece constante durante o turno.
+    run_id: str = ""
     destination: str | None = None
     # Duração da viagem em dias. Fica no estado (além de ser passada a
     # build_itinerary) para poder ser persistida pela memória e permitir a
