@@ -28,7 +28,7 @@ WIKIPEDIA_TIMEOUT = float(os.getenv("WIKIPEDIA_TIMEOUT", "10"))
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "").strip()
 # Valor do header `X-ItinerAI-Token`, correspondente à credencial "ItinerAI
 # Webhook Token" (Header Auth) criada dentro do n8n. Nunca versionado.
-N8N_WEBHOOK_TOKEN= 'iO7UmNF0WJUWSnDvxI7nBhHPDx3DHVzc4sDSgEj0yk8'
+N8N_WEBHOOK_TOKEN = os.getenv("N8N_WEBHOOK_TOKEN", "").strip()
 # Timeout (em segundos) da requisição ao webhook, espelhando WIKIPEDIA_TIMEOUT.
 N8N_TIMEOUT = float(os.getenv("N8N_TIMEOUT", "10"))
 

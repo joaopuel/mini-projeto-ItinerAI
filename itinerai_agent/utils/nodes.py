@@ -590,15 +590,33 @@ def notify_recipient(state: AgentState) -> dict:
             "messages": [AIMessage(content=_NOTIFICATION_MESSAGES["failed"])],
         }
 
-    result = send_itinerary(
-        ItineraryNotification(
-            destination=itinerary.destination,
-            num_days=itinerary.num_days,
-            recipient=state.recipient_email,
-            markdown=render_itinerary_markdown(itinerary),
-            run_id=state.run_id,
+    try:
+        result = send_itinerary(
+            ItineraryNotification(
+                destination=itinerary.destination,
+                num_days=itinerary.num_days,
+                recipient=state.recipient_email,
+                markdown=render_itinerary_markdown(itinerary),
+                run_id=state.run_id,
+            )
         )
-    )
+    except Exception as exc:
+        # Captura ampla DELIBERADA, e só aqui. `send_itinerary` degrada em falha
+        # de rede e propaga o resto, seguindo a regra do projeto (falha alto em
+        # bug). Mas esta é a fronteira do nó: "a falha da integração não derruba
+        # a aplicação" é critério de aceitação da #23, e um bug de serialização
+        # não pode custar a sessão inteira do usuário. Nada é engolido em
+        # silêncio — o traceback vai para o log e o erro para a auditoria.
+        logger.exception(
+            "notification_unexpected_error",
+            extra={"node": "notify_recipient", "error": type(exc).__name__},
+        )
+        audit.try_record(
+            state.run_id, "notification_unexpected", "node", "error",
+            error=type(exc).__name__,
+        )
+        result = NotificationResult(status="failed", detail=type(exc).__name__)
+
     logger.info(
         "notification_dispatched",
         extra={

@@ -117,9 +117,15 @@ INVALID_EMAIL_MESSAGE = (
 # --- E-mail do destinatário (T14/#25) --------------------------------------
 
 # Validação de FORMATO, não de existência: um endereço bem-formado é o suficiente
-# para decidir se vale acionar o webhook do n8n. Mesmo regex do nó `Validar
-# payload` do workflow (`docs/low-code/n8n-workflow.json`), para os dois lados
-# recusarem exatamente as mesmas entradas.
+# para decidir se vale acionar o webhook do n8n.
+#
+# Este padrão é DELIBERADAMENTE MAIS ESTRITO que o do nó `Validar payload` do
+# workflow (`docs/low-code/n8n-workflow.json`, `^[^@\s]+@[^@\s.]+\.[^@\s]+$`),
+# que aceita rótulo vazio e ponto final (`a@b..c`, `a@b.c.`) porque o `[^@\s]+`
+# final permite pontos. Aqui cada rótulo depois do @ precisa ser não vazio.
+# A assimetria é segura no sentido em que existe: a aplicação valida ANTES e é
+# a mais restritiva, então o n8n nunca recebe algo que ela recusaria. Ao mexer
+# em um dos lados, não presuma que o outro acompanha.
 _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$")
 
 

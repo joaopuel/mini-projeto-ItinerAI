@@ -8,11 +8,17 @@ definido pelo workflow versionado em `docs/low-code/n8n-workflow.json` (T13/#24)
 
 Regras de design (não alterar sem alinhar):
 
-- **Resiliência no mesmo padrão da Wikipédia** (`_get_wikipedia` em `tools.py`):
-  timeout configurável, retry limitado com backoff exponencial e repetição
-  apenas em erros de transporte transitórios (`Timeout`, `ConnectionError`).
-- **Nunca derruba o turno.** Qualquer falha vira um `NotificationResult` com
+- **Timeout configurável, mas SEM retry** (`N8N_TIMEOUT`). Diferença deliberada
+  em relação a `_get_wikipedia` (`tools.py`), que repete com backoff: um GET da
+  Wikipédia é idempotente, um POST que dispara e-mail **não é**. Um `Timeout` do
+  lado do cliente não prova que o servidor deixou de processar — repetir enviaria
+  uma segunda cópia do roteiro. Repetir automaticamente uma ação que o §4.5
+  classifica como irreversível contradiz a própria exigência de aprovação humana.
+- **Falha de rede não derruba o turno.** Ela vira um `NotificationResult` com
   `status="failed"`; o arquivo `.md` já gerado continua disponível em `output/`.
+  A garantia de que **nenhuma** exceção derruba o turno é do nó
+  `notify_recipient` (`nodes.py`), não deste módulo — aqui vale a regra geral do
+  projeto: exceções específicas, para um bug fora de rede continuar falhando alto.
 - **Degradação silenciosa:** sem `N8N_WEBHOOK_URL` configurada, nenhuma chamada
   externa é feita e o resultado é `not_configured`.
 - **O e-mail do destinatário nunca aparece em log nem na auditoria** — só
@@ -25,8 +31,7 @@ from typing import Literal
 
 import requests
 from pydantic import BaseModel, Field
-from requests.exceptions import ConnectionError as RequestsConnectionError
-from requests.exceptions import RequestException, Timeout
+from requests.exceptions import RequestException
 
 from itinerai_agent.utils import audit
 from itinerai_agent.utils.config import N8N_TIMEOUT, N8N_WEBHOOK_TOKEN, N8N_WEBHOOK_URL
@@ -42,11 +47,6 @@ WEBHOOK_TOKEN = N8N_WEBHOOK_TOKEN
 # Header de autenticação esperado pelo nó Webhook do workflow do n8n; o valor é
 # a credencial "ItinerAI Webhook Token" criada lá dentro.
 TOKEN_HEADER = "X-ItinerAI-Token"
-
-# --- Resiliência (espelha `_get_wikipedia` em tools.py) ---------------------
-_MAX_RETRIES = 2  # tentativas ADICIONAIS após a primeira
-_BACKOFF_BASE = 0.5  # s → espera 0.5s, depois 1.0s (0.5 * 2**attempt)
-_RETRYABLE_HTTP_ERRORS = (Timeout, RequestsConnectionError)
 
 # Passo registrado na trilha de auditoria (T05/#16).
 _AUDIT_STEP = "n8n_webhook"
@@ -69,13 +69,15 @@ class NotificationResult(BaseModel):
     """Desfecho da oferta de envio do roteiro por e-mail.
 
     Além dos desfechos do próprio envio (`sent` / `failed` / `not_configured`),
-    cobre as duas decisões tomadas no terminal antes de qualquer chamada
-    externa: `declined` (o usuário respondeu "n") e `invalid_email` (o endereço
-    informado não passou na validação por regex). Guardado em
-    `AgentState.notification`, é ele que impede a pergunta de se repetir a cada
-    turno."""
+    cobre as três decisões tomadas no terminal antes de qualquer chamada
+    externa: `declined` (o usuário respondeu "n"), `cancelled` (interrompeu a
+    coleta com Ctrl+C) e `invalid_email` (o endereço informado não passou na
+    validação por regex). Guardado em `AgentState.notification`, é ele que impede
+    a pergunta de se repetir a cada turno."""
 
-    status: Literal["sent", "declined", "invalid_email", "not_configured", "failed"]
+    status: Literal[
+        "sent", "declined", "cancelled", "invalid_email", "not_configured", "failed"
+    ]
     detail: str = Field(default="", description="Motivo, quando houver.")
 
 
@@ -94,52 +96,37 @@ def mask_email(email: str) -> str:
     return f"{local[:1]}***@{domain}"
 
 
-def _post_with_retry(payload: ItineraryNotification, masked: str) -> requests.Response:
-    """POST no webhook com timeout explícito (`N8N_TIMEOUT`) e retry limitado
-    com backoff exponencial.
+def _post(payload: ItineraryNotification) -> requests.Response:
+    """POST no webhook, com timeout explícito (`N8N_TIMEOUT`) e **uma única
+    tentativa**.
 
-    Repete no máximo `_MAX_RETRIES` vezes, apenas em erros de transporte
-    transitórios. Erros de status HTTP são tratados pelo chamador
-    (`raise_for_status`); o esgotamento das tentativas propaga a última
-    exceção."""
+    A ausência de retry é deliberada: enviar e-mail não é idempotente, e um
+    `Timeout` do lado do cliente não prova que o n8n deixou de processar a
+    requisição — repetir arriscaria uma segunda cópia do roteiro na caixa do
+    usuário. Ver o docstring do módulo.
+
+    Erros de transporte e de status HTTP são tratados pelo chamador."""
     headers = {"Content-Type": "application/json"}
     if WEBHOOK_TOKEN:
         headers[TOKEN_HEADER] = WEBHOOK_TOKEN
 
-    for attempt in range(_MAX_RETRIES + 1):
-        try:
-            return requests.post(
-                WEBHOOK_URL,
-                json=payload.model_dump(),
-                headers=headers,
-                timeout=N8N_TIMEOUT,
-            )
-        except _RETRYABLE_HTTP_ERRORS as exc:
-            if attempt >= _MAX_RETRIES:
-                logger.warning(
-                    "n8n webhook: %s — %d tentativas sem sucesso (destinatário %s)",
-                    type(exc).__name__, attempt + 1, masked,
-                )
-                raise
-            wait = _BACKOFF_BASE * (2**attempt)
-            logger.warning(
-                "n8n webhook: %s — nova tentativa %d/%d em %.1fs (destinatário %s)",
-                type(exc).__name__, attempt + 1, _MAX_RETRIES, wait, masked,
-            )
-            # Cada retry é uma linha pontual na trilha (T05); o resultado final
-            # (ok/erro + latência) é gravado por `send_itinerary`.
-            audit.try_record(
-                run_id_var.get(), _AUDIT_STEP, "tool", "retry", error=type(exc).__name__
-            )
-            time.sleep(wait)
+    return requests.post(
+        WEBHOOK_URL,
+        json=payload.model_dump(),
+        headers=headers,
+        timeout=N8N_TIMEOUT,
+    )
 
 
 def send_itinerary(payload: ItineraryNotification) -> NotificationResult:
     """Envia o roteiro ao webhook do n8n e devolve o desfecho.
 
-    Nunca levanta: uma falha de rede, um status HTTP de erro ou a ausência de
-    configuração viram um `NotificationResult`. O `.md` gerado permanece em
-    `output/` em qualquer cenário."""
+    **Não levanta em falha de rede, status HTTP de erro ou ausência de
+    configuração** — os três viram um `NotificationResult`, e o `.md` gerado
+    permanece em `output/`. Um erro fora dessas famílias (um bug de serialização,
+    por exemplo) **propaga de propósito**, seguindo a regra do projeto de falhar
+    alto em bug e degradar em rede; quem garante que isso não derruba o turno é o
+    nó `notify_recipient`."""
     masked = mask_email(payload.recipient)
 
     if not WEBHOOK_URL:
@@ -154,7 +141,7 @@ def send_itinerary(payload: ItineraryNotification) -> NotificationResult:
     run_id = run_id_var.get()
     start = time.perf_counter()
     try:
-        response = _post_with_retry(payload, masked)
+        response = _post(payload)
         response.raise_for_status()
     except RequestException as exc:
         duration_ms = (time.perf_counter() - start) * 1000
