@@ -1134,3 +1134,31 @@ final, somente serão realizadas as demandas já previstas em backlog.
 Adicione os últimos prompts relevantes ao arquivo docs/prompts.md e faça o
 commit.
 ```
+
+---
+
+## Decisão por achado na análise de code review
+
+* Data: 2026-08-30 19:40
+* Autor: joaopuel
+* Tipo: Documentação / Ajuste
+
+### Prompt original
+```
+Adicione Decisão para cada achado: aceito, recusado ou adiado, com justificativa
+na última análise após as correções.
+```
+
+---
+
+## Registro do prompt, commit, push e comentário no PR
+
+* Data: 2026-08-30 19:45
+* Autor: joaopuel
+* Tipo: Documentação / Versionamento
+
+### Prompt original
+```
+Adicione novamente o prompt no docs/prompts. Faça o commit, o push e adicione
+novo comentário com a parte da análise após as correções.
+```
