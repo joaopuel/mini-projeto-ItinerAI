@@ -147,3 +147,44 @@ def test_refusal_messages_are_pt():
     assert V.INJECTION_MESSAGE.startswith("Desculpe")
     assert V.FOREIGN_LANGUAGE_MESSAGE.startswith("Por favor")
     assert V.URL_MESSAGE.startswith("Por segurança")
+
+
+# --- is_valid_email (T14/#25) -------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "a@b.co",
+        "joao@exemplo.com.br",
+        "joao.puel+viagem@sub.dominio.org",
+        "  espacos@aparados.com  ",
+    ],
+)
+def test_valid_emails(text):
+    assert V.is_valid_email(text) is True
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "",
+        "   ",
+        "a@b",
+        "a@.com",
+        "sem-arroba.com",
+        "@dominio.com",
+        "a@@b.com",
+        "com espaco@dominio.com",
+        # Aceitos pelo regex do nó `Validar payload` do n8n, recusados aqui:
+        # a aplicação é deliberadamente a mais estrita das duas pontas.
+        "a@b.c.",
+        "a@b..c",
+    ],
+)
+def test_invalid_emails(text):
+    assert V.is_valid_email(text) is False
+
+
+def test_invalid_email_message_is_pt():
+    assert V.INVALID_EMAIL_MESSAGE.startswith("O endereço de e-mail")

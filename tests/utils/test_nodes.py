@@ -10,8 +10,10 @@ from langgraph.graph import END
 from itinerai_agent.utils import audit
 from itinerai_agent.utils import nodes as N
 from itinerai_agent.utils.memory import TripMemory
+from itinerai_agent.utils.notifications import NotificationResult
 from itinerai_agent.utils.state import (
     AgentState,
+    Itinerary,
     PendingSearch,
     TouristAttraction,
     WikipediaPageResult,
@@ -348,6 +350,8 @@ def test_call_tools_build_itinerary():
         "O arquivo itinerario-lisboa-1-dia.md"
     )
     assert out["messages"][0].tool_call_id == "c1"
+    # Um roteiro novo reabre a oferta de envio por e-mail (T14/#25).
+    assert out["notification"] is None
 
 
 def test_call_tools_error_propagates(monkeypatch):
@@ -382,3 +386,109 @@ def test_call_tools_non_build_serializes_json(monkeypatch):
     )
     out = N.call_tools(state)
     assert json.loads(out["messages"][0].content)["destination"] == "P"
+
+
+# --- route_entry (T14/#25) ----------------------------------
+
+
+def _ready_to_notify(**overrides):
+    """Estado que satisfaz as três condições de `route_entry`."""
+    base = dict(
+        run_id="r1",
+        destination="Lisboa",
+        num_days=1,
+        recipient_email="joao@exemplo.com",
+        itinerary=Itinerary(destination="Lisboa", num_days=1, days=[]),
+        notification=None,
+    )
+    base.update(overrides)
+    return AgentState(**base)
+
+
+def test_route_entry_to_notify_when_ready():
+    assert N.route_entry(_ready_to_notify()) == "notify_recipient"
+
+
+def test_route_entry_validate_without_email():
+    assert N.route_entry(_ready_to_notify(recipient_email=None)) == "validate_input"
+
+
+def test_route_entry_validate_without_itinerary():
+    assert N.route_entry(_ready_to_notify(itinerary=None)) == "validate_input"
+
+
+def test_route_entry_validate_when_already_decided():
+    state = _ready_to_notify(notification=NotificationResult(status="declined"))
+    assert N.route_entry(state) == "validate_input"
+
+
+def test_route_entry_validate_on_fresh_state():
+    assert N.route_entry(AgentState()) == "validate_input"
+
+
+# --- notify_recipient (T14/#25) -----------------------------
+
+
+def test_notify_sends_and_clears_email(monkeypatch):
+    sent = {}
+
+    def fake_send(payload):
+        sent["payload"] = payload
+        return NotificationResult(status="sent")
+
+    monkeypatch.setattr(N, "send_itinerary", fake_send)
+
+    out = N.notify_recipient(_ready_to_notify())
+
+    assert out["notification"].status == "sent"
+    # Zerar o destinatário é o que impede o nó de reenviar no turno seguinte.
+    assert out["recipient_email"] is None
+    assert isinstance(out["messages"][0], AIMessage)
+    assert out["messages"][0].content == N._NOTIFICATION_MESSAGES["sent"]
+    assert sent["payload"].recipient == "joao@exemplo.com"
+    assert sent["payload"].destination == "Lisboa"
+    assert sent["payload"].markdown.startswith("# Roteiro de viagem")
+
+
+def test_notify_reports_failure(monkeypatch):
+    monkeypatch.setattr(
+        N, "send_itinerary", lambda payload: NotificationResult(status="failed")
+    )
+    out = N.notify_recipient(_ready_to_notify())
+    assert out["notification"].status == "failed"
+    assert out["messages"][0].content == N._NOTIFICATION_MESSAGES["failed"]
+
+
+def test_notify_reports_not_configured(monkeypatch):
+    monkeypatch.setattr(
+        N, "send_itinerary", lambda payload: NotificationResult(status="not_configured")
+    )
+    out = N.notify_recipient(_ready_to_notify())
+    assert out["messages"][0].content == N._NOTIFICATION_MESSAGES["not_configured"]
+
+
+def test_notify_defensive_branch_closes_state():
+    out = N.notify_recipient(_ready_to_notify(recipient_email=None))
+    assert out["notification"].status == "failed"
+    assert out["recipient_email"] is None
+
+
+def test_notify_unexpected_exception_does_not_crash_turn(monkeypatch):
+    """Achado M2 do code review: um erro fora da família `RequestException`
+    escapava de `send_itinerary` e derrubava a sessão. A fronteira do nó agora
+    o converte em `failed` — critério de aceitação da #23."""
+
+    def boom(payload):
+        raise ValueError("serialização quebrou")
+
+    monkeypatch.setattr(N, "send_itinerary", boom)
+
+    out = N.notify_recipient(_ready_to_notify())
+
+    assert out["notification"].status == "failed"
+    assert out["notification"].detail == "ValueError"
+    assert out["messages"][0].content == N._NOTIFICATION_MESSAGES["failed"]
+    trail = audit.load_audit_trail("r1")
+    assert any(
+        (s.step, s.status) == ("notification_unexpected", "error") for s in trail
+    )

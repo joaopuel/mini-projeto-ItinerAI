@@ -17,6 +17,11 @@ os.environ.setdefault("GROQ_TEMPERATURE", "0.7")
 os.environ.setdefault("WIKIPEDIA_TIMEOUT", "10")
 os.environ.setdefault("LOG_LEVEL", "INFO")
 os.environ.pop("LOG_TO_STDERR", None)
+# A integração com o n8n (T14/#25) precisa nascer DESLIGADA nos testes: se um
+# desenvolvedor tiver essas variáveis exportadas no ambiente, `notifications.py`
+# as lê no import e `send_itinerary` tentaria rede de verdade.
+os.environ.pop("N8N_WEBHOOK_URL", None)
+os.environ.pop("N8N_WEBHOOK_TOKEN", None)
 
 import logging
 from collections.abc import Iterator
