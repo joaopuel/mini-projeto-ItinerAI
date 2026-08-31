@@ -2,7 +2,7 @@
 
 Seleção e justificativa dos cenários de teste considerados prioritários com base
 em **risco, impacto e criticidade**, conforme o §4.7 dos
-[requisitos](requisitos.md). Documento de apoio à **T08/#19 — [TECH] Teste E2E do
+[requisitos](../requisitos.md). Documento de apoio à **T08/#19 — [TECH] Teste E2E do
 fluxo principal e do cenário adversarial**.
 
 | | |
@@ -423,9 +423,9 @@ suíte unitária continue rápida e a distinção entre os níveis fique visíve
 
 ---
 
-> **Nota de rastreabilidade.** O checklist da T08/#19 em [`tasks.md`](tasks.md)
+> **Nota de rastreabilidade.** O checklist da T08/#19 em [`tasks.md`](../tasks.md)
 > aponta este conteúdo para `docs/qa/priorizacao-testes.md`. O arquivo foi criado
-> como `docs/analise-testes.md` para acompanhar a convenção já estabelecida pelas
+> como `docs/qa/analise-testes.md` para acompanhar a convenção já estabelecida pelas
 > análises irmãs ([`analise-ci.md`](analise-ci.md),
 > [`analise-cr.md`](analise-cr.md)). Vale atualizar a referência no backlog para
 > manter card e artefato coerentes.

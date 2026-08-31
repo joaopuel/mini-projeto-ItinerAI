@@ -1288,3 +1288,22 @@ passe um passo a passo do que você quer que eu execute e responda ao agente.
 > virou um roteiro copiável (`temp.md`) com o comando exato, o que o agente
 > pergunta, o que digitar em cada `Você:` e quais saídas devolver. Os três turnos
 > analisados foram executados pelo usuário.
+
+---
+
+## Organização de `/docs` e ciclos de refinamento (T16/#27)
+
+* Data: 2026-08-31
+* Autor: joaopuel
+* Tipo: Documentação / Organização
+
+### Prompt original
+```
+OK. Agora siga para a implementação da issue
+https://github.com/joaopuel/mini-projeto-ItinerAI/issues/27.
+```
+
+> Este arquivo era `docs/prompts.md` até esta task; virou
+> `docs/prompts/historico.md` na reorganização. As menções a `docs/prompts.md`
+> nos prompts acima são **verbatim** e foram preservadas de propósito — são o
+> que o usuário digitou na época.

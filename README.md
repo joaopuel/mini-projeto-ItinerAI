@@ -528,7 +528,7 @@ mini-projeto-ItinerAI/
 ## Prompts e apresentação
 
 - **Prompts** utilizados no planejamento, implementação e melhoria do agente:
-  [docs/prompts.md](docs/prompts.md).
+  [docs/prompts/historico.md](docs/prompts/historico.md).
 - **Apresentação** da ideia do projeto:
   [docs/apresentacao-itinerai.pptx](docs/apresentacao-itinerai.pptx)
   (versão web: [docs/apresentacao.html](docs/apresentacao.html)).

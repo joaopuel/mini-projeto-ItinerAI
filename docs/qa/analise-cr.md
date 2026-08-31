@@ -163,7 +163,7 @@ alterado, e a entrega fica restrita às demandas já previstas no backlog
 Todo o caminho de erro está descoberto: o laço de retry, o backoff, o fallback
 para `status="failed"`, a degradação por ausência de configuração e o
 mascaramento do e-mail. Evidência em
-[`evidencias/ci-run-33333506048-diff-cover.md`](evidencias/ci-run-33333506048-diff-cover.md).
+[`evidencias/ci-run-33333506048-diff-cover.md`](../evidencias/ci-run-33333506048-diff-cover.md).
 
 ### Impacto no domínio
 

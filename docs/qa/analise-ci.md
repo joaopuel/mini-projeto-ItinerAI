@@ -30,9 +30,9 @@ GitHub:
 
 | Arquivo | Conteúdo |
 | --- | --- |
-| [`evidencias/ci-run-33333506048-lint.log`](evidencias/ci-run-33333506048-lint.log) | Log completo do job *Lint (Ruff)* (etapa A) |
-| [`evidencias/ci-run-33333506048-test.log`](evidencias/ci-run-33333506048-test.log) | Log completo do job *Testes + cobertura* (etapa B) |
-| [`evidencias/ci-run-33333506048-diff-cover.md`](evidencias/ci-run-33333506048-diff-cover.md) | Relatório do `diff-cover`, do artefato `coverage-report`, com as linhas novas descobertas |
+| [`evidencias/ci-run-33333506048-lint.log`](../evidencias/ci-run-33333506048-lint.log) | Log completo do job *Lint (Ruff)* (etapa A) |
+| [`evidencias/ci-run-33333506048-test.log`](../evidencias/ci-run-33333506048-test.log) | Log completo do job *Testes + cobertura* (etapa B) |
+| [`evidencias/ci-run-33333506048-diff-cover.md`](../evidencias/ci-run-33333506048-diff-cover.md) | Relatório do `diff-cover`, do artefato `coverage-report`, com as linhas novas descobertas |
 
 Os logs estão no formato bruto do `gh run view --log`
 (`job⇥etapa⇥timestamp mensagem`), preservando os carimbos de tempo originais. O
