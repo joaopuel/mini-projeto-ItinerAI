@@ -342,7 +342,7 @@ sem isso, "o usuário recusou" seria indistinguível de "o agente nunca pergunto
 | --- | --- |
 | **Python 3.12.9** | a aplicação |
 | **Chave de API da Groq** | o LLM — gratuita em [console.groq.com](https://console.groq.com) |
-| **Node.js 20+** *ou* **Docker** | apenas se você for rodar o n8n (opcional) |
+| **Node.js 20+** *ou* **Docker** | apenas para rodar o n8n **localmente** (opcional) — dispensável se usar o n8n Cloud |
 | Conta de e-mail com **SMTP** | apenas para o envio por e-mail (opcional) |
 
 O agente funciona por completo sem o n8n; só deixa de oferecer o envio.
@@ -440,9 +440,23 @@ docker volume create n8n_data
 docker run -it --rm -p 5678:5678 -v n8n_data:/home/node/.n8n docker.n8n.io/n8nio/n8n
 ```
 
-Em qualquer opção, o editor abre em **<http://localhost:5678>**. Na primeira
-execução o n8n pede a criação de uma conta local. (Também é possível usar o n8n
-Cloud, sem instalar nada — só troque `localhost:5678` pela URL da sua instância.)
+**Opção D — n8n Cloud, sem instalar nada.** A plataforma online do n8n
+([n8n.io](https://n8n.io)) funciona igualmente bem, tanto no **período de teste
+gratuito (trial)** quanto em um **plano pago (Pro)**. É a via mais rápida se você
+não quer Node.js nem Docker na máquina: basta criar a conta e a instância já sobe
+pronta, com uma URL própria no formato
+`https://<sua-instancia>.app.n8n.cloud`.
+
+Nas opções A, B e C o editor abre em **<http://localhost:5678>** e, na primeira
+execução, o n8n pede a criação de uma conta local. Na opção D o editor é a URL da
+sua instância na nuvem.
+
+> **A escolha só muda a URL.** O workflow, as credenciais e todos os passos
+> abaixo são idênticos nos quatro casos — troque `localhost:5678` pelo domínio da
+> sua instância onde ele aparecer. Uma diferença prática: no n8n Cloud a
+> *Production URL* é pública e acessível de qualquer lugar, enquanto uma
+> instância local só responde à própria máquina — o que basta aqui, já que o
+> agente roda no mesmo computador.
 
 **3.2. Importe o workflow.** No editor: *Workflows → ⋯ → Import from File* e
 selecione [`docs/low-code/n8n-workflow.json`](docs/low-code/n8n-workflow.json).
@@ -465,7 +479,10 @@ importado casar com elas sozinho:
 **3.6. Aponte a aplicação para ele** no `.env`:
 
 ```dotenv
+# instância local (opções A, B ou C)
 N8N_WEBHOOK_URL=http://localhost:5678/webhook/itinerai-email
+# ou, no n8n Cloud (opção D):
+# N8N_WEBHOOK_URL=https://<sua-instancia>.app.n8n.cloud/webhook/itinerai-email
 N8N_WEBHOOK_TOKEN=<o mesmo token da credencial Header Auth>
 ```
 
