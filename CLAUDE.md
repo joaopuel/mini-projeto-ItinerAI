@@ -491,9 +491,16 @@ mini-projeto-ItinerAI/
 ├── tests/                  # suíte de testes unitários (pytest) — T07/#18
 │   ├── conftest.py         # GROQ_API_KEY fake + isolamento de disco
 │   └── utils/              # espelha itinerai_agent/utils/
-├── docs/
+├── docs/                   # documentação e evidências (T16/#27) — índice em docs/README.md
+│   ├── README.md           # índice de todas as evidências, por critério do §6
+│   ├── requisitos.md       # enunciado da avaliação
+│   ├── tasks.md            # backlog: epics, tarefas e checklists
 │   ├── application-structure.md
-│   └── low-code/           # workflow do n8n + payload de exemplo + evidências (T13/#24, T14/#25)
+│   ├── prompts/            # histórico de prompts, instruções de sistema e ciclos de refinamento
+│   ├── qa/                 # análises: testes, code review, CI e observabilidade
+│   ├── evidencias/         # evidência bruta: logs de CI, logs do agente e trilhas de auditoria
+│   ├── low-code/           # workflow do n8n + payload de exemplo + evidências (T13/#24, T14/#25)
+│   └── issues-templates/   # templates das issues do GitHub Project
 ├── output/                 # itinerários .md gerados pelo agente (não versionado)
 ├── logs/                   # logs estruturados em JSON (itinerai.log; não versionado)
 ├── main.py                 # ponto de entrada: loop de chat via terminal

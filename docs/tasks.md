@@ -323,7 +323,7 @@ estruturados (T04) com a trilha de auditoria (T05).
 **Conteúdo mínimo**
 
 - [x] Descrição dos dois sinais implementados e da chave de correlação
-      (`run_id`) — §1 de [`docs/analise-observabilidade.md`](analise-observabilidade.md),
+      (`run_id`) — §1 de [`docs/qa/analise-observabilidade.md`](qa/analise-observabilidade.md),
       incluindo os **dois** caminhos de propagação (`AgentState.run_id` e o
       `ContextVar`, sem o qual os passos dentro do fan-out ficariam órfãos)
 - [x] Trecho real de log estruturado de uma execução, com dados sensíveis
@@ -350,7 +350,7 @@ estruturados (T04) com a trilha de auditoria (T05).
 > **Escopo entregue:** três turnos reais de 2026-08-31 (`81579be0`, `9ec40ebb`,
 > `c5f84813`), com log e trilha versionados em `docs/evidencias/` (6 arquivos).
 > Três observações sobre o escopo: (1) o documento é
-> [`docs/analise-observabilidade.md`](analise-observabilidade.md), alinhado às
+> [`docs/qa/analise-observabilidade.md`](qa/analise-observabilidade.md), alinhado às
 > análises irmãs `analise-ci.md`/`analise-cr.md`/`analise-testes.md`, em vez de
 > `docs/evidencias/observabilidade.md` — `docs/evidencias/` guarda a evidência
 > **bruta**; mesma resolução da T08 e da T11. (2) A execução com erro foi
@@ -479,7 +479,7 @@ o fluxo principal e o cenário de risco.
       *(**em aberto** — cenário C4 da análise, nota 10; exige dublar `input()` e
       sair da fronteira do grafo para o `main.py`)*
 - [x] Documentar a justificativa do cenário considerado prioritário por risco,
-      impacto e criticidade — [`docs/analise-testes.md`](analise-testes.md)
+      impacto e criticidade — [`docs/qa/analise-testes.md`](qa/analise-testes.md)
       (nome alinhado às análises irmãs `analise-ci.md`/`analise-cr.md`, em vez
       de `docs/qa/priorizacao-testes.md`): 6 cenários pontuados, com o C1
       (injeção de prompt) eleito prioritário por ser o único cuja falha é
@@ -619,7 +619,7 @@ reais ou simulados e devidamente documentados. Registrar tudo em
 - [x] Log real de duas etapas distintas do CI (ex.: lint e testes), com a
       explicação produzida pela IA e o prompt utilizado — §1 (`ruff format
       --check`, do job *Lint (Ruff)*) e §2 (gate do `diff-cover`, do job
-      *Testes + cobertura*) de [`docs/analise-ci.md`](analise-ci.md), cada uma
+      *Testes + cobertura*) de [`docs/qa/analise-ci.md`](qa/analise-ci.md), cada uma
       com o log bruto e a explicação; prompt verbatim no anexo
 - [x] Descrição de pelo menos uma anomalia detectada (ex.: falha recorrente de
       tool, latência alta na Wikipédia, aumento da taxa de erro do
@@ -644,7 +644,7 @@ reais ou simulados e devidamente documentados. Registrar tudo em
 > **Escopo entregue:** a análise foi produzida durante a **T14/#25**, sobre a
 > execução real e **reprovada** 33333506048 (PR #40) — ver o anexo com o prompt
 > e os comandos de coleta. Dois desvios do enunciado: (1) o documento é
-> [`docs/analise-ci.md`](analise-ci.md), nome alinhado às análises irmãs
+> [`docs/qa/analise-ci.md`](qa/analise-ci.md), nome alinhado às análises irmãs
 > `analise-cr.md`/`analise-testes.md`, em vez de
 > `docs/evidencias/devops-analise-logs.md` — `docs/evidencias/` ficou com as
 > evidências **brutas** (os dois logs e o relatório do `diff-cover`); (2) a
@@ -948,17 +948,41 @@ pelo `llama-3.1-8b-instant` (`_repair_leaked_response`).
 
 **Conteúdo mínimo**
 
-- [ ] Reorganização de `/docs` em `prompts/`, `qa/`, `evidencias/` e
-      `low-code/`, com os arquivos atuais movidos e os links atualizados
-- [ ] `docs/prompts/system-prompts.md` com as instruções de sistema do agente
-      (`AGENT_SYSTEM_PROMPT` e prompts de extração) e sua finalidade
-- [ ] Ciclo de refinamento nº 1 — tool calls vazadas como texto: problema
+- [x] Reorganização de `/docs` em `prompts/`, `qa/`, `evidencias/` e
+      `low-code/`, com os arquivos atuais movidos e os links atualizados — 5
+      arquivos movidos via `git mv` (histórico preservado); `docs/prompts.md` →
+      `prompts/historico.md` e as quatro análises → `qa/`. Todos os links
+      relativos conferidos: `../evidencias/` nos arquivos que desceram um nível,
+      `qa/analise-*.md` no backlog, `docs/prompts/historico.md` no `README.md` da
+      raiz. Blocos de prompt verbatim **não** foram reescritos
+- [x] `docs/prompts/system-prompts.md` com as instruções de sistema do agente
+      (`AGENT_SYSTEM_PROMPT` e prompts de extração) e sua finalidade — as três
+      instruções documentadas cláusula a cláusula, com o **porquê** de cada uma,
+      o custo medido de cada extração (5726,4 ms e 1776,1 ms, da T06) e a
+      justificativa de não usar `with_structured_output`
+- [x] Ciclo de refinamento nº 1 — tool calls vazadas como texto: problema
       observado, alteração aplicada (`_repair_leaked_response` + ajuste do
-      system prompt) e resultado obtido, com evidência antes/depois
-- [ ] Ciclo de refinamento nº 2 — redução do escopo de ferramentas para não
-      sobrecarregar o modelo fraco, com a justificativa da decisão
-- [ ] Índice em `docs/README.md` apontando para todas as evidências produzidas
-      (observabilidade, QA, DevOps, low-code, prompts)
+      system prompt) e resultado obtido, com evidência antes/depois —
+      [`docs/prompts/refinamentos.md`](prompts/refinamentos.md), com a
+      transcrição real do terminal como "antes" e os dois testes de regressão
+      como "depois"
+- [x] Ciclo de refinamento nº 2 — redução do escopo de ferramentas para não
+      sobrecarregar o modelo fraco, com a justificativa da decisão — de 4
+      ferramentas para 2, com o `numstat` do commit `5e57116` (`tools.py` −224
+      linhas, `prompts.py` −49) e as três razões da troca
+- [x] Índice em `docs/README.md` apontando para todas as evidências produzidas
+      (observabilidade, QA, DevOps, low-code, prompts) — mais um mapa
+      **critério do §6 → evidência** para os itens 11 a 15
+
+> **Escopo entregue:** a reorganização seguiu literalmente as quatro subpastas do
+> enunciado. A decisão não óbvia foi `qa/` receber **as quatro** análises —
+> testes, code review, CI e observabilidade —, e não só as de QA: é o mesmo
+> agrupamento que o §5.2 usa ("QA, observabilidade e DevOps") e evita criar
+> subpastas que o §5.4 não cita. `evidencias/` ficou reservada à evidência
+> **bruta** (logs de CI, logs do agente, trilhas, relatório do `diff-cover`), que
+> é a separação que dá sentido às duas pastas. Se a preferência mudar, dividir
+> `qa/` em `devops/` e `observabilidade/` é só mais um `git mv` e o ajuste dos
+> links.
 
 ---
 
@@ -1040,7 +1064,7 @@ uma branch criada a partir da `develop` antes de qualquer commit.
 
 Arquivos envolvidos: os 4 templates em `docs/issues-templates/` e o
 `docs/tasks.md` (novos, não rastreados), além de `docs/requisitos.md`
-(atualizado com o enunciado do M2.2) e `docs/prompts.md`.
+(atualizado com o enunciado do M2.2) e `docs/prompts/historico.md`.
 
 **Conteúdo mínimo**
 
@@ -1050,7 +1074,7 @@ Arquivos envolvidos: os 4 templates em `docs/issues-templates/` e o
       tech e user story)
 - [ ] Versionar `docs/tasks.md` com o backlog completo do M2.2
 - [ ] Commitar a atualização de `docs/requisitos.md` com o enunciado do M2.2
-- [ ] Commitar a atualização de `docs/prompts.md`
+- [ ] Commitar a atualização de `docs/prompts/historico.md`
 - [ ] Usar mensagens de commit semânticas, separando os commits por assunto
 - [ ] Confirmar que `.env`, `itinerai_memory.db`, `output/` e qualquer
       credencial permanecem fora do versionamento

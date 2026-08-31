@@ -29,12 +29,12 @@ linha:
 
 | Arquivo | Conteúdo |
 | --- | --- |
-| [`evidencias/run-81579be0-log.jsonl`](evidencias/run-81579be0-log.jsonl) | log estruturado do T1 |
-| [`evidencias/run-81579be0-audit.txt`](evidencias/run-81579be0-audit.txt) | trilha de auditoria do T1 |
-| [`evidencias/run-9ec40ebb-log.jsonl`](evidencias/run-9ec40ebb-log.jsonl) | log estruturado do T2 |
-| [`evidencias/run-9ec40ebb-audit.txt`](evidencias/run-9ec40ebb-audit.txt) | trilha de auditoria do T2 |
-| [`evidencias/run-c5f84813-log.jsonl`](evidencias/run-c5f84813-log.jsonl) | log estruturado do T3 |
-| [`evidencias/run-c5f84813-audit.txt`](evidencias/run-c5f84813-audit.txt) | trilha de auditoria do T3 |
+| [`evidencias/run-81579be0-log.jsonl`](../evidencias/run-81579be0-log.jsonl) | log estruturado do T1 |
+| [`evidencias/run-81579be0-audit.txt`](../evidencias/run-81579be0-audit.txt) | trilha de auditoria do T1 |
+| [`evidencias/run-9ec40ebb-log.jsonl`](../evidencias/run-9ec40ebb-log.jsonl) | log estruturado do T2 |
+| [`evidencias/run-9ec40ebb-audit.txt`](../evidencias/run-9ec40ebb-audit.txt) | trilha de auditoria do T2 |
+| [`evidencias/run-c5f84813-log.jsonl`](../evidencias/run-c5f84813-log.jsonl) | log estruturado do T3 |
+| [`evidencias/run-c5f84813-audit.txt`](../evidencias/run-c5f84813-audit.txt) | trilha de auditoria do T3 |
 
 Os `.jsonl` saíram de `grep <run_id> logs/itinerai.log`; os `.txt`, de
 `python show_audit.py <run_id>`.
