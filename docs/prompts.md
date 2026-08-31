@@ -1213,3 +1213,34 @@ no arquivo docs/prompts.md. Ignore os demais prompts a partir de quando começam
 a investigar o problema com a lib. Commit as alterações, faça o push e abra o PR.
 Obrigatório, o PR deve conter "Closes #<issue-number>".
 ```
+
+---
+
+## Leitura das issues #17 e #22 e avaliação de uma demanda conjunta
+
+* Data: 2026-08-31
+* Autor: joaopuel
+* Tipo: Análise / Planejamento
+
+### Prompt original
+```
+Leia as tasks https://github.com/joaopuel/mini-projeto-ItinerAI/issues/17 e
+https://github.com/joaopuel/mini-projeto-ItinerAI/issues/22. Como a análise de
+Ci já foi concluída, as implementações restantes não podem ser realizadas em
+conjunto em uma só demanda?
+```
+
+---
+
+## Finalização da T11/#22 — encerramento da análise de logs de CI
+
+* Data: 2026-08-31
+* Autor: joaopuel
+* Tipo: Documentação
+
+### Prompt original
+```
+Então, se é possível. Implemente o proposto na issue #22 para finalizá-la antes.
+Pode seguir o proposto pela issue e alterar o nome dos arquivos e o lugar onde
+estão, como necessário.
+```

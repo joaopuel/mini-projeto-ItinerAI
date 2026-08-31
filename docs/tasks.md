@@ -586,16 +586,44 @@ reais ou simulados e devidamente documentados. Registrar tudo em
 
 **Conteúdo mínimo**
 
-- [ ] Log real de duas etapas distintas do CI (ex.: lint e testes), com a
-      explicação produzida pela IA e o prompt utilizado
-- [ ] Descrição de pelo menos uma anomalia detectada (ex.: falha recorrente de
+- [x] Log real de duas etapas distintas do CI (ex.: lint e testes), com a
+      explicação produzida pela IA e o prompt utilizado — §1 (`ruff format
+      --check`, do job *Lint (Ruff)*) e §2 (gate do `diff-cover`, do job
+      *Testes + cobertura*) de [`docs/analise-ci.md`](analise-ci.md), cada uma
+      com o log bruto e a explicação; prompt verbatim no anexo
+- [x] Descrição de pelo menos uma anomalia detectada (ex.: falha recorrente de
       tool, latência alta na Wikipédia, aumento da taxa de erro do
-      `tool_use_failed` do `llama-3.1-8b-instant`)
-- [ ] Evidências que sustentam a anomalia: logs, métricas de latência da
-      auditoria ou histórico de execuções do workflow
-- [ ] Estimativa simples de tendência ou probabilidade de falha, com o método
-      de cálculo explicitado e a origem dos dados (reais ou simulados)
-- [ ] Conclusão justificada e ação de mitigação proposta ou aplicada
+      `tool_use_failed` do `llama-3.1-8b-instant`) — **duas**: §3, o gate global
+      de cobertura é cego a regressões localizadas (94% ✓ e 50% ✗ na mesma
+      execução, com folga para ~300 statements descobertos); §4, a dívida de
+      formatação cresce em silêncio (14 de 42 arquivos, `continue-on-error`)
+- [x] Evidências que sustentam a anomalia: logs, métricas de latência da
+      auditoria ou histórico de execuções do workflow — tabela da §3 mais os
+      três arquivos versionados em `docs/evidencias/`: os logs brutos dos dois
+      jobs e o relatório do `diff-cover`, extraído do artefato `coverage-report`
+- [x] Estimativa simples de tendência ou probabilidade de falha, com o método
+      de cálculo explicitado e a origem dos dados (reais ou simulados) — §5:
+      regra de sucessão de Laplace sobre 6 execuções **reais** do `gh run list`
+      (`p̂ = 3/6 = 50%` para o próximo PR), com leitura qualificada e limitações
+      declaradas
+- [x] Conclusão justificada e ação de mitigação proposta ou aplicada — §6:
+      conclusão mais uma tabela de 5 ações com estado (1 aplicada na T10/#21, 3
+      propostas, 1 recusada de propósito — escrever os testes da T14 apagaria a
+      evidência desta análise)
+
+> **Escopo entregue:** a análise foi produzida durante a **T14/#25**, sobre a
+> execução real e **reprovada** 33333506048 (PR #40) — ver o anexo com o prompt
+> e os comandos de coleta. Dois desvios do enunciado: (1) o documento é
+> [`docs/analise-ci.md`](analise-ci.md), nome alinhado às análises irmãs
+> `analise-cr.md`/`analise-testes.md`, em vez de
+> `docs/evidencias/devops-analise-logs.md` — `docs/evidencias/` ficou com as
+> evidências **brutas** (os dois logs e o relatório do `diff-cover`); (2) a
+> trilha de auditoria da T05 **não** entra na análise: ela mede a latência dos
+> nós e tools do agente em execução, e o CI nunca roda um turno real (HTTP e LLM
+> 100% dublados, `AUDIT_DB_PATH` redirecionado para um `tmp_path`), logo não
+> produz nenhuma linha de auditoria. O checklist admite o histórico do workflow
+> como alternativa, e é ele que sustenta a §5. A latência do agente é o objeto
+> da **T06/#17**.
 
 ---
 
