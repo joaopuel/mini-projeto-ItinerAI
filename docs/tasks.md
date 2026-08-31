@@ -426,18 +426,43 @@ o fluxo principal e o cenário de risco.
 
 **Checklist técnico**
 
-- [ ] Criar fixtures de fake LLM e de resposta HTTP da Wikipédia
-- [ ] Teste E2E do fluxo principal: destino + duração → busca → itinerário →
-      arquivo `.md` gerado em diretório temporário com o conteúdo esperado
-- [ ] Teste E2E do cenário adversarial: prompt injection bloqueado em
+- [x] Criar fixtures de fake LLM e de resposta HTTP da Wikipédia — em
+      `tests/e2e/conftest.py`: `ScriptedLLM` (fila de respostas + `call_count`),
+      `FakeWikipedia` (chaveado por URL, não por ordem de chamada, porque o
+      fan-out roda em threads) e um duplo de `_invoke_structured` que despacha
+      pelo `schema` (há dois call sites: extração e agrupamento)
+- [x] Teste E2E do fluxo principal: destino + duração → busca → itinerário →
+      arquivo `.md` gerado em diretório temporário com o conteúdo esperado —
+      `test_graph_main_flow.py`, com asserções de produto (3 dias, teto de 3
+      atrações/dia, agrupamento por área, roteiro **não** exibido no terminal) e
+      de topologia (dois ramos do fan-out, reducer aplicado, `tool_call_id`
+      casado, trilha de auditoria)
+- [x] Teste E2E do cenário adversarial: prompt injection bloqueado em
       `validate_input`, com o grafo indo direto para `END`, nenhuma tool
-      executada e mensagem de recusa em português
+      executada e mensagem de recusa em português — `test_graph_adversarial.py`,
+      parametrizado nas 3 regras + precedência, com a asserção central em
+      `llm.call_count == 0` e uma contraprova benigna
 - [ ] Teste E2E do cenário de falha: erro de rede na Wikipédia resultando em
       mensagem amigável, sem derrubar o processo (depende de T02)
+      *(**em aberto** — cenário C3 da análise, nota 11)*
 - [ ] Teste E2E da retomada: memória com viagem incompleta pré-carregada
-- [ ] Documentar em `docs/qa/priorizacao-testes.md` a justificativa do cenário
-      considerado prioritário por risco, impacto e criticidade
-- [ ] Garantir que os testes E2E rodem no CI sem rede e sem credenciais
+      *(**em aberto** — cenário C4 da análise, nota 10; exige dublar `input()` e
+      sair da fronteira do grafo para o `main.py`)*
+- [x] Documentar a justificativa do cenário considerado prioritário por risco,
+      impacto e criticidade — [`docs/analise-testes.md`](analise-testes.md)
+      (nome alinhado às análises irmãs `analise-ci.md`/`analise-cr.md`, em vez
+      de `docs/qa/priorizacao-testes.md`): 6 cenários pontuados, com o C1
+      (injeção de prompt) eleito prioritário por ser o único cuja falha é
+      **silenciosa** — nem a suíte unitária, nem o `ruff`, nem o job `build` a
+      detectariam
+- [x] Garantir que os testes E2E rodem no CI sem rede e sem credenciais — HTTP e
+      LLM 100% dublados; o `conftest.py` da raiz já injeta a `GROQ_API_KEY`
+      dummy e isola disco em `tmp_path`
+
+> **Escopo entregue:** os cenários **C1** e **C2** da análise, que já atendem ao
+> §4.7 (pelo menos um teste E2E/aceitação + justificativa por risco). Os dois
+> itens acima sem marcação são **C3** e **C4**, deliberadamente adiados. Suíte
+> em **250 testes**, cobertura **99,54%**.
 
 ---
 
