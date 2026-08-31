@@ -2,8 +2,9 @@
 
 Guarda os dados da viagem em andamento (destino e duração em dias) para
 permitir a **retomada** de uma conversa depois que o programa é reiniciado
-— por exemplo, quando a busca de atrações ou a geração do itinerário falha e
-derruba o processo. Assim o usuário não precisa redigitar tudo do zero.
+— por exemplo, quando a gravação do itinerário ou outra falha fora de rede
+derruba o processo (falhas de rede na Wikipédia são tratadas em `tools.py` e
+não derrubam mais). Assim o usuário não precisa redigitar tudo do zero.
 
 Design (não alterar sem alinhar):
 

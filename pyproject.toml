@@ -1,0 +1,40 @@
+# Primeiro pyproject.toml do projeto — contém APENAS configuração de teste e
+# cobertura (T07/#18). O ItinerAI não é um pacote instalável (variante
+# requirements.txt do LangGraph), portanto NÃO há [build-system].
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "--cov=itinerai_agent --cov-report=term-missing --cov-fail-under=70"
+
+[tool.coverage.run]
+source = ["itinerai_agent"]
+branch = false
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise RuntimeError\\(\"unreachable\"\\)",
+    "if __name__ == .__main__.:",
+]
+
+# --- Ruff (lint + formatação) — T10/#21 -------------------------------------
+# Ferramenta de lint do projeto (equivalente Python do ESLint, que não analisa
+# Python). No CI: `ruff check .` é bloqueante; `ruff format --check .` roda como
+# informativo até a base ser normalizada num commit próprio.
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# Conjunto padrão do Ruff: pyflakes (F) + pycodestyle essencial (E4/E7/E9).
+# E501 (linha longa) é deliberadamente deixado de fora — dispararia em dezenas
+# de comentários/strings pré-existentes; o `ruff format` cuida do estilo.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+# Imports após código no topo do módulo são intencionais nestes arquivos:
+"main.py" = ["E402"]            # imports após load_dotenv() / configure_logging()
+"show_audit.py" = ["E402"]     # import após sys.stdout.reconfigure()
+"tests/conftest.py" = ["E402"] # imports após o shim de GROQ_API_KEY

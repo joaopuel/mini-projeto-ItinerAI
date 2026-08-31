@@ -1,11 +1,14 @@
 """Tools do agente ItinerAI (busca de pontos turísticos e escrita do
 itinerário .md)."""
 
+import json
+import logging
 import re
+import time
 import unicodedata
 from collections import Counter
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import quote
 
 import requests
@@ -13,7 +16,12 @@ from bs4 import BeautifulSoup
 from langchain_core.tools import InjectedToolArg
 from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import RequestException, Timeout
 
+from itinerai_agent.utils import audit
+from itinerai_agent.utils.config import GROQ_MODEL, WIKIPEDIA_TIMEOUT
+from itinerai_agent.utils.logging_config import run_id_var
 from itinerai_agent.utils.prompts import (
     ATTRACTION_EXTRACTION_PROMPT,
     ITINERARY_CLUSTERING_PROMPT,
@@ -22,11 +30,21 @@ from itinerai_agent.utils.state import (
     Itinerary,
     ItineraryDay,
     TouristAttraction,
+    WikipediaPageResult,
 )
+
+logger = logging.getLogger(__name__)
 
 WIKIPEDIA_BASE_URL = "https://en.wikipedia.org/wiki"
 _REQUEST_HEADERS = {"User-Agent": "ItinerAI/1.0 (https://github.com/joaopuel/mini-projeto-ItinerAI)"}
 _MAX_PAGE_TEXT_CHARS = 8000
+
+# Resiliência das chamadas HTTP à Wikipédia (T02/#13): o timeout vem de
+# `config.WIKIPEDIA_TIMEOUT` (env); retry limitado com backoff exponencial
+# apenas em erros de transporte.
+_WIKIPEDIA_MAX_RETRIES = 2       # tentativas ADICIONAIS após a primeira
+_WIKIPEDIA_BACKOFF_BASE = 0.5    # s → espera 0.5s, depois 1.0s (0.5 * 2**attempt)
+_RETRYABLE_HTTP_ERRORS = (Timeout, RequestsConnectionError)
 
 MAX_ATTRACTIONS_PER_DAY = 3
 
@@ -46,24 +64,89 @@ ITINERARY_OVERFLOW_NOTE = (
 # projeto (não do cwd), para funcionar de qualquer diretório de execução.
 OUTPUT_DIR = Path(__file__).resolve().parents[2] / "output"
 
-# temperature=0 deixa a extração determinística e reduz muito o risco de o
-# modelo entrar em loop de repetição e gerar um tool call malformado.
-_extraction_llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0)
+# O modelo vem de `config.GROQ_MODEL` (T03/#14); temperature=0 deixa a extração
+# determinística e reduz muito o risco de o modelo entrar em loop de repetição e
+# gerar um JSON malformado (fixo aqui, à parte de GROQ_TEMPERATURE). max_retries=2
+# torna explícito o retry limitado que o SDK da Groq já faz em erros
+# transitórios de rede/API (T02/#13).
+_extraction_llm = ChatGroq(model=GROQ_MODEL, temperature=0, max_retries=2)
+
+
+def _extract_json_payload(text: str) -> dict | list | None:
+    """Extrai o primeiro objeto/array JSON de um texto. Tolera cercas de código
+    (```json ... ```) e texto antes/depois do JSON."""
+    text = text.strip()
+    fence = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)
+    if fence:
+        text = fence.group(1).strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    for opener, closer in (("{", "}"), ("[", "]")):
+        start, end = text.find(opener), text.rfind(closer)
+        if 0 <= start < end:
+            try:
+                return json.loads(text[start : end + 1])
+            except json.JSONDecodeError:
+                continue
+    return None
 
 
 def _invoke_structured(schema: type[BaseModel], prompt: str) -> BaseModel | None:
-    """Invoca o LLM de extração pedindo saída estruturada no formato `schema`.
+    """Pede uma resposta JSON ao LLM de extração e valida contra `schema`.
 
-    Retorna `None` se o modelo falhar ao gerar uma resposta válida — por
-    exemplo, quando entra em loop de repetição e produz um JSON truncado que a
-    Groq rejeita com `tool_use_failed` (HTTP 400). Assim as tools degradam com
-    elegância (tratam como "nada encontrado") em vez de derrubar o agente.
+    **Não** usa `ChatGroq.with_structured_output`: com o `openai/gpt-oss-120b`
+    na Groq esse método força `tool_choice` e o modelo devolve o JSON como
+    texto (não como tool call), o que a Groq rejeita com `tool_use_failed`
+    ("model did not call a tool"). Aqui o formato do JSON é pedido no próprio
+    prompt e a resposta é extraída do texto.
+
+    Retorna `None` em qualquer falha (rede, JSON inválido/truncado, schema que
+    não bate) — as tools degradam tratando como "nada encontrado" em vez de
+    derrubar o agente.
     """
+    run_id = run_id_var.get()
+    start = time.perf_counter()
     try:
-        structured_llm = _extraction_llm.with_structured_output(schema)
-        return structured_llm.invoke(prompt)
-    except Exception:
+        response = _extraction_llm.invoke(prompt)
+    except Exception as exc:
+        # O SDK da Groq já faz retry limitado (max_retries=2) em erros
+        # transitórios; aqui só registramos o fallback e degradamos.
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.warning("Extração LLM (%s) falhou: %s", schema.__name__, type(exc).__name__)
+        audit.try_record(
+            run_id, "llm_extraction", "tool", "fallback", elapsed_ms, "invoke_exception"
+        )
         return None
+    content = response.content if isinstance(response.content, str) else ""
+    payload = _extract_json_payload(content)
+    if payload is None:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.info("Extração LLM (%s): resposta sem JSON válido", schema.__name__)
+        audit.try_record(run_id, "llm_extraction", "tool", "fallback", elapsed_ms, "no_json")
+        return None
+    # O gpt-oss às vezes devolve só a lista, sem o objeto que a envolve.
+    if isinstance(payload, list):
+        field_names = list(schema.model_fields)
+        if len(field_names) == 1:
+            payload = {field_names[0]: payload}
+    try:
+        parsed = schema.model_validate(payload)
+    except Exception as exc:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            "Extração LLM (%s): JSON não bate com o schema (%s)",
+            schema.__name__, type(exc).__name__,
+        )
+        audit.try_record(
+            run_id, "llm_extraction", "tool", "fallback", elapsed_ms, "schema_mismatch"
+        )
+        return None
+    audit.try_record(
+        run_id, "llm_extraction", "tool", "ok", (time.perf_counter() - start) * 1000
+    )
+    return parsed
 
 
 class _ExtractedAttractions(BaseModel):
@@ -83,6 +166,9 @@ class TouristAttractionSearchResult(BaseModel):
     destination: str
     source_url: str | None
     found: bool
+    # True quando a busca falhou por indisponibilidade da Wikipédia (rede), e
+    # não por o destino não ter informação — ver merge_pages / AGENT_SYSTEM_PROMPT.
+    unavailable: bool = False
     attractions: list[TouristAttraction] = Field(default_factory=list)
 
 
@@ -98,11 +184,50 @@ class ItineraryFileResult(BaseModel):
     itinerary: Itinerary
 
 
+def _get_wikipedia(url: str) -> requests.Response:
+    """GET com timeout explícito (`WIKIPEDIA_TIMEOUT`) e retry limitado com
+    backoff exponencial.
+
+    Repete no máximo `_WIKIPEDIA_MAX_RETRIES` vezes, apenas em erros de
+    transporte transitórios (`Timeout`, `ConnectionError`). Erros de status HTTP
+    são tratados pelo chamador (`raise_for_status`); o esgotamento das
+    tentativas propaga a última exceção.
+    """
+    for attempt in range(_WIKIPEDIA_MAX_RETRIES + 1):
+        try:
+            return requests.get(url, headers=_REQUEST_HEADERS, timeout=WIKIPEDIA_TIMEOUT)
+        except _RETRYABLE_HTTP_ERRORS as exc:
+            if attempt >= _WIKIPEDIA_MAX_RETRIES:
+                logger.warning(
+                    "Wikipédia %s: %s — %d tentativas sem sucesso",
+                    url, type(exc).__name__, attempt + 1,
+                )
+                raise
+            wait = _WIKIPEDIA_BACKOFF_BASE * (2**attempt)
+            logger.warning(
+                "Wikipédia %s: %s — nova tentativa %d/%d em %.1fs",
+                url, type(exc).__name__, attempt + 1, _WIKIPEDIA_MAX_RETRIES, wait,
+            )
+            # Cada retry é uma linha pontual na trilha (T05); o resultado final
+            # (ok/erro + latência) é gravado por `fetch_page_attractions`.
+            audit.try_record(
+                run_id_var.get(), "wikipedia_fetch", "tool", "retry",
+                error=type(exc).__name__,
+            )
+            time.sleep(wait)
+    raise RuntimeError("unreachable")  # o loop sempre retorna ou levanta
+
+
 def _fetch_wikipedia_page(title: str) -> tuple[str, str] | None:
     """Busca uma página da Wikipédia em inglês pelo título e retorna
-    (texto_da_pagina, url), ou None se a página não existir."""
+    (texto_da_pagina, url), ou None se a página não existir.
+
+    Propaga as exceções de `requests` (`Timeout`/`ConnectionError` após os
+    retries de `_get_wikipedia`, `HTTPError` para status != 404) — quem trata é
+    `fetch_page_attractions`.
+    """
     url = f"{WIKIPEDIA_BASE_URL}/{quote(title.replace(' ', '_'))}"
-    response = requests.get(url, headers=_REQUEST_HEADERS, timeout=10)
+    response = _get_wikipedia(url)
     if response.status_code == 404:
         return None
     response.raise_for_status()
@@ -140,32 +265,81 @@ def _extract_attractions(destination: str, page_text: str) -> list[TouristAttrac
     return unique_attractions
 
 
+def fetch_page_attractions(
+    title: str, destination: str, kind: Literal["tourism", "destination"]
+) -> WikipediaPageResult:
+    """Baixa uma página da Wikipédia e extrai suas atrações — a unidade de
+    trabalho de cada ramo do fan-out da busca no grafo
+    (`fetch_tourism_page` / `fetch_destination_page`).
+
+    Em 404 ou página sem conteúdo, devolve `found=False`. Em falha de rede
+    (após os retries de `_get_wikipedia`), devolve `found=False,
+    unavailable=True` — `merge_pages` usa isso para distinguir "indisponível"
+    de "não existe". Só captura erros de `requests` (`RequestException`); um
+    bug fora disso volta a propagar (falha alto em bug, degrada em rede).
+    """
+    run_id = run_id_var.get()
+    fetch_start = time.perf_counter()
+    try:
+        fetched = _fetch_wikipedia_page(title)
+    except RequestException as exc:
+        fetch_ms = (time.perf_counter() - fetch_start) * 1000
+        logger.warning(
+            "Busca da Wikipédia para '%s' falhou: %s", title, type(exc).__name__
+        )
+        audit.try_record(
+            run_id, "wikipedia_fetch", "tool", "error", fetch_ms, type(exc).__name__
+        )
+        return WikipediaPageResult(kind=kind, found=False, unavailable=True)
+    audit.try_record(
+        run_id, "wikipedia_fetch", "tool", "ok", (time.perf_counter() - fetch_start) * 1000
+    )
+    if fetched is None:
+        return WikipediaPageResult(kind=kind, found=False)
+    page_text, url = fetched
+    attractions = _extract_attractions(destination, page_text)
+    return WikipediaPageResult(
+        kind=kind,
+        found=bool(attractions),
+        source_url=url,
+        attractions=attractions,
+    )
+
+
 def search_tourist_attractions(destination: str) -> TouristAttractionSearchResult:
     """Busca pontos turísticos de um destino de viagem na Wikipédia.
 
-    Tenta primeiro a página "Tourism in <destination>"; se ela não existir,
-    tenta a página padrão do destino. Retorna os pontos turísticos
-    encontrados, ou found=False caso nenhuma página exista ou nada relevante
-    seja encontrado.
+    Tenta primeiro a página "Tourism in <destination>"; se ela não existir
+    ou não render atrações, tenta a página padrão do destino. Retorna os
+    pontos turísticos encontrados, ou found=False caso nenhuma página exista
+    ou nada relevante seja encontrado.
+
+    No grafo esta busca roda como um fan-out/fan-in paralelo
+    (`fetch_tourism_page` ∥ `fetch_destination_page` → `merge_pages`); esta
+    função é a especificação sequencial equivalente, mantida para referência
+    e usada pelo `bind_tools` para montar o schema da ferramenta.
     """
-    for title in (f"Tourism in {destination}", destination):
-        fetched = _fetch_wikipedia_page(title)
-        if fetched is None:
-            continue
-        page_text, url = fetched
-        attractions = _extract_attractions(destination, page_text)
-        if attractions:
+    candidates: tuple[tuple[str, Literal["tourism", "destination"]], ...] = (
+        (f"Tourism in {destination}", "tourism"),
+        (destination, "destination"),
+    )
+    unavailable = False
+    for title, kind in candidates:
+        result = fetch_page_attractions(title, destination, kind)
+        if result.attractions:
             return TouristAttractionSearchResult(
                 destination=destination,
-                source_url=url,
+                source_url=result.source_url,
                 found=True,
-                attractions=attractions,
+                attractions=result.attractions,
             )
+        unavailable = unavailable or result.unavailable
 
     return TouristAttractionSearchResult(
         destination=destination,
         source_url=None,
         found=False,
+        unavailable=unavailable,
         attractions=[],
     )
 

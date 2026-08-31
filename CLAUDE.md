@@ -25,6 +25,11 @@ Funcionalidades do agente:
   em SQLite, salva logo após a validação. Numa nova execução, o agente
   **mostra** a última viagem salva e oferece **retomá-la** (se ficou incompleta,
   ex.: após uma falha na busca/geração) ou **refazê-la** (se já concluída).
+- Oferecer, ao fim do turno em que o roteiro ficou pronto, o **envio do
+  itinerário por e-mail** através de um fluxo no n8n acionado por webhook. Por
+  ser uma ação externa e irreversível, só acontece mediante **aprovação humana
+  explícita** (pergunta s/n + e-mail validado por regex, sem passar pelo LLM).
+  Ver "Integração low-code (n8n)" abaixo.
 
 Não introduza funcionalidades, integrações ou tecnologias além das descritas
 neste documento sem alinhar antes com o usuário.
@@ -35,7 +40,12 @@ neste documento sem alinhar antes com o usuário.
 - **LangGraph** — orquestração do agente como um grafo de estados.
 - **pydantic** — definição do estado do grafo e de todos os modelos de dados
   (ex.: pontos turísticos, dias do itinerário).
-- **Groq** — modelo `llama-3.1-8b-instant` como LLM do agente.
+- **Groq** — LLM do agente e da extração via `langchain-groq`. Modelo e
+  temperatura do agente são configuráveis por `GROQ_MODEL` / `GROQ_TEMPERATURE`
+  (T03/#14; ver "Configuração de ambiente"), com padrão `openai/gpt-oss-120b` /
+  `0.7`. O `llama-3.1-8b-instant` original foi desligado pela Groq em
+  16/08/2026; `openai/gpt-oss-120b` está na camada gratuita (limites: 30
+  req/min, 8K tokens/min, 1K req/dia, 200K tokens/dia).
 - Autenticação com a Groq via variável de ambiente `GROQ_API_KEY` (nunca
   hardcode a chave; carregue de `.env`/ambiente).
 - **requests + beautifulsoup4** — busca e parsing de páginas da Wikipédia,
@@ -46,28 +56,42 @@ neste documento sem alinhar antes com o usuário.
 O agente segue um loop de tool-calling estilo ReAct, não um pipeline fixo de
 nós por etapa:
 
-- `validate_input` é o nó de entrada do grafo (`START → validate_input`):
-  valida a última mensagem do usuário e, via aresta condicional
-  (`route_after_validation`), segue para `persist_memory` quando a entrada é
-  válida ou vai direto para `END` (com a mensagem de recusa já inserida) quando
-  viola uma regra. Ver "Validação de entrada" abaixo.
+- **`route_entry` é a aresta condicional do `START`** (T14/#25): manda para
+  `notify_recipient` quando o usuário já aprovou o envio por e-mail e o
+  endereço validado está em `AgentState.recipient_email`; caso contrário, segue
+  o caminho normal para `validate_input`. É o único desvio do fluxo padrão e
+  **não passa pelo LLM**. Ver "Integração low-code (n8n)" abaixo.
+- `validate_input` é o nó de entrada do turno normal: valida a última mensagem
+  do usuário e, via aresta condicional (`route_after_validation`), segue para
+  `persist_memory` quando a entrada é válida ou vai direto para `END` (com a
+  mensagem de recusa já inserida) quando viola uma regra. Ver "Validação de
+  entrada" abaixo.
 - `persist_memory` roda logo após a validação (só no caminho válido) e salva os
   dados da viagem coletados até aqui na memória persistente, antes das buscas
   que podem falhar; em seguida segue para `call_llm`. Ver "Memória persistente"
   abaixo.
 - `call_llm` invoca o LLM com as tools de `tools.py` vinculadas via
-  `bind_tools`; também recupera as tool calls que o modelo fraco eventualmente
-  "vaza" como texto (ver "Robustez com o `llama-3.1-8b-instant`" abaixo).
-- Uma aresta condicional (`should_call_tools`) verifica se a resposta do LLM
-  pediu alguma tool: se sim, roteia para `call_tools`; se não, vai para
-  `END`.
-- `call_tools` executa a(s) tool(s) pedidas e volta para `call_llm`, que
-  formula a resposta final ao usuário (inclusive mensagens de "não
-  encontrado").
+  `bind_tools`; também recupera as tool calls que o modelo eventualmente
+  "vaza" como texto (ver "Robustez em tool-calling" abaixo).
+- Uma aresta condicional (`route_after_llm`) tem **3 saídas**: sem tool call →
+  `END` (condição de parada); tool call `search_tourist_attractions` → o
+  fan-out da busca (`dispatch_search`); qualquer outra tool (hoje só
+  `build_itinerary`) → `call_tools`.
+- `call_tools` executa `build_itinerary` (e outras tools que venham a existir) e
+  volta para `call_llm`. **A busca de atrações não passa por `call_tools`** — é
+  sempre roteada para o fan-out.
+- `dispatch_search → (fetch_tourism_page ∥ fetch_destination_page) →
+  merge_pages` é a **paralelização simples** exigida pelo §4.2 (ver
+  "Paralelização da busca da Wikipédia" abaixo). `merge_pages` volta para
+  `call_llm`, que formula a resposta final (inclusive "não encontrado").
 
-Qualquer nova funcionalidade deve seguir o mesmo padrão: implementar como
-tool em `tools.py` e registrá-la na lista de tools vinculada ao LLM em
-`nodes.py`, em vez de criar nós fixos por etapa.
+Para novas *ferramentas*, siga o padrão: implementar como tool em `tools.py` e
+registrá-la na lista vinculada ao LLM em `nodes.py`, roteando por `call_tools`
+— sem criar nós fixos por etapa. A **exceção deliberada** é a paralelização do
+§4.2: a busca da Wikipédia foi quebrada em nós fixos de fan-out/fan-in
+justamente porque o requisito é sobre a *topologia do grafo*, não sobre a
+ferramenta. `search_tourist_attractions` continua registrada (é o que o
+`bind_tools` inspeciona) e existe como especificação sequencial em `tools.py`.
 
 ## Validação de entrada (`validation.py`)
 
@@ -83,9 +107,9 @@ informativa em português (e sem acionar nenhuma tool):
 
 Regras de design (não remover sem alinhar):
 
-- **Detecção 100% por regex, sem nenhuma chamada ao LLM.** O
-  `llama-3.1-8b-instant` é fraco; a validação precisa ser determinística,
-  barata e previsível, sem sobrecarregar o modelo.
+- **Detecção 100% por regex, sem nenhuma chamada ao LLM.** A validação precisa
+  ser determinística, barata e previsível, sem sobrecarregar o modelo nem
+  depender do julgamento dele.
 - Os padrões de **prompt injection** cobrem os 6 idiomas mais falados:
   português, inglês, espanhol, francês, mandarim e híndi.
 - O **filtro de idioma** barra apenas scripts não-latinos (mandarim/híndi), que
@@ -106,8 +130,10 @@ Regras de design (não remover sem alinhar):
 ## Memória persistente (`memory.py`)
 
 O agente guarda em **SQLite** os dados da última viagem, para poder retomá-la
-numa nova execução caso a busca de atrações ou a geração do roteiro falhe (e
-falham de fato: uma falha de rede em `tools.py` propaga e derruba o processo).
+numa nova execução caso a geração do roteiro falhe. Falhas de rede na Wikipédia
+não derrubam mais o processo (ver "Resiliência das integrações" abaixo), mas a
+gravação do `.md` e outros erros fora de rede ainda podem — a memória é a rede
+de segurança.
 
 Regras de design (não alterar sem alinhar):
 
@@ -144,7 +170,12 @@ Regras de design (não alterar sem alinhar):
 Todas já implementadas e registradas em `nodes.py`:
 
 - `search_tourist_attractions(destination)` — busca na Wikipédia
-  (`Tourism in <destino>` → `<destino>`).
+  (`Tourism in <destino>` → `<destino>`). No grafo roda como fan-out/fan-in
+  paralelo (ver "Paralelização da busca da Wikipédia"); a função em `tools.py` é
+  a especificação sequencial e o que o `bind_tools` inspeciona. A unidade por
+  ramo é `fetch_page_attractions(title, destination, kind)` (fetch com
+  timeout/retry + extração; captura só `RequestException` → `found=False`, e
+  `unavailable=True` em falha de rede — ver "Resiliência das integrações").
 - `build_itinerary(destination, num_days)` — monta o roteiro e **grava o `.md`**
   em `output/`. Agrupa as atrações por proximidade e as distribui pelos
   `num_days` dias (**no máximo 3 atrações por dia**, sem divisão por período do
@@ -159,16 +190,259 @@ Todas já implementadas e registradas em `nodes.py`:
 O nome do arquivo gerado segue o padrão `itinerario-<destino>-<n>-dias.md`; se
 já existir, ganha sufixo sequencial no padrão Windows (` (2)`, ` (3)`, …).
 
-## Robustez com o `llama-3.1-8b-instant`
+## Paralelização da busca da Wikipédia (`nodes.py`)
 
-O modelo é pequeno e frágil em tool-calling. Regras aprendidas (não remover sem
-motivo — cada uma corrige um `tool_use_failed`/crash real):
+A busca sequencial de páginas da Wikipédia (`Tourism in <destino>` e, no
+fallback, `<destino>`) é modelada como um **fan-out/fan-in no grafo** — a
+"paralelização simples" exigida pelo §4.2. Regras de design (não alterar sem
+alinhar):
+
+- **`dispatch_search`** é a origem única do fan-out. Extrai `destination` e
+  `tool_call_id` da tool call `search_tourist_attractions` e os guarda no
+  pydantic `AgentState.pending_search`, para os nós seguintes não reprocessarem
+  `messages`.
+- **`fetch_tourism_page`** e **`fetch_destination_page`** rodam em paralelo (o
+  LangGraph executa nós de um mesmo superstep num `ThreadPoolExecutor`; a I/O de
+  rede e a chamada Groq liberam o GIL). Cada um faz fetch + extração via
+  `fetch_page_attractions` e escreve **uma chave** (`tourism` / `destination`)
+  em `AgentState.page_results`.
+- **`page_results`** é `Annotated[dict[str, WikipediaPageResult],
+  _merge_page_results]`: o reducer mescla por chave (`{**existing, **new}`).
+  Como os dois ramos sempre reescrevem sua própria chave a cada busca, um retry
+  do ReAct ou um novo turno sobrescreve tudo — resultados antigos nunca vazam,
+  sem precisar de nó de reset.
+- **`merge_pages`** é o fan-in e é **100% determinístico, sem LLM**: escolhe a
+  página que rendeu atrações, priorizando `Tourism in <destino>`; senão
+  `<destino>`; senão `found=False`. Devolve o **mesmo** `TouristAttractionSearchResult`
+  (e o mesmo formato de `ToolMessage`, com o `tool_call_id` da busca) que
+  `call_tools` produzia antes. A extração (que usa o LLM) fica nos ramos,
+  **fora** do nó de consolidação — mantém a "escolha da melhor página"
+  determinística.
+- Comportamento observável idêntico ao da busca sequencial: mesmas atrações,
+  mesmo `source_url`, mesma mensagem de "não encontrado". O custo é 1 chamada a
+  mais ao LLM de extração por busca (as duas páginas são sempre extraídas), mas
+  em paralelo (sem custo de latência).
+- A resiliência de rede (timeout/retry/backoff/log/`unavailable`) fica em
+  `fetch_page_attractions` e `_get_wikipedia` — ver "Resiliência das
+  integrações" abaixo (T02/#13).
+- `main.py` passa `recursion_limit=50` no `graph.invoke` — o fan-out consome
+  alguns supersteps a mais por busca.
+
+## Resiliência das integrações (`tools.py`)
+
+Política explícita e determinística de falhas nas integrações externas (T02/#13,
+§4.6). Regras de design (não alterar sem alinhar):
+
+- **HTTP da Wikipédia** (`_get_wikipedia`): timeout **configurável** por
+  `WIKIPEDIA_TIMEOUT` (em `config.py`, padrão 10s) + **retry limitado** (máx. 2
+  tentativas adicionais) com **backoff exponencial** (0,5s → 1,0s). Repete
+  **só** em erros de transporte transitórios (`Timeout`, `ConnectionError`);
+  erros de status HTTP (incl. 5xx) e o esgotamento das tentativas propagam a
+  exceção.
+- **Exceções específicas, não `except Exception`**: `fetch_page_attractions`
+  captura só `requests.exceptions.RequestException`. Um bug fora de rede volta a
+  propagar (falha alto em bug, degrada em rede).
+- **`unavailable`**: falha de rede após os retries → `WikipediaPageResult(
+  found=False, unavailable=True)`. `merge_pages` propaga para o
+  `TouristAttractionSearchResult`, e o `AGENT_SYSTEM_PROMPT` orienta o LLM a
+  dizer "problema técnico ao acessar a Wikipédia, tente de novo" — diferente de
+  "não encontrei informações do destino" (`found=False` sem `unavailable`).
+- **Extração do LLM** (`_invoke_structured`): `_extraction_llm` usa
+  `max_retries=2` (retry limitado que o SDK da Groq já faz internamente em erros
+  transitórios). O `except Exception` continua (o SDK trata as exceções
+  específicas; estreitar exigiria um import de `groq.*` frágil), mas agora
+  **registra** cada fallback via `logging` em vez de mascarar.
+- **Logging**: `logging.getLogger(__name__)` em `tools.py`; cada tentativa, erro
+  e fallback vira `logger.warning`/`logger.info`. Desde a **T04/#15**, esses
+  registros fluem pelo handler JSON + arquivo (`logs/itinerai.log`) plugado por
+  `logging_config.py` e ganham o `run_id` do turno — ver "Observabilidade /
+  logging" abaixo. `itinerai_agent/__init__.py` mantém só o `NullHandler` (a
+  aplicação é quem configura o logging).
+- **Trilha de auditoria (T05/#16)**: os retries de `_get_wikipedia`, a
+  indisponibilidade em `fetch_page_attractions` e os fallbacks de
+  `_invoke_structured` também viram linhas em `execution_audit`
+  (`status` `retry`/`error`/`fallback`) — ver "Trilha de auditoria" abaixo. Os
+  testes unitários da política continuam adiados para a T07/#18. Retry de 5xx
+  também não entra (Wikipédia raramente devolve 5xx).
+
+## Observabilidade / logging (`logging_config.py`)
+
+Logs estruturados em JSON, um evento por linha, para arquivo em `logs/`, com um
+`run_id` por turno da conversa correlacionando todos os eventos daquele turno
+(T04/#15, §4.6 — primeiro dos dois sinais do épico E02; a trilha de auditoria em
+SQLite com latência é a T05). Regras de design (não alterar sem alinhar):
+
+- **Somente stdlib** — nenhuma dependência nova no `requirements.txt`. O
+  `JsonFormatter` é escrito à mão (mesmo espírito da validação por regex e da
+  memória por `sqlite3`): determinístico, barato, previsível.
+- **A aplicação configura, a biblioteca não.** `main.py` chama
+  `configure_logging()` logo após `load_dotenv()` e **antes** de importar o
+  grafo. `itinerai_agent/__init__.py` continua só com o `NullHandler` — quando o
+  agente roda pela LangGraph platform (que não passa por `main.py`), os logs são
+  absorvidos e o terminal fica limpo (o `run_id` fica `""`).
+- **Só arquivo por padrão** (`logs/itinerai.log`, via `RotatingFileHandler`, 1 MB
+  × 3 backups). `LOG_TO_STDERR=1` espelha os eventos no stderr para depuração; o
+  padrão desligado mantém o terminal do usuário 100% limpo. `configure_logging()`
+  é idempotente e põe `propagate = False` no logger do pacote.
+- **`run_id` por turno**, gerado em `main.py` (`_run_turn`) a cada `graph.invoke`
+  e propagado de duas formas: no `AgentState.run_id` (lido pelos decorators de
+  nó) e num `contextvars.ContextVar` publicado por `_run_turn` e re-setado pelos
+  decorators — assim o `copy_context()` do fan-out da busca já o carrega e até as
+  chamadas profundas em `tools.py` (retries da Wikipédia, extração) saem com o
+  `run_id` correto. O filtro que injeta o `run_id` fica nos **handlers**, não no
+  logger (um filtro de logger não roda para records propagados dos loggers
+  filhos).
+- **Instrumentação** em `nodes.py`: os decorators `_logged_node` (nos 8 nós) e
+  `_logged_router` (nos 2 roteadores) emitem `node_start`/`node_end`/`node_error`
+  e `routing_decision`; o `_logged_node` também mede a latência do nó
+  (`perf_counter`) — o `duration_ms` entra nos eventos `node_end`/`node_error` e
+  numa linha da trilha de auditoria (T05). Eventos semânticos pontuais:
+  `validation_blocked` (com o motivo: `prompt_injection` / `non_latin_script` /
+  `url`, mapeado da mensagem de recusa sem tocar em `validation.py`),
+  `memory_persisted`, `llm_decision`, `llm_exception_fallback`,
+  `leaked_tool_calls_recovered`/`_unrecoverable`, `tool_executed` (nome, args
+  resumidos, status, `duration_ms`), `search_dispatched`, `page_fetched`,
+  `search_merged`. `main.py` emite `run_start`/`run_end`/`run_error`.
+- **Nada de segredos nem conteúdo de mensagens.** Os nós logam só metadados
+  (contagens, nomes de tools, decisões, booleanos, o destino) — nunca o texto do
+  usuário, a resposta do LLM, a lista de atrações ou o itinerário. Como defesa em
+  profundidade, o `JsonFormatter` ainda redige o valor de `GROQ_API_KEY` da
+  string final e trunca valores string longos (500 chars).
+- **Nível** configurável por `LOG_LEVEL` (padrão `INFO`; valor inválido cai para
+  `INFO`). Timestamps em **UTC** ISO-8601 (`…Z`); a trilha de auditoria (T05)
+  usa **o mesmo formato UTC** para casar com os logs. Só a `memory.py` fica em
+  hora local (dado de produto, não correlacionado com os sinais).
+
+## Trilha de auditoria (`audit.py`)
+
+Segundo sinal de observabilidade do §4.6 (T05/#16): uma tabela SQLite
+`execution_audit`, **uma linha por passo executado** (nó do grafo ou tool) com a
+**latência medida**, correlacionada aos logs (T04) pelo **mesmo `run_id`**. A
+T06/#17 cruza os dois para reconstruir uma execução real, achar o gargalo e
+investigar um erro. Regras de design (não alterar sem alinhar):
+
+- **Espelha o padrão de `memory.py`**: `sqlite3` da stdlib (sem dependência
+  nova), `_connect` que abre/commita/fecha por chamada (fecha explícito por
+  causa do lock de arquivo no Windows), funções puras com `db_path` opcional que
+  cai para `AUDIT_DB_PATH` em tempo de chamada (testável na T07).
+- **Banco próprio** `itinerai_audit.db` (raiz do projeto, **não versionado**),
+  separado do `itinerai_memory.db`: a trilha é *append-only* e cresce a cada
+  turno; apagar o arquivo reseta. `_connect` usa `timeout=10` porque os dois
+  ramos do fan-out da busca escrevem de threads diferentes.
+- **Colunas** (do checklist da T05): `run_id`, `step`, `step_type`
+  (`node` | `tool` | `turn`), `status` (`ok` | `error` | `retry` | `fallback`),
+  `duration_ms` (REAL, `NULL` em linhas de `retry`), `error` (tipo da exceção /
+  motivo do fallback), `created_at` (UTC ISO-8601 `…Z`). Mais um `id` rowid para
+  ordenação estável e um índice em `run_id`.
+- **Best-effort**: a instrumentação chama `audit.try_record(...)`, que monta o
+  `AuditStep`, chama a função pura `record_audit_step` e **engole** qualquer erro
+  (só loga `audit_write_failed`). Auditar **nunca** derruba um turno. As funções
+  puras (`record_audit_step`, `load_audit_trail`, `format_audit_trail`, `init_db`)
+  propagam erros — quem degrada é o `try_record`.
+- **Onde as linhas nascem**: `_logged_node` (latência de cada nó, `ok`/`error`);
+  `call_tools` (a tool `build_itinerary`); `fetch_page_attractions` (o passo
+  `wikipedia_fetch`, só a parte de rede); `_get_wikipedia` (linhas `retry`);
+  `_invoke_structured` (o passo `llm_extraction`, `ok`/`fallback` com o motivo);
+  `call_llm` (linha `fallback` do `llm_agent`); `_run_turn` em `main.py` (a linha
+  `turn` `graph_invoke` com a latência ponta a ponta). Todos leem o `run_id` de
+  `run_id_var.get()` (fundo de `tools.py`) ou de `state.run_id`.
+- **Exibir uma trilha**: `python show_audit.py <run_id>` (script na raiz; a
+  lógica fica na função pura `audit.format_audit_trail`, que mostra a tabela de
+  passos, o passo mais lento e o total do turno). Pegue o `run_id` de qualquer
+  linha de `logs/itinerai.log`.
+- **Fora de escopo (T05)**: testes unitários das funções de auditoria →
+  **T07/#18** (bootstrap do `pytest`); o documento de evidências cruzando os
+  dois sinais → **T06/#17**; poda/retenção do `itinerai_audit.db`.
+
+## Integração low-code (n8n) (`notifications.py`)
+
+A automação low-code do §4.9: ao fim do turno em que o roteiro fica pronto, o
+agente oferece enviá-lo por e-mail; aprovado, faz um POST para um webhook do n8n
+que dispara o e-mail. A T13/#24 entregou o workflow
+(`docs/low-code/n8n-workflow.json`); a T14/#25, o lado da aplicação. Regras de
+design (não alterar sem alinhar):
+
+- **A lógica principal permanece na aplicação.** O n8n só recebe um payload
+  pronto e despacha o e-mail — não monta roteiro, não decide nada, não conhece a
+  Wikipédia. Se o fluxo sumir, o agente continua inteiro; só deixa de oferecer o
+  envio.
+- **Aprovação humana explícita (§4.5).** A pergunta s/n e a coleta do e-mail
+  acontecem em `main.py` (`_offer_email`), **entre turnos** e sem passar pelo
+  LLM. Nenhuma chamada externa ocorre sem um "s" e um endereço bem-formado. A
+  validação de formato é `is_valid_email` em `validation.py` — regex
+  determinístico, no mesmo espírito do resto do módulo. Ele é
+  **deliberadamente mais estrito** que o do nó `Validar payload` do workflow
+  (que aceita `a@b..c` e `a@b.c.`); como a aplicação valida **antes** e é o lado
+  restritivo, o n8n nunca recebe algo que ela recusaria. Os dois padrões **não
+  são idênticos** — ao mexer em um, não presuma que o outro acompanha.
+- **Por que a aprovação não mora num nó:** ela é `input()` de terminal, e um nó
+  que bloqueia em I/O interativo deixaria de ser puro e testável. Daí o desenho:
+  `main.py` grava `recipient_email` no estado e reinvoca o grafo; `route_entry`
+  desvia o `START` direto para `notify_recipient`. Alternativa descartada:
+  `interrupt()` + checkpointer do LangGraph — mais idiomático, mas exigiria
+  `MemorySaver` e `thread_id` no projeto inteiro.
+- **`notify_recipient`** (em `nodes.py`) monta o payload com
+  `render_itinerary_markdown(state.itinerary)` (reaproveita a função que gera o
+  `.md`, sem reler o arquivo), chama `send_itinerary` e devolve a confirmação
+  como `AIMessage` — que o `print` já existente em `_run_turn` exibe. Zera o
+  `recipient_email` para não reenviar no turno seguinte.
+- **`AgentState.notification`** guarda o desfecho (`sent`, `declined`,
+  `cancelled`, `invalid_email`, `not_configured`, `failed`) e é o que impede a
+  pergunta de se repetir a cada turno. `call_tools` o zera a cada novo
+  `build_itinerary`, para um roteiro novo reabrir a oferta.
+- **Os desfechos que não passam pelo grafo também são auditados.** `declined`,
+  `cancelled` e `invalid_email` são decididos em `main.py`, fora do nó
+  instrumentado; `_record_offer_outcome` emite para cada um o log
+  `notification_<status>` e a linha de auditoria homônima (tipo `turn`), com o
+  `run_id` do turno que gerou o roteiro. Sem isso, "o usuário recusou" seria
+  indistinguível de "o agente nunca perguntou" — e é a recusa que evidencia o
+  limite de autonomia do §4.5.
+- **Timeout configurável (`N8N_TIMEOUT`), mas SEM retry.** Divergência
+  deliberada em relação a `_get_wikipedia` (T02/#13), que repete com backoff: um
+  GET da Wikipédia é idempotente, um POST que dispara e-mail **não é**. Um
+  `Timeout` do cliente não prova que o n8n deixou de processar — repetir mandaria
+  uma segunda cópia do roteiro. E repetir automaticamente uma ação que o §4.5
+  classifica como irreversível contradiz a própria exigência de aprovação humana.
+- **Onde cada camada degrada:** `send_itinerary` **não levanta em falha de rede,
+  status HTTP de erro ou ausência de configuração** (viram
+  `NotificationResult(status="failed")`), mas **propaga o resto** — vale a regra
+  geral do projeto, falhar alto em bug. A garantia de que *nenhuma* exceção
+  derruba o turno é do nó `notify_recipient`, que tem um `except Exception`
+  **deliberado na fronteira** (com `logger.exception` + linha de auditoria
+  `notification_unexpected`): ali "não derrubar a sessão" é decisão de produto —
+  critério de aceitação da #23 —, não de biblioteca.
+- **Degradação silenciosa:** sem `N8N_WEBHOOK_URL`, nenhuma chamada é feita e o
+  resultado é `not_configured`, com mensagem amigável ao usuário.
+- **O e-mail do destinatário nunca sai em texto puro.** Logs e trilha de
+  auditoria recebem só `mask_email(...)` (`j***@exemplo.com`). O passo auditado
+  do envio é `n8n_webhook` (tipo `tool`), com `ok`/`error` e `duration_ms`.
+- **Segredos só no ambiente:** `N8N_WEBHOOK_URL` e `N8N_WEBHOOK_TOKEN` vêm de
+  `config.py`; o JSON do workflow versionado não carrega credencial alguma (elas
+  entram por referência de *nome* dentro do n8n).
+- Instruções de reprodução no `README.md` da raiz (exigência literal do §4.9); o
+  detalhe do fluxo e as evidências ficam em `docs/low-code/README.md`.
+
+## Robustez em tool-calling
+
+Estas regras nasceram com o `llama-3.1-8b-instant` (modelo pequeno e frágil,
+hoje substituído por `openai/gpt-oss-120b`). O `gpt-oss-120b` erra muito menos,
+mas as proteções continuam — cada uma corrige um `tool_use_failed`/crash real e
+o custo delas é baixo (não remover sem motivo):
 
 - O LLM de extração (`_extraction_llm`) usa `temperature=0`; os prompts de
   extração pedem no máximo ~15 itens e proíbem repetição (evita loops que
   truncam o JSON).
-- Falhas de geração estruturada são tratadas: as extrações caem para vazio e
-  `call_llm` responde com mensagem amigável, em vez de derrubar o agente.
+- **A extração NÃO usa `ChatGroq.with_structured_output`.** Com o
+  `openai/gpt-oss-120b` esse método força `tool_choice` e o modelo devolve o
+  JSON como **texto** (não como tool call), o que a Groq rejeita com
+  `tool_use_failed` ("model did not call a tool"). Em vez disso,
+  `_invoke_structured` (em `tools.py`) pede o formato do JSON no próprio prompt
+  de extração e faz o parse do texto da resposta (`_extract_json_payload`
+  tolera cercas ` ```json ` e texto ao redor; lista "solta" é embrulhada no
+  campo único do schema), validando com `schema.model_validate`.
+- Falhas de extração são tratadas: `_invoke_structured` devolve `None` em
+  qualquer erro, as extrações caem para vazio e `call_llm` responde com
+  mensagem amigável, em vez de derrubar o agente.
 - Mantenha os schemas das tools **pequenos**; para dados grandes vindos do
   estado, use `InjectedToolArg` (nunca exponha listas aninhadas ao modelo).
 - **Recuperação de tool calls "vazadas" como texto:** o modelo às vezes emite a
@@ -180,7 +454,11 @@ motivo — cada uma corrige um `tool_use_failed`/crash real):
   chamadas em `tool_calls` reais por regex determinístico e **descarta um
   `build_itinerary` prematuro** quando há uma busca no mesmo lote (a busca
   precisa rodar antes); se nada for recuperável (JSON truncado, ferramenta
-  desconhecida), troca o texto cru por um aviso amigável.
+  desconhecida), troca o texto cru por um aviso amigável. Esse descarte do
+  `build_itinerary` prematuro (helper `_drop_premature_build_itinerary`) vale
+  também para tool calls **estruturados** — `call_llm` o aplica antes de
+  `route_after_llm`, para que `merge_pages` responda sempre a exatamente um
+  `tool_call_id`.
 - Para reduzir o gatilho na origem, o `AGENT_SYSTEM_PROMPT` orienta o modelo a
   chamar **uma ferramenta por vez**, a nunca escrever a chamada como texto e a
   sempre usar `search_tourist_attractions` **antes** de `build_itinerary`.
@@ -193,36 +471,67 @@ Estrutura baseada na organização recomendada pela documentação do LangGraph
 
 ```
 mini-projeto-ItinerAI/
+├── .github/workflows/
+│   └── ci.yml              # pipeline de CI: lint, testes, cobertura, build (T10/#21)
 ├── itinerai_agent/         # todo o código do agente
 │   ├── utils/
 │   │   ├── __init__.py
+│   │   ├── config.py       # variáveis de ambiente (GROQ_MODEL, GROQ_TEMPERATURE, WIKIPEDIA_TIMEOUT, LOG_LEVEL)
 │   │   ├── tools.py        # tools: busca de pontos turísticos, geração do .md
 │   │   ├── validation.py   # validação de entrada do usuário (anti prompt injection, idioma, URLs)
 │   │   ├── memory.py       # memória persistente da última viagem em SQLite (retomada)
+│   │   ├── logging_config.py  # bootstrap do logging estruturado em JSON + run_id (T04/#15)
+│   │   ├── audit.py        # trilha de auditoria + latência por passo em SQLite (T05/#16)
+│   │   ├── notifications.py   # cliente do webhook do n8n: roteiro por e-mail (T14/#25)
 │   │   ├── prompts.py      # prompts do agente e das extrações
-│   │   ├── nodes.py        # funções de nó do grafo (validação, persistência, chamada ao LLM, execução de tools)
+│   │   ├── nodes.py        # funções de nó do grafo (validação, persistência, LLM, tools, fan-out da busca, notificação)
 │   │   └── state.py        # definição do estado do grafo (modelos pydantic)
 │   ├── __init__.py
 │   └── agent.py            # construção/compilação do StateGraph
-├── docs/
-│   └── application-structure.md
+├── tests/                  # suíte de testes unitários (pytest) — T07/#18
+│   ├── conftest.py         # GROQ_API_KEY fake + isolamento de disco
+│   └── utils/              # espelha itinerai_agent/utils/
+├── docs/                   # documentação e evidências (T16/#27) — índice em docs/README.md
+│   ├── README.md           # índice de todas as evidências, por critério do §6
+│   ├── requisitos.md       # enunciado da avaliação
+│   ├── tasks.md            # backlog: epics, tarefas e checklists
+│   ├── application-structure.md
+│   ├── prompts/            # histórico de prompts, instruções de sistema e ciclos de refinamento
+│   ├── qa/                 # análises: testes, code review, CI e observabilidade
+│   ├── evidencias/         # evidência bruta: logs de CI, logs do agente e trilhas de auditoria
+│   ├── low-code/           # workflow do n8n + payload de exemplo + evidências (T13/#24, T14/#25)
+│   └── issues-templates/   # templates das issues do GitHub Project
 ├── output/                 # itinerários .md gerados pelo agente (não versionado)
+├── logs/                   # logs estruturados em JSON (itinerai.log; não versionado)
 ├── main.py                 # ponto de entrada: loop de chat via terminal
+├── show_audit.py           # exibe a trilha de auditoria de um run_id (T05/#16)
 ├── .env                    # variáveis de ambiente locais (não versionado)
 ├── itinerai_memory.db      # memória persistente SQLite da última viagem (não versionado)
+├── itinerai_audit.db       # trilha de auditoria SQLite (não versionado)
+├── pyproject.toml          # config de pytest + cobertura + Ruff (T07/#18, T10/#21)
 ├── requirements.txt        # dependências do projeto
+├── requirements-dev.txt    # deps de teste + lint (pytest, pytest-cov, ruff, diff-cover)
 └── langgraph.json          # arquivo de configuração do LangGraph
 ```
 
 - Todo o código do agente fica dentro de `itinerai_agent/`, seguindo o padrão
   `my_agent` da documentação do LangGraph.
 - `state.py` define o estado do grafo (`AgentState`) com `pydantic.BaseModel`:
-  `messages`, `destination`, `num_days`, `tourist_attractions` e `itinerary`. A
-  duração (`num_days`) fica no estado — além de ser passada a `build_itinerary`
-  — para poder ser persistida pela memória e permitir a retomada da conversa
-  (populada em `call_tools` a partir de `build_itinerary`). Também é o lugar dos
-  modelos de domínio usados pelas tools (`TouristAttraction`,
-  `Itinerary`/`ItineraryDay`). As atrações têm um campo `location` (exato ou
+  `messages`, `run_id`, `destination`, `num_days`, `tourist_attractions`,
+  `itinerary`, `pending_search`, `page_results`, `recipient_email` e
+  `notification` (estes dois últimos da T14/#25 — ver "Integração low-code
+  (n8n)"). O `run_id` (T04/#15) é gerado
+  por turno em `main.py` e propagado para correlacionar os logs estruturados e a
+  trilha de auditoria — ver "Observabilidade / logging" e "Trilha de auditoria".
+  A duração (`num_days`) fica no estado —
+  além de ser passada a `build_itinerary` — para poder ser persistida pela
+  memória e permitir a retomada da conversa (populada em `call_tools` a partir
+  de `build_itinerary`). `pending_search` (modelo `PendingSearch`) e
+  `page_results` (`dict[str, WikipediaPageResult]` com o reducer
+  `_merge_page_results`) suportam o fan-out/fan-in da busca — ver
+  "Paralelização da busca da Wikipédia". Também é o lugar dos modelos de domínio
+  usados pelas tools (`TouristAttraction`, `Itinerary`/`ItineraryDay`,
+  `WikipediaPageResult`). As atrações têm um campo `location` (exato ou
   provável) usado no agrupamento por proximidade.
 - `tools.py` concentra as ferramentas expostas ao agente (pesquisa de pontos
   turísticos, geração do arquivo `.md`) — ver "Ferramentas do agente" acima.
@@ -230,31 +539,152 @@ mini-projeto-ItinerAI/
   (tool-calling)" acima para o padrão atual de roteamento.
 - `validation.py` concentra a validação de entrada do usuário (funções puras de
   regex + mensagens de recusa) — ver "Validação de entrada" acima.
+- `config.py` concentra a leitura das variáveis de ambiente (constantes
+  `GROQ_MODEL`, `GROQ_TEMPERATURE`, `WIKIPEDIA_TIMEOUT`, `LOG_LEVEL`,
+  `LOG_TO_STDERR` lidas no import) — ver "Configuração de ambiente" abaixo.
+- `logging_config.py` concentra o bootstrap do logging estruturado em JSON
+  (formatter, `ContextVar` do `run_id`, `configure_logging()` idempotente) — ver
+  "Observabilidade / logging" acima.
 - `memory.py` concentra a memória persistente em SQLite (funções puras
   `init_db`/`save_trip_memory`/`load_trip_memory` + o modelo `TripMemory`) —
   ver "Memória persistente" acima.
+- `notifications.py` concentra o cliente do webhook do n8n (o payload
+  `ItineraryNotification`, o desfecho `NotificationResult`, `mask_email` e
+  `send_itinerary`, com timeout/retry/fallback próprios) — ver "Integração
+  low-code (n8n)" acima. `docs/low-code/` guarda o workflow e as evidências.
+- `audit.py` concentra a trilha de auditoria em SQLite (funções puras
+  `init_db`/`record_audit_step`/`load_audit_trail`/`format_audit_trail` + o
+  wrapper best-effort `try_record` + o modelo `AuditStep`) — ver "Trilha de
+  auditoria" acima. `show_audit.py` (raiz) é o comando de exibição.
+- `.github/workflows/ci.yml` é o pipeline de CI (jobs `lint`/`test`/`build`) —
+  ver "Integração contínua (CI)" abaixo. As regras do Ruff ficam em
+  `[tool.ruff*]` no `pyproject.toml`.
 - Itinerários gerados são salvos como arquivo `.md` em `output/`.
 
 ## Configuração de ambiente
 
 - Requer Python 3.12.9.
-- Variável de ambiente obrigatória: `GROQ_API_KEY` (carregada via `.env` em
-  desenvolvimento local, nunca commitada).
-- `.env`, `output/` e o banco `itinerai_memory.db` devem estar no `.gitignore`.
-- A memória persistente usa `sqlite3` da stdlib — nenhuma dependência extra no
-  `requirements.txt`.
+- **Todas as variáveis são lidas em `itinerai_agent/utils/config.py`** (no
+  import, após `load_dotenv()` do `main.py`), com padrões que preservam o
+  comportamento anterior — rodar só com `GROQ_API_KEY` não muda nada.
+- Variável obrigatória: `GROQ_API_KEY` (nunca commitada; consumida direto pela
+  `langchain-groq`, não passa por `config.py`; `logging_config.py` a lê só para
+  redigir seu valor dos logs, como defesa em profundidade).
+- Variáveis opcionais:
+  - `GROQ_MODEL` (padrão `openai/gpt-oss-120b`) — modelo do agente **e** da
+    extração. T03/#14.
+  - `GROQ_TEMPERATURE` (padrão `0.7`) — temperatura só do LLM do agente (`_llm`);
+    a extração (`_extraction_llm`) usa `temperature=0` fixo, à parte.
+  - `WIKIPEDIA_TIMEOUT` (segundos; padrão `10`) — timeout das requisições HTTP à
+    Wikipédia. Ver "Resiliência das integrações".
+  - `LOG_LEVEL` (padrão `INFO`) — nível dos logs estruturados; valor inválido
+    cai para `INFO`. Ver "Observabilidade / logging". T04/#15.
+  - `LOG_TO_STDERR` (padrão desligado) — quando ligado (`1`/`true`/`yes`/`on`),
+    espelha os logs no stderr além do arquivo, para depuração.
+  - `N8N_WEBHOOK_URL` (padrão vazio) — URL de produção do webhook do n8n que
+    envia o roteiro por e-mail. **Vazia desliga a integração** (degradação
+    silenciosa, sem nenhuma chamada externa). T14/#25.
+  - `N8N_WEBHOOK_TOKEN` (padrão vazio) — valor do header `X-ItinerAI-Token`,
+    igual ao da credencial *Header Auth* criada no n8n. Nunca versionado.
+  - `N8N_TIMEOUT` (segundos; padrão `10`) — timeout da chamada ao webhook.
+- `.env`, `output/`, `logs/`, `.ruff_cache/` e os bancos `itinerai_memory.db` /
+  `itinerai_audit.db` devem estar no `.gitignore`.
+- A memória persistente, a trilha de auditoria e o logging estruturado usam só a
+  stdlib (`sqlite3`, `logging`) — nenhuma dependência extra no
+  `requirements.txt`. As dependências de teste e de lint (`pytest`, `pytest-cov`,
+  `coverage[toml]`, `ruff`, `diff-cover`) ficam em `requirements-dev.txt` — ver
+  "Testes" e "Integração contínua (CI)".
+
+## Testes (`tests/`, T07/#18)
+
+Suíte de testes **unitários** com `pytest` + `pytest-cov`; **gate de cobertura em
+70%** (`--cov-fail-under=70`; cobertura real estimada ~90%). Regras de design
+(não alterar sem alinhar):
+
+- **Deps de teste isoladas** em `requirements-dev.txt` (`-r requirements.txt` +
+  `pytest` + `pytest-cov` + `coverage[toml]` + `ruff` + `diff-cover`, todos
+  pinados). O `requirements.txt` de produção continua só com as libs do agente.
+- **Configuração** em `pyproject.toml` — o primeiro do projeto, contém
+  `[tool.pytest.ini_options]`, `[tool.coverage.*]` e `[tool.ruff*]` (T10/#21);
+  sem `[build-system]` (o ItinerAI não é pacote instalável). `addopts =
+  --cov=itinerai_agent --cov-report=term-missing --cov-fail-under=70`.
+- **Nenhum teste acessa a rede ou exige a `GROQ_API_KEY` real.**
+  `tests/conftest.py` injeta `GROQ_API_KEY=test-key` em nível de módulo, **antes**
+  de qualquer import de `itinerai_agent` — necessário porque `tools.py`/`nodes.py`
+  constroem `ChatGroq` no import (e o validator do `ChatGroq` instancia
+  `groq.Groq`, que exige a chave; `groq.Groq(api_key="test-key")` não valida nada
+  nem faz rede).
+- **Efeitos em disco isolados** por uma fixture `autouse` que redireciona
+  `memory.MEMORY_DB_PATH`, `audit.AUDIT_DB_PATH` e `tools.OUTPUT_DIR` para um
+  `tmp_path` por teste (todos resolvidos em tempo de chamada).
+- **HTTP e LLM sempre simulados**: mock de `tools.requests.get` /
+  `tools.time.sleep` para a resiliência (T02) e de `tools._extraction_llm` /
+  `_invoke_structured` para a extração estruturada; `_llm_with_tools` para o
+  `call_llm`.
+- **Cobertos**: `validation.py` e `memory.py` (~100%), `audit.py` (T05, ~95%),
+  funções puras + resiliência + extração de `tools.py`,
+  `state._merge_page_results`, helpers e nós determinísticos de `nodes.py`,
+  `logging_config.py`, `agent.build_graph()`. **Fora de escopo** (T08): o grafo
+  compilado ponta a ponta.
+- **Rodar**: `pip install -r requirements-dev.txt && pytest`. O `pytest` sai com
+  erro se a cobertura ficar abaixo de 70% (mesmo com todos os testes verdes).
+
+## Integração contínua (CI) (`.github/workflows/ci.yml`)
+
+Pipeline do GitHub Actions (T10/#21, §4.8) disparado em `push` e `pull_request`
+para `develop` e `main`. **Três jobs paralelos e independentes** — a separação em
+etapas legíveis é o que viabiliza a análise de logs de duas etapas distintas
+exigida pela T11/#22. Regras de design (não alterar sem alinhar):
+
+- **`lint`** — Ruff, o equivalente Python do ESLint (que não analisa Python).
+  `ruff check --output-format=github .` é **bloqueante**; `ruff format --check
+  --diff .` roda com `continue-on-error: true` (**informativo**) — a base nunca
+  passou por um formatador e a normalização virá num commit próprio; tornar o
+  `format` bloqueante é só remover o `continue-on-error`. As regras ficam em
+  `[tool.ruff]` no `pyproject.toml`: `line-length = 100`, `select = ["E4", "E7",
+  "E9", "F"]` (conjunto padrão do Ruff; **E501 fora de propósito**), com
+  `per-file-ignores` de `E402` para `main.py`, `show_audit.py` e
+  `tests/conftest.py` (imports após código no topo, intencionais).
+- **`test`** — `pytest` com os relatórios `xml`/`html`/`term-missing` e
+  `--cov-fail-under=0` (sobrepõe o `addopts`: o passo do pytest falha só por
+  teste quebrado). Os gates de cobertura são **passos separados**: (1) global,
+  `coverage report --fail-under=70`; (2) do **código novo**, `diff-cover
+  coverage.xml --compare-branch=origin/<base> --fail-under=70`, **só em
+  `pull_request`** (`diff-cover` só olha arquivos presentes no `coverage.xml`,
+  isto é `itinerai_agent/**`). O `coverage.xml` + HTML + relatórios do
+  `diff-cover` sobem como o artefato `coverage-report`.
+- **`build`** — compila o grafo (`build_graph()` + o `graph` de módulo) usando
+  **só as dependências de produção** (`requirements.txt`) e valida a integridade
+  do `langgraph.json` (chaves `dependencies`/`graphs`, alvo `...:graph`, arquivo
+  do grafo existente). Redundante com `tests/test_agent.py` de propósito: é a
+  etapa de "build" do §4.8 e prova que o grafo sobe sem as libs de dev.
+- **Sem `GROQ_API_KEY` real e sem rede.** Nenhum job referencia secret; a suíte
+  mocka todo HTTP/LLM e o `conftest.py` injeta a chave dummy. Só o `build` passa
+  um literal descartável (`GROQ_API_KEY: ci-dummy-key`) porque importa
+  `itinerai_agent.agent` sem passar pelo `conftest` — o `ChatGroq` lê a variável
+  no import mas não chama a API.
+- **Python 3.12.9** fixo (`actions/setup-python@v5`, `cache: pip`);
+  `concurrency` cancela runs superados; `permissions: contents: read`.
+- Badge de status no `README.md` (aponta para `?branch=develop`, onde o
+  desenvolvimento acontece).
 
 ## Convenções de código
 
 - Use type hints em todas as funções públicas.
 - Toda estrutura de dados trocada entre nós do grafo deve ser um modelo
-  `pydantic`, não `dict` solto.
+  `pydantic`, não `dict` solto. (`AgentState.page_results` é `dict[str,
+  WikipediaPageResult]` — um canal de reducer tipado com valores pydantic, no
+  mesmo espírito de `messages: Annotated[list[BaseMessage], add_messages]`, não
+  um `dict` solto.)
 - Mantenha as tools em `tools.py` puras e testáveis (sem lógica de
   orquestração do grafo dentro delas).
 - Nomes de arquivos-fonte, pastas, funções e variáveis em inglês; mensagens
   voltadas ao usuário final (saída no terminal, conteúdo do `.md` gerado)
-  em português. Exceção: os `.md` gerados em `output/` são artefatos do
-  usuário e seguem o esquema `itinerario-<destino>-<n>-dias.md`.
+  em português. Duas exceções: os `.md` gerados em `output/`, que são artefatos
+  do usuário e seguem o esquema `itinerario-<destino>-<n>-dias.md`; e as
+  **subpastas de `docs/`**, que seguem os nomes definidos no backlog
+  (`docs/tasks.md`) por serem os que o avaliador procura — daí
+  `docs/evidencias/`, e não `evidences`. Não "corrigir" para inglês.
 
 ## Regras obrigatórias
 

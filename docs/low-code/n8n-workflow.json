@@ -1,0 +1,230 @@
+{
+  "name": "ItinerAI - Enviar roteiro por e-mail",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "id": "8f1c2a10-1f2b-4c3d-9e10-0a1b2c3d4e5f",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "b7a6c5d4-e3f2-4a1b-8c9d-0e1f2a3b4c5d",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "itinerai-email",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "ItinerAI Webhook Token"
+        }
+      },
+      "notes": "Gatilho da automação. A aplicação (ItinerAI) faz POST com destination, num_days, recipient, markdown e run_id, autenticando pelo header X-ItinerAI-Token."
+    },
+    {
+      "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5e",
+      "name": "Validar payload",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-destination",
+              "leftValue": "={{ $json.body.destination }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-num-days",
+              "leftValue": "={{ $json.body.num_days }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "cond-markdown",
+              "leftValue": "={{ $json.body.markdown }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-recipient",
+              "leftValue": "={{ $json.body.recipient }}",
+              "rightValue": "^[^@\\s]+@[^@\\s.]+\\.[^@\\s]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "notes": "Validação do contrato no lado do n8n: os quatro campos obrigatórios presentes e o recipient com formato de e-mail."
+    },
+    {
+      "id": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6f",
+      "name": "Markdown para HTML",
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [460, -120],
+      "parameters": {
+        "mode": "markdownToHtml",
+        "markdown": "={{ $json.body.markdown }}",
+        "destinationKey": "html",
+        "options": {}
+      },
+      "notes": "Converte o roteiro em markdown para HTML, para o e-mail chegar formatado."
+    },
+    {
+      "id": "3c4d5e6f-7a8b-4c9d-0e1f-2a3b4c5d6e70",
+      "name": "Enviar email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [680, -120],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "fromEmail": "itinerai@example.com",
+        "toEmail": "={{ $('Webhook').item.json.body.recipient }}",
+        "subject": "={{ 'Seu roteiro de viagem - ' + $('Webhook').item.json.body.destination + ' (' + $('Webhook').item.json.body.num_days + ' dias)' }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "name": "ItinerAI SMTP"
+        }
+      },
+      "notes": "Saída observável da automação. Troque o fromEmail pelo endereço da sua credencial SMTP. A saída de erro alimenta a resposta 502."
+    },
+    {
+      "id": "4d5e6f7a-8b9c-4d0e-1f2a-3b4c5d6e7f81",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, -220],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"sent\", \"run_id\": $('Webhook').item.json.body.run_id } }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "5e6f7a8b-9c0d-4e1f-2a3b-4c5d6e7f8092",
+      "name": "Responder falha de envio",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, -20],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"error\", \"error\": \"falha ao enviar o e-mail pelo servidor SMTP\", \"run_id\": $('Webhook').item.json.body.run_id } }}",
+        "options": {
+          "responseCode": 502
+        }
+      }
+    },
+    {
+      "id": "6f7a8b9c-0d1e-4f2a-3b4c-5d6e7f8091a3",
+      "name": "Responder payload invalido",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 140],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"rejected\", \"error\": \"payload invalido: destination, num_days, markdown e recipient (e-mail valido) sao obrigatorios\" } }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validar payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar payload": {
+      "main": [
+        [
+          {
+            "node": "Markdown para HTML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder payload invalido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown para HTML": {
+      "main": [
+        [
+          {
+            "node": "Enviar email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar email": {
+      "main": [
+        [
+          {
+            "node": "Responder OK",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder falha de envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "tags": []
+}

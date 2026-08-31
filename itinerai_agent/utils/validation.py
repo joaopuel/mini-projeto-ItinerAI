@@ -108,6 +108,34 @@ URL_MESSAGE = (
     "diga apenas o nome do destino (e por quantos dias você pretende viajar) que eu "
     "pesquiso as informações para você."
 )
+INVALID_EMAIL_MESSAGE = (
+    "O endereço de e-mail informado não parece válido, então não vou enviar nada. "
+    "O roteiro continua disponível no arquivo criado em output/."
+)
+
+
+# --- E-mail do destinatário (T14/#25) --------------------------------------
+
+# Validação de FORMATO, não de existência: um endereço bem-formado é o suficiente
+# para decidir se vale acionar o webhook do n8n.
+#
+# Este padrão é DELIBERADAMENTE MAIS ESTRITO que o do nó `Validar payload` do
+# workflow (`docs/low-code/n8n-workflow.json`, `^[^@\s]+@[^@\s.]+\.[^@\s]+$`),
+# que aceita rótulo vazio e ponto final (`a@b..c`, `a@b.c.`) porque o `[^@\s]+`
+# final permite pontos. Aqui cada rótulo depois do @ precisa ser não vazio.
+# A assimetria é segura no sentido em que existe: a aplicação valida ANTES e é
+# a mais restritiva, então o n8n nunca recebe algo que ela recusaria. Ao mexer
+# em um dos lados, não presuma que o outro acompanha.
+_EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$")
+
+
+def is_valid_email(text: str) -> bool:
+    """Indica se o texto é um endereço de e-mail bem-formado.
+
+    Determinístico e sem rede, no mesmo espírito das demais regras deste módulo:
+    não verifica se a caixa existe, apenas se o formato justifica a chamada
+    externa."""
+    return bool(_EMAIL_PATTERN.match(text.strip()))
 
 
 def contains_url(text: str) -> bool:

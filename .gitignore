@@ -12,13 +12,38 @@ env/
 .env
 !.env.example
 
+# Snapshot local do ambiente (pip freeze) para restaurar a máquina do dev após
+# um problema de instalação. NÃO é lockfile do projeto — a reprodutibilidade
+# vem das versões pinadas em requirements.txt.
+environment-funcionando.txt
+
 # Project output
 output/
+
+# Logs estruturados (T04/#15)
+logs/
 
 # Memória persistente (SQLite)
 itinerai_memory.db
 itinerai_memory.db-journal
 itinerai_memory.db-wal
+
+# Trilha de auditoria (SQLite) — T05/#16
+itinerai_audit.db
+itinerai_audit.db-journal
+itinerai_audit.db-wal
+
+# Testes / cobertura — T07/#18
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Lint / cobertura do código novo — T10/#21
+.ruff_cache/
+diff-cover.html
+diff-cover.md
 
 # LangGraph local artifacts
 .langgraph_api/
