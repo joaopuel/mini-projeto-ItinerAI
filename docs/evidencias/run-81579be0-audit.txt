@@ -1,0 +1,20 @@
+Trilha de auditoria — run_id 81579be0-957f-49f8-ab8e-12abdf6e917e
+
+  #  passo                    tipo   status            ms
+---------------------------------------------------------
+  1  validate_input           node   ok               0.2
+  2  persist_memory           node   ok               0.2
+  3  call_llm                 node   ok            1552.3
+  4  dispatch_search          node   ok               0.2
+  5  wikipedia_fetch          tool   ok             918.4
+  6  fetch_tourism_page       node   ok             930.7
+  7  wikipedia_fetch          tool   ok            1947.4
+  8  llm_extraction           tool   ok            5726.4
+  9  fetch_destination_page   node   ok            7695.1
+ 10  merge_pages              node   ok               0.8
+ 11  call_llm                 node   ok             489.2
+ 12  graph_invoke             turn   ok            9883.4
+
+Passo mais lento: fetch_destination_page (7695.1 ms)
+Total (turno): 9883.4 ms
+12 passos · 0 retries · 0 fallbacks · 0 erros
