@@ -945,7 +945,9 @@ relação ao mini-projeto.
       `c5f84813`) e cenário 2b (entrada adversarial)
 - [x] Seção de análise crítica, limitações, evoluções futuras e link do vídeo —
       o refinamento das tool calls vazadas em problema → alteração → resultado,
-      7 limitações e 5 evoluções futuras; **link do vídeo é um placeholder
+      7 limitações e 5 evoluções futuras. O **link do vídeo** ganhou seção
+      própria logo após o sumário (junto com a do **quadro Kanban**), por serem
+      os dois artefatos que o avaliador procura primeiro; é um **placeholder
       marcado**, a preencher pela T17/#28
 - [x] Badge do pipeline de CI — já existia, mantido no topo
 

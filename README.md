@@ -10,6 +10,8 @@ envia o roteiro por e-mail.
 
 ## Sumário
 
+- [Vídeo de demonstração](#vídeo-de-demonstração)
+- [Quadro Kanban](#quadro-kanban)
 - [Descrição da solução](#descrição-da-solução)
 - [Classificação e arquitetura](#classificação-e-arquitetura)
 - [Tool e integração](#tool-e-integração)
@@ -26,6 +28,27 @@ envia o roteiro por e-mail.
 - [Análise crítica e limitações](#análise-crítica-e-limitações)
 - [Estrutura do projeto](#estrutura-do-projeto)
 - [Documentação e evidências](#documentação-e-evidências)
+
+---
+
+## Vídeo de demonstração
+
+> 🎥 *A publicar (YouTube, não listado) — o link entra aqui.*
+
+Demonstração da solução em funcionamento: o problema e o objetivo, a arquitetura,
+o fluxo principal e o cenário de falha ao vivo, a aprovação humana antes do envio
+do e-mail, as evidências de QA e do pipeline, e o fluxo low-code no n8n.
+
+## Quadro Kanban
+
+O planejamento e o acompanhamento do desenvolvimento estão no GitHub Project:
+
+**<https://github.com/users/joaopuel/projects/1>**
+
+São **26 cards** — 6 epics (E01 a E06) e 19 tarefas (T01 a T19) —, criados
+**antes** do início das implementações e movimentados ao longo do trabalho. Cada
+card referencia o epic a que pertence, e as branches e os pull requests seguem a
+nomenclatura registrada em [`docs/tasks.md`](docs/tasks.md).
 
 ---
 
@@ -777,9 +800,8 @@ com `tools.py` encolhendo 224 linhas — está em
    da heurística sobre texto.
 5. **Histórico de viagens** na memória, no lugar do registro único.
 
-### Vídeo de demonstração
-
-> 🎥 *A publicar (YouTube, não listado) — o link entra aqui.*
+> O **vídeo de demonstração** está no topo deste documento, em
+> [Vídeo de demonstração](#vídeo-de-demonstração).
 
 ---
 
