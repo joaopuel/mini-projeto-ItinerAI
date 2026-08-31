@@ -800,9 +800,6 @@ com `tools.py` encolhendo 224 linhas — está em
    da heurística sobre texto.
 5. **Histórico de viagens** na memória, no lugar do registro único.
 
-> O **vídeo de demonstração** está no topo deste documento, em
-> [Vídeo de demonstração](#vídeo-de-demonstração).
-
 ---
 
 ## Estrutura do projeto
