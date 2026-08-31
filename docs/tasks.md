@@ -1031,8 +1031,14 @@ ser a última a ser executada.
 
 **Conteúdo mínimo**
 
-- [ ] Roteiro escrito seguindo a sugestão de tempos do §5.5, salvo em
-      `docs/evidencias/roteiro-video.md`
+- [x] Roteiro escrito seguindo a sugestão de tempos do §5.5, salvo em
+      `docs/evidencias/roteiro-video.md` — entregue como
+      [`docs/roteiro-video.md`](roteiro-video.md): os 8 blocos de tempo, cada um
+      com **o que mostrar**, **o comando exato a executar** e **a fala**, mais
+      uma checklist de preparação (ambiente, abas do navegador, segurança da
+      gravação) e outra de pós-produção. Fica na raiz de `docs/` porque
+      `evidencias/` guarda evidência **bruta** (logs, trilhas, relatórios), e um
+      roteiro é documento de produção — mesma separação estabelecida na T16/#27
 - [ ] Demonstração do problema, objetivo e classificação da solução
 - [ ] Visão resumida da arquitetura e das integrações
 - [ ] Dois cenários ao vivo: fluxo principal e cenário de risco/falha

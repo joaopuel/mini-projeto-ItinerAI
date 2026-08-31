@@ -1347,3 +1347,30 @@ executar a aplicação, o n8n e os testes.
 > **instalação do n8n** (npx, npm global ou Docker) não existia em lugar nenhum
 > da documentação — o README anterior partia de um n8n já rodando. A seção de
 > execução passou a cobrir explicitamente os três alvos: aplicação, n8n e testes.
+
+---
+
+## Roteiro do vídeo de demonstração (T17/#28)
+
+* Data: 2026-08-31
+* Autor: joaopuel
+* Tipo: Documentação
+
+### Prompt original
+```
+Agora vamos iniciar a task
+https://github.com/joaopuel/mini-projeto-ItinerAI/issues/28. Monte o roteiro
+com base no descrito no arquivo de requisitos: 0:00 a 1:00 — problema, objetivo
+e classificação da solução; 1:00 a 2:00 — visão resumida da arquitetura e das
+integrações; 2:00 a 4:00 — dois cenários de uso, sendo um fluxo principal e um
+cenário de risco, falha, exceção ou comportamento anômalo; 4:00 a 5:00 —
+evidência de segurança, bloqueio ou aprovação humana, quando aplicável; 5:00 a
+6:00 — uma evidência de QA; 6:00 a 8:00 — pipeline, análise de logs, detecção de
+anomalias e estimativa de tendência ou risco de falha; 8:00 a 9:00 —
+demonstração resumida da automação low-code/no-code; 9:00 a 10:00 — principais
+limitações e melhorias futuras.
+```
+
+> Roteiro montado como script de gravação executável — cada bloco traz o que
+> mostrar, o comando exato e a fala —, e não como sumário de tópicos. A gravação
+> em si permanece com o usuário.

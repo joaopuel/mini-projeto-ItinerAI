@@ -99,6 +99,7 @@ e e-mail validado por regex, ambos fora do LLM) — o limite de autonomia do §4
 | --- | --- |
 | [`tasks.md`](tasks.md) | Backlog completo: 6 epics, 19 tarefas, com checklist e escopo entregue de cada |
 | [`requisitos.md`](requisitos.md) | Enunciado da avaliação |
+| [`roteiro-video.md`](roteiro-video.md) | Roteiro de gravação do vídeo de demonstração, com os 8 blocos de tempo do §5.5 |
 | [`application-structure.md`](application-structure.md) | Estrutura recomendada pela documentação do LangGraph, base da organização do código |
 | [`issues-templates/`](issues-templates) | Templates de epic, tech, docs e user story usados nas issues |
 
