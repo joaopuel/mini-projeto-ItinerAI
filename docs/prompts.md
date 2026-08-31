@@ -1244,3 +1244,47 @@ Então, se é possível. Implemente o proposto na issue #22 para finalizá-la an
 Pode seguir o proposto pela issue e alterar o nome dos arquivos e o lugar onde
 estão, como necessário.
 ```
+
+---
+
+## Planejamento da investigação de observabilidade (T06/#17)
+
+* Data: 2026-08-31
+* Autor: joaopuel
+* Tipo: Planejamento
+
+### Prompt original
+```
+Agora faça um plano de implementação da issue #17.
+
+[decisões tomadas durante o planejamento]
+- O log não tinha nenhuma execução com erro (354 eventos, zero node_error /
+  run_error / retry / unavailable), então a falha exigida pelo checklist teve de
+  ser provocada.
+- Forma escolhida: execução real com WIKIPEDIA_TIMEOUT=0.001, que exercita a
+  política de retry/backoff/unavailable da T02 sem alterar uma linha de código.
+  Descartadas: dublar requests.get num script, e entregar sem o item de erro.
+- Documento em docs/analise-observabilidade.md, alinhado às análises irmãs, em
+  vez de docs/evidencias/observabilidade.md — mesma resolução da T08 e da T11.
+```
+
+---
+
+## Restrição: proibido tocar no `.env` e executar a aplicação
+
+* Data: 2026-08-31
+* Autor: joaopuel
+* Tipo: Restrição de processo
+
+### Prompt original
+```
+É estritamento proibido você alterar ou ler o arquivo .env. Também é
+estritamento proibido executar qualquer comando para run, build, compile ou
+testar a aplicação. Deixa que eu rodo os commandos quando necessário. Apenas me
+passe um passo a passo do que você quer que eu execute e responda ao agente.
+```
+
+> Consequência prática na T06: como a task exige dados de execução real, a coleta
+> virou um roteiro copiável (`temp.md`) com o comando exato, o que o agente
+> pergunta, o que digitar em cada `Você:` e quais saídas devolver. Os três turnos
+> analisados foram executados pelo usuário.
