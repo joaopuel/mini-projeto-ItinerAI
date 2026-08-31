@@ -1307,3 +1307,43 @@ https://github.com/joaopuel/mini-projeto-ItinerAI/issues/27.
 > `docs/prompts/historico.md` na reorganização. As menções a `docs/prompts.md`
 > nos prompts acima são **verbatim** e foram preservadas de propósito — são o
 > que o usuário digitou na época.
+
+---
+
+## Encerramento da tarefa do quadro Kanban (T18/#29)
+
+* Data: 2026-08-31
+* Autor: joaopuel
+* Tipo: Processo
+
+### Prompt original
+```
+Acredito que a issue https://github.com/joaopuel/mini-projeto-ItinerAI/issues/29
+já pode ser fechada, pois o quadro já foi criado e movimentado
+```
+
+> Os 8 itens do checklist foram conferidos antes de fechar. O único que não podia
+> ser presumido — o professor como colaborador — foi verificado por
+> `gh api repos/.../collaborators`: `wangsouza` com `pull, push, triage`.
+
+---
+
+## Reescrita do README conforme o §5.2 (T15/#26)
+
+* Data: 2026-08-31
+* Autor: joaopuel
+* Tipo: Documentação
+
+### Prompt original
+```
+Agora prossiga para a implementação da task
+https://github.com/joaopuel/mini-projeto-ItinerAI/issues/26. Garanta que os
+passos de instação e configuração tanto do projeto quanto do n8n estejam
+presentes e atualizados. Além disso, garanta que o arquivo contenha como
+executar a aplicação, o n8n e os testes.
+```
+
+> As duas exigências acrescentadas ao enunciado da issue mudaram o resultado: a
+> **instalação do n8n** (npx, npm global ou Docker) não existia em lugar nenhum
+> da documentação — o README anterior partia de um n8n já rodando. A seção de
+> execução passou a cobrir explicitamente os três alvos: aplicação, n8n e testes.
