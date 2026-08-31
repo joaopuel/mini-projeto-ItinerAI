@@ -4,3 +4,14 @@ pydantic==2.13.4
 python-dotenv==1.2.2
 requests==2.34.2
 beautifulsoup4==4.15.0
+
+# Dependências TRANSITIVAS pinadas de propósito (chegam via langgraph, que
+# aceita langchain-core>=1.4.7,<2). Sem pin, cada `pip install` pode resolver
+# para um wheel diferente do uuid-utils — e o Controle de Aplicativos do Windows
+# avalia binários nativos por HASH do arquivo, de modo que uma build nova pode
+# ser bloqueada e derrubar todo import de langchain_core:
+#   ImportError: DLL load failed while importing _uuid_utils
+# Versão fixa = wheel idêntico = veredito estável. Ao atualizar, faça-o de
+# forma deliberada e verifique com: python -c "import uuid_utils"
+langchain-core==1.6.1
+uuid-utils==0.17.0
