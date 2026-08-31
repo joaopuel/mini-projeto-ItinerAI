@@ -33,7 +33,7 @@ envia o roteiro por e-mail.
 
 ## Vídeo de demonstração
 
-> 🎥 *A publicar (YouTube, não listado) — o link entra aqui.*
+> 🎥 **<https://youtu.be/qWlvr7P1jrI?si=7_YHBEnX5GSuEO5g>**
 
 Demonstração da solução em funcionamento: o problema e o objetivo, a arquitetura,
 o fluxo principal e o cenário de falha ao vivo, a aprovação humana antes do envio
