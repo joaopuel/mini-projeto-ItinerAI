@@ -1162,3 +1162,54 @@ na última análise após as correções.
 Adicione novamente o prompt no docs/prompts. Faça o commit, o push e adicione
 novo comentário com a parte da análise após as correções.
 ```
+
+---
+
+## Priorização por risco dos cenários de teste (T08/#19)
+
+* Data: 2026-08-30 20:05
+* Autor: joaopuel
+* Tipo: Análise / Documentação
+
+### Prompt original
+```
+Como o arquivo docs/requisitos.md pede "Selecionar e justificar pelo menos um
+teste ou cenário considerado prioritário com base em risco, impacto ou
+criticidade.". Descreva alguns cenários prioritários que pode ser implementado
+com um teste E2E ou integração e adicione no novo arquivo docs/analise-testes.md.
+```
+
+---
+
+## Planejamento dos testes E2E C1 e C2 (T08/#19)
+
+* Data: 2026-08-30 20:40
+* Autor: joaopuel
+* Tipo: Planejamento
+
+### Prompt original
+```
+Crie um plano para implementar os testes C1 e C2 para cumprir os requisitos da
+demanda https://github.com/joaopuel/mini-projeto-ItinerAI/issues/19.
+
+[decisões tomadas durante o planejamento]
+- Escopo: apenas os cenários C1 e C2. O §4.7 já é atendido por eles; C3 (falha
+  de rede na Wikipédia) e C4 (retomada da memória) ficam para um follow-up.
+- Branch: nova feature/qa-teste-e2e a partir da develop, conforme o backlog.
+```
+
+---
+
+## Registro dos prompts, commit e PR dos testes E2E (T08/#19)
+
+* Data: 2026-08-31 00:40
+* Autor: joaopuel
+* Tipo: Documentação / Versionamento
+
+### Prompt original
+```
+Adicione os primeiros prompts dessa sessão que solicitaram a inclusão dos testes
+no arquivo docs/prompts.md. Ignore os demais prompts a partir de quando começamos
+a investigar o problema com a lib. Commit as alterações, faça o push e abra o PR.
+Obrigatório, o PR deve conter "Closes #<issue-number>".
+```
