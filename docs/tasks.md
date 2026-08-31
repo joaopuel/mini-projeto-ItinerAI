@@ -908,26 +908,54 @@ relação ao mini-projeto.
 
 **Conteúdo mínimo**
 
-- [ ] Descrição da solução, incluindo o que foi mantido e o que evoluiu em
-      relação ao mini-projeto
-- [ ] Classificação explícita da solução (agente, workflow determinístico ou
-      híbrido) com justificativa
-- [ ] Diagrama de arquitetura atualizado, destacando nodes, rotas, a
-      paralelização de T01 e os componentes envolvidos
-- [ ] Seção de tool e integração, incluindo a integração externa via webhook
-- [ ] Seção de contexto e memória (SQLite, retomada e uso das informações)
-- [ ] Seção de segurança e autonomia: proteção de credenciais, validações,
+- [x] Descrição da solução, incluindo o que foi mantido e o que evoluiu em
+      relação ao mini-projeto — tabela entrada/processamento/saída mais uma
+      tabela de 7 linhas separando o núcleo mantido das capacidades evoluídas
+- [x] Classificação explícita da solução (agente, workflow determinístico ou
+      híbrido) com justificativa — **agente**, justificado pelo que é observável
+      no grafo: nada no código determina que a busca preceda o roteiro, quem
+      decide é o modelo; o que é determinístico está deliberadamente fora do
+      caminho dele
+- [x] Diagrama de arquitetura atualizado, destacando nodes, rotas, a
+      paralelização de T01 e os componentes envolvidos — diagrama + tabela de
+      nós e rotas + subseção de paralelização com o **ganho medido** (931,2 ms)
+- [x] Seção de tool e integração, incluindo a integração externa via webhook —
+      as duas ferramentas com a finalidade de cada uma no fluxo, mais o POST
+      autenticado ao n8n com o payload tipado
+- [x] Seção de contexto e memória (SQLite, retomada e uso das informações) —
+      separada em duas camadas: estado do grafo (curto prazo, com a justificativa
+      de **não** usar checkpointer) e memória persistente (longo prazo)
+- [x] Seção de segurança e autonomia: proteção de credenciais, validações,
       limites de autonomia, aprovação humana e comportamento diante de prompt
-      injection
-- [ ] Instalação e execução completas, com todas as variáveis do `.env.example`
-      e o comando de execução dos testes
-- [ ] Seção de QA, observabilidade e DevOps com as evidências e links para
-      `/docs`
-- [ ] Seção de automação low-code com gatilho, relação com a aplicação e saída
-- [ ] Dois cenários de uso documentados: fluxo principal e cenário de risco,
-      com entrada, comportamento esperado e resultado
-- [ ] Seção de análise crítica, limitações, evoluções futuras e link do vídeo
-- [ ] Badge do pipeline de CI
+      injection — inclui a tabela de autonomia por ação e a garantia verificada
+      por teste E2E (`llm.call_count == 0`)
+- [x] Instalação e execução completas, com todas as variáveis do `.env.example`
+      e o comando de execução dos testes — quatro etapas numeradas: projeto,
+      aplicação, **n8n** (npx / npm / Docker) e testes; tabela com as **9**
+      variáveis, marcando obrigatória, padrão e finalidade
+- [x] Seção de QA, observabilidade e DevOps com as evidências e links para
+      `/docs` — testes, code review com IA, os dois sinais, pipeline e a
+      anomalia com a estimativa de risco, cada um linkando o documento
+- [x] Seção de automação low-code com gatilho, relação com a aplicação e saída —
+      tabela gatilho/relação/saída, mais a justificativa de não haver retry num
+      POST não idempotente
+- [x] Dois cenários de uso documentados: fluxo principal e cenário de risco,
+      com entrada, comportamento esperado e resultado — cenário 1 (fluxo
+      completo), cenário 2 (falha de rede, com os números reais do `run_id`
+      `c5f84813`) e cenário 2b (entrada adversarial)
+- [x] Seção de análise crítica, limitações, evoluções futuras e link do vídeo —
+      o refinamento das tool calls vazadas em problema → alteração → resultado,
+      7 limitações e 5 evoluções futuras; **link do vídeo é um placeholder
+      marcado**, a preencher pela T17/#28
+- [x] Badge do pipeline de CI — já existia, mantido no topo
+
+> **Escopo entregue:** o README foi reescrito por completo (534 → ~700 linhas),
+> preservando as seções que já estavam boas e acrescentando as sete ausentes do
+> §5.2. A pedido, a instalação e a configuração cobrem **projeto e n8n**, e a
+> execução cobre **aplicação, n8n e testes** — a instalação do n8n (npx, npm
+> global ou Docker) não existia em lugar nenhum da documentação. Único item em
+> aberto: o **link do vídeo**, que depende da T17/#28 e está marcado como
+> placeholder.
 
 ---
 
@@ -1031,19 +1059,31 @@ ser executada.
 
 **Checklist técnico**
 
-- [ ] Criar o GitHub Project no formato Kanban com as seis colunas exigidas
-- [ ] Criar as 6 issues de epic (E01 a E06) com o `epic_template.yml`, antes das
-      tarefas
-- [ ] Criar uma issue por tarefa deste documento (T01 a T17), usando o template
-      correspondente ao tipo de cada uma
-- [ ] Vincular cada tarefa ao seu epic (sub-issues ou referência ao número da
-      issue do epic na descrição), conforme o índice dos epics
-- [ ] Vincular cada card à branch e ao pull request correspondentes
-- [ ] Movimentar os cards ao longo do desenvolvimento, refletindo o andamento
-      real
-- [ ] Adicionar o professor como colaborador do repositório e conceder acesso ao
-      quadro
-- [ ] Garantir a coerência entre cards, branches, commits e PRs
+- [x] Criar o GitHub Project no formato Kanban com as seis colunas exigidas —
+      Project `mini-projeto-ItinerAI`, criado **antes** da primeira implementação
+- [x] Criar as 6 issues de epic (E01 a E06) com o `epic_template.yml`, antes das
+      tarefas — issues #6 a #11
+- [x] Criar uma issue por tarefa deste documento (T01 a T17), usando o template
+      correspondente ao tipo de cada uma — issues #12 a #30, **26 issues no
+      total** contando os epics
+- [x] Vincular cada tarefa ao seu epic (sub-issues ou referência ao número da
+      issue do epic na descrição), conforme o índice dos epics — cada corpo abre
+      com `> **Epic:** #N`
+- [x] Vincular cada card à branch e ao pull request correspondentes — PRs com
+      `Closes #N`; branches nomeadas conforme este backlog
+- [x] Movimentar os cards ao longo do desenvolvimento, refletindo o andamento
+      real — colunas distintas em uso (*Ready*, *In progress*, *Done*) ao longo
+      de todo o projeto
+- [x] Adicionar o professor como colaborador do repositório e conceder acesso ao
+      quadro — `wangsouza`, com permissões `pull, push, triage`
+- [x] Garantir a coerência entre cards, branches, commits e PRs — as mensagens de
+      commit carregam o par `(Tnn/#issue)`
+
+> **Escopo entregue:** issue #29 encerrada em 2026-08-31, com um comentário
+> registrando a evidência de cada item. O que o critério 3 penaliza é o card
+> criado só no fim: aqui os 6 epics e as 19 tarefas foram abertos antes da
+> primeira implementação, e a ordem de fechamento acompanha a sequência de
+> execução planejada neste documento.
 
 ---
 
