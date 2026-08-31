@@ -12,6 +12,11 @@ env/
 .env
 !.env.example
 
+# Snapshot local do ambiente (pip freeze) para restaurar a máquina do dev após
+# um problema de instalação. NÃO é lockfile do projeto — a reprodutibilidade
+# vem das versões pinadas em requirements.txt.
+environment-funcionando.txt
+
 # Project output
 output/
 
