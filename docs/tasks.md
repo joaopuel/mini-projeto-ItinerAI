@@ -322,16 +322,46 @@ estruturados (T04) com a trilha de auditoria (T05).
 
 **Conteúdo mínimo**
 
-- [ ] Descrição dos dois sinais implementados e da chave de correlação
-      (`run_id`)
-- [ ] Trecho real de log estruturado de uma execução, com dados sensíveis
-      omitidos
-- [ ] Trecho real da trilha de auditoria do mesmo `run_id`
-- [ ] Reconstrução narrativa do fluxo: nós percorridos, decisão de roteamento,
-      tools chamadas e resultado final
-- [ ] Tabela de latência por passo, apontando o gargalo da execução
-- [ ] Investigação de pelo menos uma execução com erro (ex.: falha de rede na
-      Wikipédia), mostrando como os sinais permitiram identificar a causa
+- [x] Descrição dos dois sinais implementados e da chave de correlação
+      (`run_id`) — §1 de [`docs/analise-observabilidade.md`](analise-observabilidade.md),
+      incluindo os **dois** caminhos de propagação (`AgentState.run_id` e o
+      `ContextVar`, sem o qual os passos dentro do fan-out ficariam órfãos)
+- [x] Trecho real de log estruturado de uma execução, com dados sensíveis
+      omitidos — §2; nenhuma omissão foi necessária, e a seção explica por quê
+      (os nós logam só metadados; o `JsonFormatter` redige a `GROQ_API_KEY` e
+      mascara e-mail)
+- [x] Trecho real da trilha de auditoria do mesmo `run_id` — §3, saída literal de
+      `python show_audit.py 81579be0-…`
+- [x] Reconstrução narrativa do fluxo: nós percorridos, decisão de roteamento,
+      tools chamadas e resultado final — §4, os turnos T1 (busca) e T2 (roteiro),
+      incluindo o `notification_declined` gravado **fora** do grafo com o
+      `run_id` do turno que gerou o roteiro
+- [x] Tabela de latência por passo, apontando o gargalo da execução — §5: o
+      gargalo do nó é `fetch_destination_page` (7695,1 ms), mas o cruzamento com
+      a auditoria mostra que **74,4% dele é `llm_extraction`**, não rede; mais a
+      medição do paralelismo (economia de 931,2 ms) e a anomalia do `call_llm`
+      final (12687,7 ms, 84% do turno)
+- [x] Investigação de pelo menos uma execução com erro (ex.: falha de rede na
+      Wikipédia), mostrando como os sinais permitiram identificar a causa — §6:
+      `ConnectTimeout` nos dois ramos, 4 retries + 2 erros, `unavailable: true`,
+      e a conclusão de que **todos os passos terminaram `ok`** — o incidente só
+      existe nos sinais
+
+> **Escopo entregue:** três turnos reais de 2026-08-31 (`81579be0`, `9ec40ebb`,
+> `c5f84813`), com log e trilha versionados em `docs/evidencias/` (6 arquivos).
+> Três observações sobre o escopo: (1) o documento é
+> [`docs/analise-observabilidade.md`](analise-observabilidade.md), alinhado às
+> análises irmãs `analise-ci.md`/`analise-cr.md`/`analise-testes.md`, em vez de
+> `docs/evidencias/observabilidade.md` — `docs/evidencias/` guarda a evidência
+> **bruta**; mesma resolução da T08 e da T11. (2) A execução com erro foi
+> **induzida de forma declarada** (`$env:WIKIPEDIA_TIMEOUT = '0.001'`, §6.1):
+> nenhuma das 354 linhas de log anteriores continha erro, e a indução usa uma
+> variável de configuração já existente, sem alterar código. (3) A investigação
+> encontrou **três defeitos nos próprios sinais** (§7) — o `run_id` é por turno e
+> não por conversa, `format_audit_trail` perde o `Total (turno)` quando há linha
+> de notificação, e o cálculo do gargalo ignora passos em `error`. Os três viram
+> ações propostas na §8, não correções aqui: são código e merecem tarefa própria
+> com teste.
 
 ---
 
